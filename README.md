@@ -100,18 +100,18 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 ## Layout
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────────────┐
 │ builddeck  my-org / my-pipeline #42  ⟳ loading  14:32:01          │
 ├─────────────────┬──────────────────────────┬──────────────────────┤
 │ Organizations   │ Builds                   │ Build Detail         │
-│  ▸ MyOrg        │ [5 │ 1 running │ 3 ...] │  Number:  #42       │
+│  ▸ MyOrg        │ [5 │ 1 running │ 3 ...]  │  Number:  #42        │
 │                 │                          │  State:   PASS       │
-│ Pipelines       │ BUILD BRANCH COMMIT ... │  Branch:  main       │
-│  ▸ my-pipeline  │  ▸ #42 main  abc1234 .. │  Commit:  abc1234    │
-│    other-pipe   │    #41 main  def5678 .. │                      │
-│                 │    #40 release 901abcd . │  Jobs                │
-│                 │                          │   PASS Build [ag-1] │
-│                 │                          │   RUN  Test  [ag-2] │
+│ Pipelines       │ BUILD BRANCH COMMIT ...  │  Branch:  main       │
+│  ▸ my-pipeline  │  ▸ #42 main  abc1234 ..  │  Commit:  abc1234    │
+│    other-pipe   │    #41 main  def5678 ..  │                      │
+│                 │    #40 release 901abcd . │ Jobs                 │
+│                 │                          │   PASS Build [ag-1]  │
+│                 │                          │   RUN  Test  [ag-2]  │
 │                 │                          │                      │
 │                 │                          │  Annotations         │
 │                 │                          │   [ctx] Deploy done  │
@@ -119,7 +119,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 │                 │                          │  Artifacts           │
 │                 │                          │   • log.txt (1.2KB)  │
 ├─────────────────┴──────────────────────────┴──────────────────────┤
-│ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit r:refresh ...   │
+│ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit r:refresh ...    │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
