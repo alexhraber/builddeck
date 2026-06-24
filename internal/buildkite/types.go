@@ -39,6 +39,7 @@ type Creator struct {
 
 type Job struct {
 	ID              string   `json:"id"`
+	Type            string   `json:"type"`
 	State           string   `json:"state"`
 	Name            string   `json:"name"`
 	Label           string   `json:"label"`
@@ -51,8 +52,44 @@ type Job struct {
 }
 
 type Agent struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID             string          `json:"id"`
+	Name           string          `json:"name"`
+	Hostname       string          `json:"hostname"`
+	Version        string          `json:"version"`
+	ConnectedState string          `json:"connected_state"`
+	OS             string          `json:"os"`
+	IPAddress      string          `json:"ip_address"`
+	Metadata       []AgentMetadata `json:"meta_data"`
+	WebURL         string          `json:"web_url"`
+}
+
+type AgentMetadata struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type Annotation struct {
+	ID        string `json:"id"`
+	BodyHTML  string `json:"body_html"`
+	Style     string `json:"style"`
+	Context   string `json:"context"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	WebURL    string `json:"web_url"`
+}
+
+type Artifact struct {
+	ID          string `json:"id"`
+	JobID       string `json:"job_id"`
+	URL         string `json:"url"`
+	DownloadURL string `json:"download_url"`
+	Filename    string `json:"filename"`
+	FileSize    int    `json:"file_size"`
+	Dirname     string `json:"dirname"`
+	ContentType string `json:"content_type"`
+	State       string `json:"state"`
+	CreatedAt   string `json:"created_at"`
+	WebURL      string `json:"web_url"`
 }
 
 type ErrorResponse struct {

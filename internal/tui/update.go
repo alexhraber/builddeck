@@ -50,17 +50,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.pipeIndex = 0
 		if len(m.pipelines) > 0 {
 			m.loadingBuilds = true
+			m.buildsInFlight = true
 			org := m.selectedOrg()
 			pipe := m.selectedPipeline()
 			return m, loadBuildsCmd(m.client, org.Slug, pipe.Slug)
 		}
-		m.builds = nil
-		m.buildIndex = 0
-		m.selectedBuild = nil
+		m.resetBuildState()
 		return m, nil
 
 	case buildsLoadedMsg:
 		m.loadingBuilds = false
+		m.buildsInFlight = false
 		m.lastRefresh = time.Now()
 		if msg.err != nil {
 			m.err = msg.err
@@ -75,38 +75,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = nil
 		m.errMsg = ""
 		if len(m.builds) > 0 {
-			foundIdx := -1
-			if prevBuildNumber > 0 {
-				for i, b := range m.builds {
-					if b.Number == prevBuildNumber {
-						foundIdx = i
-						break
-					}
-				}
-			}
-			if foundIdx >= 0 {
-				m.buildIndex = foundIdx
-			} else if m.buildIndex >= len(m.builds) {
-				m.buildIndex = 0
-			}
-			b := m.builds[m.buildIndex]
-			if hasNoJobs(&b) {
-				m.loadingDetail = true
-				m.selectedBuild = &b
-				org := m.selectedOrg()
-				pipe := m.selectedPipeline()
-				return m, loadBuildDetailCmd(m.client, org.Slug, pipe.Slug, b.Number)
-			}
-			m.selectedBuild = &b
-		} else {
-			m.selectedBuild = nil
+			m.buildIndex = preserveSelection(m.builds, prevBuildNumber, m.buildIndex)
+			cmds := m.onBuildIndexChanged()
+			return m, tea.Batch(cmds...)
 		}
+		m.selectedBuild = nil
+		m.annotations = nil
+		m.artifacts = nil
 		return m, nil
 
 	case buildDetailMsg:
 		m.loadingDetail = false
+		m.detailInFlight = false
 		if msg.err == nil && msg.build != nil {
 			m.selectedBuild = msg.build
+		}
+		return m, nil
+
+	case annotationsLoadedMsg:
+		m.loadingAnnotations = false
+		m.annotsInFlight = false
+		if msg.err == nil {
+			m.annotations = msg.annotations
+		}
+		return m, nil
+
+	case artifactsLoadedMsg:
+		m.loadingArtifacts = false
+		m.artifactsInFlight = false
+		if msg.err == nil {
+			m.artifacts = msg.artifacts
 		}
 		return m, nil
 
@@ -114,104 +112,167 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds := []tea.Cmd{tickCmd()}
 		org := m.selectedOrg()
 		pipe := m.selectedPipeline()
-		if org != nil && pipe != nil && !m.loadingBuilds {
+		if org != nil && pipe != nil && !m.buildsInFlight {
+			m.buildsInFlight = true
+			m.loadingBuilds = false
 			cmds = append(cmds, loadBuildsCmd(m.client, org.Slug, pipe.Slug))
 		}
 		return m, tea.Batch(cmds...)
 
 	case tea.KeyMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" || msg.String() == "q" {
-				m.showHelp = false
-				return m, nil
-			}
-			return m, nil
-		}
-
-		switch {
-		case key.Matches(msg, keys.Quit):
-			return m, tea.Quit
-
-		case key.Matches(msg, keys.Help):
-			m.showHelp = true
-			return m, nil
-
-		case key.Matches(msg, keys.Refresh):
-			return m, m.refresh()
-
-		case key.Matches(msg, keys.Tab):
-			m.activePane = pane((int(m.activePane) + 1) % 3)
-			return m, nil
-
-		case key.Matches(msg, keys.ShiftTab):
-			m.activePane = pane((int(m.activePane) + 2) % 3)
-			return m, nil
-
-		case key.Matches(msg, keys.Up):
-			cmd := m.moveUp()
-			return m, cmd
-
-		case key.Matches(msg, keys.Down):
-			cmd := m.moveDown()
-			return m, cmd
-
-		case key.Matches(msg, keys.Enter):
-			return m, m.onEnter()
-		}
+		return m.handleKey(msg)
 	}
 
 	return m, nil
 }
 
-func (m *Model) moveUp() tea.Cmd {
+func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.showHelp {
+		if key.Matches(msg, keys.Help) || key.Matches(msg, keys.Quit) || msg.String() == "esc" {
+			m.showHelp = false
+			return m, nil
+		}
+		return m, nil
+	}
+
+	switch {
+	case key.Matches(msg, keys.Quit):
+		return m, tea.Quit
+
+	case key.Matches(msg, keys.Help):
+		m.showHelp = true
+		return m, nil
+
+	case key.Matches(msg, keys.Refresh):
+		return m, m.refresh()
+
+	case key.Matches(msg, keys.Tab), key.Matches(msg, keys.Right):
+		m.activePane = m.activePane.next()
+		return m, nil
+
+	case key.Matches(msg, keys.ShiftTab), key.Matches(msg, keys.Left):
+		m.activePane = m.activePane.prev()
+		return m, nil
+
+	case key.Matches(msg, keys.Up):
+		return m.moveUp()
+
+	case key.Matches(msg, keys.Down):
+		return m.moveDown()
+
+	case key.Matches(msg, keys.Top):
+		return m.jumpTop()
+
+	case key.Matches(msg, keys.Bottom):
+		return m.jumpBottom()
+
+	case key.Matches(msg, keys.Enter):
+		cmd := m.onEnter()
+		return m, cmd
+
+	case key.Matches(msg, keys.Search):
+		m.searchMsg = "search not implemented yet"
+		return m, nil
+	}
+
+	m.searchMsg = ""
+	return m, nil
+}
+
+func (m Model) moveUp() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
 		if m.pipeIndex > 0 {
 			m.pipeIndex--
-			return nil
-		} else if m.orgIndex > 0 {
+			return m, m.onPipelineChange()
+		}
+		if m.orgIndex > 0 {
 			m.orgIndex--
-			return m.onOrgChange()
+			return m, m.onOrgChange()
 		}
 	case centerPane:
 		if m.buildIndex > 0 {
 			m.buildIndex--
-			return m.updateSelectedBuild()
+			cmds := m.onBuildIndexChanged()
+			return m, tea.Batch(cmds...)
 		}
 	case rightPane:
+		if m.rightScroll > 0 {
+			m.rightScroll--
+		}
 	}
-	return nil
+	return m, nil
 }
 
-func (m *Model) moveDown() tea.Cmd {
+func (m Model) moveDown() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
 		if m.pipeIndex < len(m.pipelines)-1 {
 			m.pipeIndex++
-			return nil
-		} else if m.orgIndex < len(m.orgs)-1 {
+			return m, m.onPipelineChange()
+		}
+		if m.orgIndex < len(m.orgs)-1 {
 			m.orgIndex++
-			return m.onOrgChange()
+			return m, m.onOrgChange()
 		}
 	case centerPane:
 		if m.buildIndex < len(m.builds)-1 {
 			m.buildIndex++
-			return m.updateSelectedBuild()
+			cmds := m.onBuildIndexChanged()
+			return m, tea.Batch(cmds...)
+		}
+	case rightPane:
+		m.rightScroll++
+	}
+	return m, nil
+}
+
+func (m Model) jumpTop() (tea.Model, tea.Cmd) {
+	switch m.activePane {
+	case leftPane:
+		m.orgIndex = 0
+		m.pipeIndex = 0
+		return m, m.onPipelineChange()
+	case centerPane:
+		if len(m.builds) > 0 {
+			m.buildIndex = 0
+			cmds := m.onBuildIndexChanged()
+			return m, tea.Batch(cmds...)
+		}
+	case rightPane:
+		m.rightScroll = 0
+	}
+	return m, nil
+}
+
+func (m Model) jumpBottom() (tea.Model, tea.Cmd) {
+	switch m.activePane {
+	case leftPane:
+		if len(m.orgs) > 0 {
+			m.orgIndex = len(m.orgs) - 1
+		}
+		m.pipeIndex = 0
+		return m, m.onOrgChange()
+	case centerPane:
+		if len(m.builds) > 0 {
+			m.buildIndex = len(m.builds) - 1
+			cmds := m.onBuildIndexChanged()
+			return m, tea.Batch(cmds...)
 		}
 	case rightPane:
 	}
-	return nil
+	return m, nil
 }
 
 func (m *Model) onOrgChange() tea.Cmd {
 	m.pipelines = nil
 	m.pipeIndex = 0
-	m.builds = nil
-	m.buildIndex = 0
-	m.selectedBuild = nil
+	m.resetBuildState()
 	m.loadingPipes = true
 	m.loadingBuilds = false
 	m.loadingDetail = false
+	m.loadingAnnotations = false
+	m.loadingArtifacts = false
 	org := m.selectedOrg()
 	if org != nil {
 		return loadPipelinesCmd(m.client, org.Slug)
@@ -219,22 +280,50 @@ func (m *Model) onOrgChange() tea.Cmd {
 	return nil
 }
 
-func (m *Model) updateSelectedBuild() tea.Cmd {
+func (m *Model) onPipelineChange() tea.Cmd {
+	m.resetBuildState()
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	if org != nil && pipe != nil {
+		m.loadingBuilds = true
+		m.buildsInFlight = true
+		return loadBuildsCmd(m.client, org.Slug, pipe.Slug)
+	}
+	return nil
+}
+
+func (m *Model) onBuildIndexChanged() []tea.Cmd {
+	var cmds []tea.Cmd
 	if b := m.selectedBuildEntry(); b != nil {
 		m.selectedBuild = b
-		m.loadingDetail = false
-		if hasNoJobs(b) {
-			org := m.selectedOrg()
-			pipe := m.selectedPipeline()
-			if org != nil && pipe != nil {
+		m.rightScroll = 0
+		org := m.selectedOrg()
+		pipe := m.selectedPipeline()
+		if org != nil && pipe != nil {
+			if hasNoJobs(b) && !m.detailInFlight {
 				m.loadingDetail = true
-				return loadBuildDetailCmd(m.client, org.Slug, pipe.Slug, b.Number)
+				m.detailInFlight = true
+				cmds = append(cmds, loadBuildDetailCmd(m.client, org.Slug, pipe.Slug, b.Number))
+			}
+			if !m.annotsInFlight {
+				m.loadingAnnotations = true
+				m.annotsInFlight = true
+				m.annotations = nil
+				cmds = append(cmds, loadAnnotationsCmd(m.client, org.Slug, pipe.Slug, b.Number))
+			}
+			if !m.artifactsInFlight {
+				m.loadingArtifacts = true
+				m.artifactsInFlight = true
+				m.artifacts = nil
+				cmds = append(cmds, loadArtifactsCmd(m.client, org.Slug, pipe.Slug, b.Number))
 			}
 		}
 	} else {
 		m.selectedBuild = nil
+		m.annotations = nil
+		m.artifacts = nil
 	}
-	return nil
+	return cmds
 }
 
 func (m *Model) onEnter() tea.Cmd {
@@ -242,11 +331,7 @@ func (m *Model) onEnter() tea.Cmd {
 		org := m.selectedOrg()
 		pipe := m.selectedPipeline()
 		if org != nil && pipe != nil {
-			m.loadingBuilds = true
-			m.builds = nil
-			m.buildIndex = 0
-			m.selectedBuild = nil
-			return loadBuildsCmd(m.client, org.Slug, pipe.Slug)
+			return m.onPipelineChange()
 		}
 	}
 	return nil
@@ -254,13 +339,44 @@ func (m *Model) onEnter() tea.Cmd {
 
 func (m *Model) refresh() tea.Cmd {
 	m.loadingOrgs = true
+	m.resetBuildState()
 	m.orgs = nil
 	m.pipelines = nil
-	m.builds = nil
-	m.selectedBuild = nil
 	m.err = nil
 	m.errMsg = ""
+	m.searchMsg = ""
+	m.buildsInFlight = false
+	m.detailInFlight = false
+	m.annotsInFlight = false
+	m.artifactsInFlight = false
 	return loadOrgsCmd(m.client)
+}
+
+func (m *Model) resetBuildState() {
+	m.builds = nil
+	m.buildIndex = 0
+	m.selectedBuild = nil
+	m.annotations = nil
+	m.artifacts = nil
+	m.loadingBuilds = false
+	m.loadingDetail = false
+	m.loadingAnnotations = false
+	m.loadingArtifacts = false
+	m.buildsInFlight = false
+	m.detailInFlight = false
+	m.annotsInFlight = false
+	m.artifactsInFlight = false
+}
+
+func preserveSelection(builds []buildkite.Build, prevNumber, prevIndex int) int {
+	if prevNumber > 0 {
+		for i, b := range builds {
+			if b.Number == prevNumber {
+				return i
+			}
+		}
+	}
+	return clampIndex(prevIndex, len(builds))
 }
 
 func hasNoJobs(b *buildkite.Build) bool {

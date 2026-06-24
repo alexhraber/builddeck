@@ -60,6 +60,10 @@ func stateColor(state string) lipgloss.Color {
 		return lipgloss.Color("199")
 	case "not_run":
 		return lipgloss.Color("243")
+	case "timed_out":
+		return lipgloss.Color("196")
+	case "broken":
+		return lipgloss.Color("196")
 	default:
 		return lipgloss.Color("252")
 	}
@@ -75,28 +79,35 @@ func stateBadge(state string) string {
 func stateLabel(state string) string {
 	switch state {
 	case "passed":
-		return "PASSED"
+		return "PASS"
 	case "failed":
-		return "FAILED"
+		return "FAIL"
 	case "running":
-		return "RUNNING"
+		return "RUN"
 	case "scheduled":
-		return "SCHED "
+		return "SCHD"
 	case "canceled", "cancelled":
-		return "CNCLD"
+		return "CNCL"
 	case "skipped":
-		return "SKIPPD"
+		return "SKIP"
 	case "blocked":
-		return "BLOCKED"
+		return "BLCK"
 	case "waiting":
-		return "WAITNG"
+		return "WAIT"
 	case "not_run":
-		return "NOTRUN"
+		return "NRUN"
 	case "failing":
-		return "FAILING"
+		return "FLNG"
 	case "active":
-		return "ACTIVE"
+		return "ACTV"
+	case "timed_out":
+		return "TMOU"
+	case "broken":
+		return "BRKN"
 	default:
+		if len(state) > 4 {
+			return state[:4]
+		}
 		return state
 	}
 }
