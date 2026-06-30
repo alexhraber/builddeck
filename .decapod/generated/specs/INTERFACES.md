@@ -31,14 +31,14 @@ Generated interface specs should include:
 - API / RPC entrypoints:
 - CLI surfaces:
 - Event/webhook consumers:
-- Repository-detected surfaces: go
+- Repository-detected surfaces: Go CLI
 
 ## Data Ownership
 - Source-of-truth tables/collections:
 - Cross-boundary read models:
 - Consistency expectations:
 
-## Error Taxonomy Example (service_or_library)
+## Error Taxonomy Example (cli)
 ```go
 var (
     ErrValidation = errors.New("validation_failed")

@@ -12,13 +12,13 @@ entrypoints = [
 ]
 
 [repo]
-product_name = "agent-unknown-feat-01kwb9wdypa12t27-01kwbft0"
-product_summary = "A Buildkite terminal flight deck — a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, annotations, artifacts, and build health."
-architecture_direction = "Composable repository architecture with explicit boundaries and proof-backed delivery invariants."
-product_type = "service_or_library"
-done_criteria = "Decapod validate passes, required tests pass, and promotion-relevant artifacts are present."
-primary_languages = ["go"]
-detected_surfaces = ["go"]
+product_name = "builddeck"
+product_summary = "A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health."
+architecture_direction = "cli"
+product_type = "cli"
+done_criteria = "Done means `builddeck` is a compiling Go application with a clean repository structure, a typed internal Buildkite API client, authentication through `BUILDKITE_API_TOKEN`, real read-only Buildkite data loading for organizations, pipelines, recent builds, and build jobs, and a Bubble Tea/Lip Gloss TUI that supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop; the README clearly explains what `builddeck` is, how to install and run it, required token setup, current MVP scope, keybindings, and planned next features, and the codebase passes `go fmt ./...`, `go test ./...`, and `go build ./cmd/builddeck` without failures."
+primary_languages = ["Go"]
+detected_surfaces = ["Go CLI"]
 external_tracker = false
 container_workspaces = true
 mode = "local"

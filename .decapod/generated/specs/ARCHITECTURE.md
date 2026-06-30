@@ -1,11 +1,11 @@
 # Architecture
 
 ## Direction
-Composable repository architecture with explicit boundaries and proof-backed delivery invariants.
+cli
 
 ## What This Project Is
-agent-unknown-feat-01kwb9wdypa12t27-01kwbft0 is a service_or_library project built using go.
-Composable repository architecture with explicit boundaries and proof-backed delivery invariants.
+builddeck is a Go CLI/TUI for read-only Buildkite operations visibility.
+A typed internal Buildkite API client feeds a Bubble Tea/Lip Gloss terminal interface with organizations, pipelines, builds, jobs, annotations, artifacts, queues, agents, logs, and health-oriented status views.
 
 Architectural principles:
 - **Simplicity**: Keep components focused and reusable.
@@ -13,26 +13,30 @@ Architectural principles:
 - **Reliability**: Graceful failure handling and thorough verification.
 
 ## Current Facts
-- Runtime/languages: go
-- Detected surfaces/framework hints: go
-- Product type: service_or_library
+- Runtime/languages: Go
+- Detected surfaces/framework hints: Go CLI, Bubble Tea TUI
+- Product type: cli
 
 ## Architecture Map
 This project's architecture consists of the following key layers/directories:
-- `src/`: Main source directory containing primary logic.
-- `tests/`: Integration and unit test suite.
+- `cmd/builddeck/`: CLI entrypoint.
+- `internal/buildkite/`: typed Buildkite API client and data models.
+- `internal/tui/`: Bubble Tea model, update loop, views, filtering, and key handling.
+- `README.md`: operator-facing installation, token, scope, and keybinding documentation.
 
 ## Data Flows
-- Inbound request/command parses and validates at the entrypoint.
-- Core runtime handles business logic and initiates queries or state changes.
-- Storage adapter reads or writes data to the underlying persistence layers.
+- `cmd/builddeck` starts the TUI and reads configuration from the environment.
+- `internal/buildkite` authenticates with `BUILDKITE_API_TOKEN` and loads read-only Buildkite API data.
+- `internal/tui` stores the loaded snapshot in the Bubble Tea model, renders panes, handles selection/search/navigation, and refreshes without blocking the UI.
 
 ## Strongest Existing Primitives
-- Define the strongest existing primitives in the codebase (e.g., helper utilities, base controllers, data access layers).
+- Typed Buildkite client boundaries keep external API behavior separate from TUI state.
+- Bubble Tea update/model separation keeps input handling, refresh messages, loading states, and rendering testable.
+- Search/filter helpers are isolated under `internal/tui` and covered by package tests.
 
 ## Topology
 ```text
-Host Application -> Library API -> Domain Core -> Adapters (Store / Network)
+Terminal User -> cmd/builddeck -> TUI Model -> Buildkite Client -> Buildkite API
 ```
 
 ## Store Boundaries

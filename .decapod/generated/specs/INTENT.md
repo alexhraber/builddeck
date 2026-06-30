@@ -1,30 +1,30 @@
 # Intent
 
 ## Product Outcome
-- A Buildkite terminal flight deck — a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, annotations, artifacts, and build health.
+- A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
 
 ## What This Project Is
-agent-unknown-feat-01kwb9wdypa12t27-01kwbft0 is a service_or_library project built using go.
-A Buildkite terminal flight deck — a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, annotations, artifacts, and build health.
+builddeck is a CLI project built using Go.
+builddeck is a Buildkite terminal flight deck for platform engineers and release captains who need dense, live-updating read-only visibility into organizations, pipelines, builds, jobs, annotations, artifacts, agents, queues, logs, and build health.
 
 Key operating facts:
-- **Primary languages**: go
-- **Detected surfaces**: go
+- **Primary languages**: Go
+- **Detected surfaces**: Go CLI
 
 ## Product View
 ```mermaid
 flowchart LR
-  U[Primary User] --> P[agent-unknown-feat-01kwb9wdypa12t27-01kwbft0]
+  U[Primary User] --> P[builddeck]
   P --> O[User-visible Outcome]
   P --> G[Proof Gates]
   G --> E[Evidence Artifacts]
 ```
 
 ## Inferred Baseline
-- Repository: agent-unknown-feat-01kwb9wdypa12t27-01kwbft0
-- Product type: service_or_library
-- Primary languages: go
-- Detected surfaces: go
+- Repository: builddeck
+- Product type: cli
+- Primary languages: Go
+- Detected surfaces: Go CLI
 
 ## Scope
 | Area | In Scope | Proof Surface |
@@ -46,7 +46,10 @@ flowchart LR
 - Security/compliance: sensitive data handling and authz are mandatory.
 
 ## Acceptance Criteria (must be objectively testable)
-- [ ] Decapod validate passes, required tests pass, and promotion-relevant artifacts are present.
+- [ ] `builddeck` compiles with `go build ./cmd/builddeck`.
+- [ ] The TUI loads real read-only Buildkite data using `BUILDKITE_API_TOKEN`.
+- [ ] The TUI supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop.
+- [ ] The README explains install/run steps, token setup, MVP scope, keybindings, and planned next features.
 - [ ] Non-functional targets are met (latency, reliability, cost, etc.).
 - [ ] Validation gates pass and artifacts are attached.
 - [ ] `go test ./...` passes for all packages

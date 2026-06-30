@@ -4,10 +4,10 @@ Canonical path: `.decapod/generated/specs/`.
 These files are the project-local contract for humans and agents.
 
 ## Snapshot
-- Project: agent-unknown-feat-01kwb9wdypa12t27-01kwbft0
-- Outcome: A Buildkite terminal flight deck — a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, annotations, artifacts, and build health.
-- Detected languages: go
-- Detected surfaces: go
+- Project: builddeck
+- Outcome: A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
+- Detected languages: Go
+- Detected surfaces: Go CLI
 
 ## How to use this folder
 - [INTENT.md](./INTENT.md): what success means and what is explicitly out of scope.
