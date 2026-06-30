@@ -90,3 +90,10 @@ type Artifact struct {
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
+
+type JobLog struct {
+	URL         string `json:"url"`
+	Content     string `json:"content"`
+	Size        int    `json:"size"`
+	HeaderTimes []int  `json:"header_times"`
+}

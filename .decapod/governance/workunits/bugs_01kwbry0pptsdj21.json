@@ -2,7 +2,9 @@
   "task_id": "bugs_01kwbry0pptsdj21",
   "intent_ref": "Fix rate limiting on refresh/reload in builddeck",
   "spec_refs": [],
-  "state_refs": [],
+  "state_refs": [
+    ".decapod/generated/context/bugs_01kwbry0pptsdj21.json"
+  ],
   "proof_plan": [
     "validation"
   ],

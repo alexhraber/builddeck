@@ -230,3 +230,17 @@ func (c *Client) ListArtifacts(ctx context.Context, orgSlug, pipelineSlug string
 	}
 	return decode[Artifact](resp.Body)
 }
+
+func (c *Client) GetJobLog(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID string) (*JobLog, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/log", orgSlug, pipelineSlug, buildNumber, jobID)
+	resp, err := c.get(ctx, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("getting job log for %s/%s#%d job %s: %w", orgSlug, pipelineSlug, buildNumber, jobID, err)
+	}
+	var jobLog JobLog
+	if err := json.Unmarshal(resp.Body, &jobLog); err != nil {
+		return nil, fmt.Errorf("decoding job log: %w", err)
+	}
+	return &jobLog, nil
+}
+

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1.0",
+  "topic": "rate limiting",
+  "scope": "interfaces",
+  "task_id": "bugs_01kwbry0pptsdj21",
+  "workunit_id": null,
+  "sources": [
+    {
+      "path": "interfaces/DOC_RULES",
+      "section": "ambiguity"
+    },
+    {
+      "path": "interfaces/STORE_MODEL",
+      "section": "concepts"
+    },
+    {
+      "path": "interfaces/PROJECT_SPECS",
+      "section": "interfaces/PROJECT_SPECS"
+    }
+  ],
+  "snippets": [
+    {
+      "source_path": "interfaces/DOC_RULES",
+      "text": "## ambiguity\n\nStop inference if a file's status as 'canonical' or 'generated' is unclear."
+    },
+    {
+      "source_path": "interfaces/STORE_MODEL",
+      "text": "## concepts\n\nDecapod uses a dual-store model: repository state (shared, versioned) vs user state (local, ephemeral).\nGenerated artifacts (.decapod/generated/) are deterministic outputs of the system, not sources of truth.\nDirect mutation of Decapod internal state files bypasses validation and corrupts the system."
+    },
+    {
+      "source_path": "interfaces/PROJECT_SPECS",
+      "text": "# interfaces/PROJECT_SPECS\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes generated project specs: intent, acceptance criteria, boundaries, and spec drift."
+    }
+  ],
+  "policy": {
+    "risk_tier": "medium",
+    "policy_hash": "01a9984c70ab7f37aa4b0b7eb401bec8d289a984f9f0809038e001e9ae51d818",
+    "policy_version": "jit-capsule-policy-v1",
+    "policy_path": ".decapod/generated/policy/context_capsule_policy.json",
+    "repo_revision": "d99f2f9925156f1cdba9e8ab1003bace0d93c3e1"
+  },
+  "capsule_hash": "c02808adeac3db970592f5934a61f131270532c3da9781a165f1b8e98d4e8030"
+}

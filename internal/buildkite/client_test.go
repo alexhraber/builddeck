@@ -299,3 +299,26 @@ func TestClientMissingToken(t *testing.T) {
 		t.Fatal("expected error with empty token")
 	}
 }
+
+func TestGetJobLog(t *testing.T) {
+	logResp := JobLog{
+		URL:     "http://example.com/log",
+		Content: "hello log",
+	}
+	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42/jobs/j1/log" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		json.NewEncoder(w).Encode(logResp)
+	})
+	defer srv.Close()
+
+	got, err := testClient(srv).GetJobLog(context.Background(), "org", "pipe", 42, "j1")
+	if err != nil {
+		t.Fatalf("GetJobLog: %v", err)
+	}
+	if got.Content != "hello log" {
+		t.Errorf("expected hello log, got %s", got.Content)
+	}
+}
+
