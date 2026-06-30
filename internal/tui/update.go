@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
 	"github.com/charmbracelet/bubbles/key"
@@ -76,6 +78,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.errMsg = ""
 		if len(m.builds) > 0 {
 			m.buildIndex = preserveSelection(m.builds, prevBuildNumber, m.buildIndex)
+			if m.filterPane == centerPane && m.filterQuery != "" {
+				indices := m.filteredBuildIndices()
+				if len(indices) == 0 {
+					m.selectedBuild = nil
+					m.annotations = nil
+					m.artifacts = nil
+					return m, nil
+				}
+				if !containsIndex(indices, m.buildIndex) {
+					m.buildIndex = indices[0]
+				}
+			}
 			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
@@ -127,6 +141,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.searching {
+		return m.handleSearchKey(msg)
+	}
+
 	if m.showHelp {
 		if key.Matches(msg, keys.Help) || key.Matches(msg, keys.Quit) || msg.String() == "esc" {
 			m.showHelp = false
@@ -171,7 +189,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case key.Matches(msg, keys.Search):
-		m.searchMsg = "search not implemented yet"
+		m.searching = true
+		m.filterPane = m.activePane
+		m.searchMsg = ""
 		return m, nil
 	}
 
@@ -179,9 +199,49 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter", "esc":
+		m.searching = false
+		return m, nil
+	case "ctrl+c":
+		return m, tea.Quit
+	case "backspace", "ctrl+h":
+		if m.filterQuery != "" {
+			_, size := utf8.DecodeLastRuneInString(m.filterQuery)
+			m.filterQuery = m.filterQuery[:len(m.filterQuery)-size]
+			return m.applyFilterSelection()
+		}
+		return m, nil
+	case "ctrl+u":
+		m.filterQuery = ""
+		return m.applyFilterSelection()
+	}
+
+	if msg.Type == tea.KeyRunes {
+		m.filterQuery += string(msg.Runes)
+		m.filterQuery = strings.TrimLeft(m.filterQuery, " ")
+		return m.applyFilterSelection()
+	}
+
+	return m, nil
+}
+
 func (m Model) moveUp() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.filterQuery != "" && m.filterPane == leftPane {
+			indices := m.filteredPipelineIndices()
+			if len(indices) == 0 {
+				return m, nil
+			}
+			pos := indexPosition(indices, m.pipeIndex)
+			if pos > 0 {
+				m.pipeIndex = indices[pos-1]
+				return m, m.onPipelineChange()
+			}
+			return m, nil
+		}
 		if m.pipeIndex > 0 {
 			m.pipeIndex--
 			return m, m.onPipelineChange()
@@ -191,8 +251,10 @@ func (m Model) moveUp() (tea.Model, tea.Cmd) {
 			return m, m.onOrgChange()
 		}
 	case centerPane:
-		if m.buildIndex > 0 {
-			m.buildIndex--
+		indices := m.filteredBuildIndices()
+		pos := indexPosition(indices, m.buildIndex)
+		if pos > 0 {
+			m.buildIndex = indices[pos-1]
 			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
@@ -207,6 +269,15 @@ func (m Model) moveUp() (tea.Model, tea.Cmd) {
 func (m Model) moveDown() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.filterQuery != "" && m.filterPane == leftPane {
+			indices := m.filteredPipelineIndices()
+			pos := indexPosition(indices, m.pipeIndex)
+			if pos >= 0 && pos < len(indices)-1 {
+				m.pipeIndex = indices[pos+1]
+				return m, m.onPipelineChange()
+			}
+			return m, nil
+		}
 		if m.pipeIndex < len(m.pipelines)-1 {
 			m.pipeIndex++
 			return m, m.onPipelineChange()
@@ -216,8 +287,10 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 			return m, m.onOrgChange()
 		}
 	case centerPane:
-		if m.buildIndex < len(m.builds)-1 {
-			m.buildIndex++
+		indices := m.filteredBuildIndices()
+		pos := indexPosition(indices, m.buildIndex)
+		if pos >= 0 && pos < len(indices)-1 {
+			m.buildIndex = indices[pos+1]
 			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
@@ -230,12 +303,21 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 func (m Model) jumpTop() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.filterQuery != "" && m.filterPane == leftPane {
+			indices := m.filteredPipelineIndices()
+			if len(indices) > 0 {
+				m.pipeIndex = indices[0]
+				return m, m.onPipelineChange()
+			}
+			return m, nil
+		}
 		m.orgIndex = 0
 		m.pipeIndex = 0
 		return m, m.onPipelineChange()
 	case centerPane:
-		if len(m.builds) > 0 {
-			m.buildIndex = 0
+		indices := m.filteredBuildIndices()
+		if len(indices) > 0 {
+			m.buildIndex = indices[0]
 			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
@@ -248,14 +330,23 @@ func (m Model) jumpTop() (tea.Model, tea.Cmd) {
 func (m Model) jumpBottom() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.filterQuery != "" && m.filterPane == leftPane {
+			indices := m.filteredPipelineIndices()
+			if len(indices) > 0 {
+				m.pipeIndex = indices[len(indices)-1]
+				return m, m.onPipelineChange()
+			}
+			return m, nil
+		}
 		if len(m.orgs) > 0 {
 			m.orgIndex = len(m.orgs) - 1
 		}
 		m.pipeIndex = 0
 		return m, m.onOrgChange()
 	case centerPane:
-		if len(m.builds) > 0 {
-			m.buildIndex = len(m.builds) - 1
+		indices := m.filteredBuildIndices()
+		if len(indices) > 0 {
+			m.buildIndex = indices[len(indices)-1]
 			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
@@ -368,6 +459,31 @@ func (m *Model) resetBuildState() {
 	m.artifactsInFlight = false
 }
 
+func (m Model) applyFilterSelection() (tea.Model, tea.Cmd) {
+	switch m.filterPane {
+	case leftPane:
+		indices := m.filteredPipelineIndices()
+		if len(indices) > 0 && !containsIndex(indices, m.pipeIndex) {
+			m.pipeIndex = indices[0]
+			return m, m.onPipelineChange()
+		}
+	case centerPane:
+		indices := m.filteredBuildIndices()
+		if len(indices) == 0 {
+			m.selectedBuild = nil
+			m.annotations = nil
+			m.artifacts = nil
+			return m, nil
+		}
+		if !containsIndex(indices, m.buildIndex) {
+			m.buildIndex = indices[0]
+			cmds := m.onBuildIndexChanged()
+			return m, tea.Batch(cmds...)
+		}
+	}
+	return m, nil
+}
+
 func preserveSelection(builds []buildkite.Build, prevNumber, prevIndex int) int {
 	if prevNumber > 0 {
 		for i, b := range builds {
@@ -381,4 +497,17 @@ func preserveSelection(builds []buildkite.Build, prevNumber, prevIndex int) int 
 
 func hasNoJobs(b *buildkite.Build) bool {
 	return b == nil || len(b.Jobs) == 0
+}
+
+func indexPosition(indices []int, idx int) int {
+	for i, candidate := range indices {
+		if candidate == idx {
+			return i
+		}
+	}
+	return -1
+}
+
+func containsIndex(indices []int, idx int) bool {
+	return indexPosition(indices, idx) >= 0
 }
