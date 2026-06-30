@@ -59,13 +59,8 @@ type Agent struct {
 	ConnectedState string          `json:"connected_state"`
 	OS             string          `json:"os"`
 	IPAddress      string          `json:"ip_address"`
-	Metadata       []AgentMetadata `json:"meta_data"`
-	WebURL         string          `json:"web_url"`
-}
-
-type AgentMetadata struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Metadata       []string `json:"meta_data"`
+	WebURL         string   `json:"web_url"`
 }
 
 type Annotation struct {

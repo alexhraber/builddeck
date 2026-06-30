@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "title": "Fix Buildkite agent metadata parsing error",
+  "intent": "Change Agent.Metadata type from []AgentMetadata to []string to match the actual Buildkite API response structure",
+  "state": "APPROVED",
+  "todo_ids": [
+    "bugs_01kwbnmz088a5xrv"
+  ],
+  "proof_hooks": [],
+  "unknowns": [],
+  "human_questions": [],
+  "stop_conditions": [],
+  "unresolved_contradictions": [],
+  "deferred_questions": [],
+  "constraints": {
+    "forbidden_paths": [],
+    "file_touch_budget": null
+  },
+  "updated_at": "1782804167Z"
+}
