@@ -62,6 +62,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Build health summary** — count of running/failed/passed/blocked builds with failure rate
 - **State badges** — compact, color-coded state labels (PASS/FAIL/RUN/BLCK/etc.)
 - **Active pane highlighting** — clear border on the focused pane
+- **Search/filter** — `/` filters visible pipelines, builds, jobs, annotations, and artifacts
 - **Live updates** — 5-second polling with in-flight request guards
 - **Graceful degradation** — compact fallback for small terminals
 - **Loading/error states** — visible without crashing
@@ -80,7 +81,8 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `G` | Jump to bottom of active list |
 | `enter` | Select / drill down |
 | `r` | Refresh all data |
-| `/` | Search (placeholder — not yet implemented) |
+| `/` | Search/filter visible lists |
+| `esc` / `enter` | Close search prompt |
 | `?` | Toggle help |
 | `q` | Quit |
 
@@ -131,7 +133,6 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **No artifact download** — only listing; download is not yet implemented
 - **No config file** — authentication is via environment variable only
 - **Limited pagination** — builds show first 25; pipelines and agents paginate up to 500
-- **No search/filter** — `/` key shows placeholder message
 - **Annotations are HTML-stripped** — rich content is flattened to text
 - **Agent view not yet in TUI** — agent data is in the API client only
 
@@ -144,7 +145,6 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Open in browser** — `o` to open the current resource in the Buildkite web UI
 - **Artifact download** — `d` to download an artifact
 - **Queue/agent saturation views** — dedicated pane for agent utilization and queue depth
-- **Filtering/search** — `/` to filter builds, pipelines, or jobs by name/state
 - **GraphQL dashboard snapshots** — efficient nested queries for dashboard views
 - **Incident command mode** — focused view for diagnosing and resolving build failures
 - **Config file** — token and preferences in `~/.config/builddeck/config.toml`

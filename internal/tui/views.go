@@ -103,6 +103,14 @@ func (m Model) headerView(w int) string {
 		parts = append(parts, dimStyle.Render(m.lastRefresh.Format("15:04:05")))
 	}
 
+	if m.searchActive || m.hasSearch() {
+		query := m.searchQuery
+		if query == "" {
+			query = "_"
+		}
+		parts = append(parts, loadingStyle.Render("/"+query))
+	}
+
 	line := strings.Join(parts, " ")
 	return lipgloss.NewStyle().Width(w).Render(line)
 }
@@ -157,7 +165,13 @@ func (m Model) leftPaneView(w, h int) string {
 		b.WriteString(dimStyle.Render("No pipelines"))
 		b.WriteString("\n")
 	} else {
-		for i, pipe := range m.pipelines {
+		indexes := m.filteredPipelineIndexes()
+		if len(indexes) == 0 {
+			b.WriteString(dimStyle.Render("No matching pipelines"))
+			b.WriteString("\n")
+		}
+		for _, i := range indexes {
+			pipe := m.pipelines[i]
 			cursor := "  "
 			if i == m.pipeIndex {
 				cursor = "▶ "
@@ -194,7 +208,15 @@ func (m Model) centerPaneView(w, h int) string {
 	b.WriteString("\n")
 
 	if len(m.builds) > 0 {
-		summary := SummarizeBuilds(m.builds)
+		summaryBuilds := m.builds
+		if m.hasSearch() {
+			indexes := m.filteredBuildIndexes()
+			summaryBuilds = make([]buildkite.Build, 0, len(indexes))
+			for _, i := range indexes {
+				summaryBuilds = append(summaryBuilds, m.builds[i])
+			}
+		}
+		summary := SummarizeBuilds(summaryBuilds)
 		b.WriteString(m.renderBuildSummary(summary))
 		b.WriteString("\n")
 	}
@@ -209,8 +231,15 @@ func (m Model) centerPaneView(w, h int) string {
 		b.WriteString(dimStyle.Render("No builds"))
 		b.WriteString("\n")
 	} else {
+		indexes := m.filteredBuildIndexes()
+		if len(indexes) == 0 {
+			b.WriteString(dimStyle.Render("No matching builds"))
+			b.WriteString("\n")
+			return style.Width(w).Height(h).Render(b.String())
+		}
 		b.WriteString(dimStyle.Render(fmt.Sprintf("%-8s %-10s %-9s %-9s %-12s %s\n", "BUILD", "BRANCH", "COMMIT", "STATE", "CREATOR", "DURATION")))
-		for i, build := range m.builds {
+		for _, i := range indexes {
+			build := m.builds[i]
 			b.WriteString(m.renderBuildRow(i, build))
 		}
 	}
@@ -316,17 +345,18 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(titleStyle.Render("Jobs"))
 		b.WriteString("\n")
 
+		jobs := m.filteredJobs()
 		if len(bd.Jobs) == 0 && m.loadingDetail {
 			b.WriteString(loadingStyle.Render("Loading..."))
 			b.WriteString("\n")
 		} else if len(bd.Jobs) == 0 {
 			b.WriteString(dimStyle.Render("No jobs"))
 			b.WriteString("\n")
+		} else if len(jobs) == 0 {
+			b.WriteString(dimStyle.Render("No matching jobs"))
+			b.WriteString("\n")
 		} else {
-			for _, job := range bd.Jobs {
-				if job.Type == "waiter" {
-					continue
-				}
+			for _, job := range jobs {
 				label := job.Label
 				if label == "" {
 					label = job.Command
@@ -370,7 +400,13 @@ func (m Model) renderAnnotations() string {
 		b.WriteString(dimStyle.Render("No annotations"))
 		b.WriteString("\n")
 	} else {
-		for _, ann := range m.annotations {
+		annotations := m.filteredAnnotations()
+		if len(annotations) == 0 {
+			b.WriteString(dimStyle.Render("No matching annotations"))
+			b.WriteString("\n")
+			return b.String()
+		}
+		for _, ann := range annotations {
 			style := dimStyle
 			switch ann.Style {
 			case "success":
@@ -414,7 +450,13 @@ func (m Model) renderArtifacts(w int) string {
 		b.WriteString(dimStyle.Render("No artifacts"))
 		b.WriteString("\n")
 	} else {
-		for _, art := range m.artifacts {
+		artifacts := m.filteredArtifacts()
+		if len(artifacts) == 0 {
+			b.WriteString(dimStyle.Render("No matching artifacts"))
+			b.WriteString("\n")
+			return b.String()
+		}
+		for _, art := range artifacts {
 			filename := art.Filename
 			if len(filename) > w-15 {
 				filename = filename[:w-15] + "…"
@@ -436,8 +478,12 @@ func (m Model) statusBarView(w int) string {
 		parts = append(parts, errorStyle.Render(fmt.Sprintf("ERR: %s", m.errMsg)))
 	}
 
-	if m.searchMsg != "" {
+	if m.searchActive {
+		parts = append(parts, loadingStyle.Render("Search: "+m.searchQuery))
+	} else if m.searchMsg != "" {
 		parts = append(parts, loadingStyle.Render(m.searchMsg))
+	} else if m.hasSearch() {
+		parts = append(parts, loadingStyle.Render("Filter: "+m.searchQuery))
 	}
 
 	paneName := "Orgs/Pipes"
@@ -453,7 +499,7 @@ func (m Model) statusBarView(w int) string {
 		parts = append(parts, fmt.Sprintf("Updated: %s", m.lastRefresh.Format("15:04:05")))
 	}
 
-	parts = append(parts, helpStyle.Render("?:help  q:quit  r:refresh  tab:pane  g/G:top/bot"))
+	parts = append(parts, helpStyle.Render("?:help  /:search  q:quit  r:refresh  tab:pane  g/G:top/bot"))
 
 	return statusStyle.Width(w).Render(strings.Join(parts, "  │  "))
 }
@@ -475,7 +521,8 @@ func (m Model) helpView() string {
 	b.WriteString("\n")
 	b.WriteString("Actions:\n")
 	b.WriteString("  r           Refresh all data\n")
-	b.WriteString("  /           Search (not yet implemented)\n")
+	b.WriteString("  /           Search/filter visible lists\n")
+	b.WriteString("  esc/enter   Close search prompt\n")
 	b.WriteString("  ?           Toggle this help\n")
 	b.WriteString("  q           Quit\n")
 	b.WriteString("\n")

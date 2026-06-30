@@ -55,12 +55,14 @@ type Model struct {
 	err    error
 	errMsg string
 
-	lastRefresh time.Time
-	showHelp    bool
-	searchMsg   string
-	ready       bool
-	width       int
-	height      int
+	lastRefresh  time.Time
+	showHelp     bool
+	searchActive bool
+	searchQuery  string
+	searchMsg    string
+	ready        bool
+	width        int
+	height       int
 
 	leftScroll   int
 	centerScroll int

@@ -135,6 +135,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if m.searchActive {
+		return m.handleSearchKey(msg)
+	}
+
 	switch {
 	case key.Matches(msg, keys.Quit):
 		return m, tea.Quit
@@ -171,7 +175,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case key.Matches(msg, keys.Search):
-		m.searchMsg = "search not implemented yet"
+		m.searchActive = true
+		m.searchMsg = ""
 		return m, nil
 	}
 
@@ -179,9 +184,42 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc, tea.KeyEnter:
+		m.searchActive = false
+		return m, nil
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyBackspace, tea.KeyCtrlH:
+		if len(m.searchQuery) > 0 {
+			runes := []rune(m.searchQuery)
+			m.searchQuery = string(runes[:len(runes)-1])
+		}
+	case tea.KeyRunes:
+		m.searchQuery += string(msg.Runes)
+	case tea.KeySpace:
+		m.searchQuery += " "
+	default:
+		return m, nil
+	}
+	cmds := m.ensureSelectionVisible()
+	return m, tea.Batch(cmds...)
+}
+
 func (m Model) moveUp() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.hasSearch() {
+			if indexes := m.filteredPipelineIndexes(); len(indexes) > 0 {
+				pos := positionInIndexes(indexes, m.pipeIndex)
+				if pos > 0 {
+					m.pipeIndex = indexes[pos-1]
+					return m, m.onPipelineChange()
+				}
+			}
+			return m, nil
+		}
 		if m.pipeIndex > 0 {
 			m.pipeIndex--
 			return m, m.onPipelineChange()
@@ -191,6 +229,17 @@ func (m Model) moveUp() (tea.Model, tea.Cmd) {
 			return m, m.onOrgChange()
 		}
 	case centerPane:
+		if m.hasSearch() {
+			if indexes := m.filteredBuildIndexes(); len(indexes) > 0 {
+				pos := positionInIndexes(indexes, m.buildIndex)
+				if pos > 0 {
+					m.buildIndex = indexes[pos-1]
+					cmds := m.onBuildIndexChanged()
+					return m, tea.Batch(cmds...)
+				}
+			}
+			return m, nil
+		}
 		if m.buildIndex > 0 {
 			m.buildIndex--
 			cmds := m.onBuildIndexChanged()
@@ -207,6 +256,16 @@ func (m Model) moveUp() (tea.Model, tea.Cmd) {
 func (m Model) moveDown() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.hasSearch() {
+			if indexes := m.filteredPipelineIndexes(); len(indexes) > 0 {
+				pos := positionInIndexes(indexes, m.pipeIndex)
+				if pos >= 0 && pos < len(indexes)-1 {
+					m.pipeIndex = indexes[pos+1]
+					return m, m.onPipelineChange()
+				}
+			}
+			return m, nil
+		}
 		if m.pipeIndex < len(m.pipelines)-1 {
 			m.pipeIndex++
 			return m, m.onPipelineChange()
@@ -216,6 +275,17 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 			return m, m.onOrgChange()
 		}
 	case centerPane:
+		if m.hasSearch() {
+			if indexes := m.filteredBuildIndexes(); len(indexes) > 0 {
+				pos := positionInIndexes(indexes, m.buildIndex)
+				if pos >= 0 && pos < len(indexes)-1 {
+					m.buildIndex = indexes[pos+1]
+					cmds := m.onBuildIndexChanged()
+					return m, tea.Batch(cmds...)
+				}
+			}
+			return m, nil
+		}
 		if m.buildIndex < len(m.builds)-1 {
 			m.buildIndex++
 			cmds := m.onBuildIndexChanged()
@@ -230,10 +300,25 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 func (m Model) jumpTop() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.hasSearch() {
+			if indexes := m.filteredPipelineIndexes(); len(indexes) > 0 {
+				m.pipeIndex = indexes[0]
+				return m, m.onPipelineChange()
+			}
+			return m, nil
+		}
 		m.orgIndex = 0
 		m.pipeIndex = 0
 		return m, m.onPipelineChange()
 	case centerPane:
+		if m.hasSearch() {
+			if indexes := m.filteredBuildIndexes(); len(indexes) > 0 {
+				m.buildIndex = indexes[0]
+				cmds := m.onBuildIndexChanged()
+				return m, tea.Batch(cmds...)
+			}
+			return m, nil
+		}
 		if len(m.builds) > 0 {
 			m.buildIndex = 0
 			cmds := m.onBuildIndexChanged()
@@ -248,12 +333,27 @@ func (m Model) jumpTop() (tea.Model, tea.Cmd) {
 func (m Model) jumpBottom() (tea.Model, tea.Cmd) {
 	switch m.activePane {
 	case leftPane:
+		if m.hasSearch() {
+			if indexes := m.filteredPipelineIndexes(); len(indexes) > 0 {
+				m.pipeIndex = indexes[len(indexes)-1]
+				return m, m.onPipelineChange()
+			}
+			return m, nil
+		}
 		if len(m.orgs) > 0 {
 			m.orgIndex = len(m.orgs) - 1
 		}
 		m.pipeIndex = 0
 		return m, m.onOrgChange()
 	case centerPane:
+		if m.hasSearch() {
+			if indexes := m.filteredBuildIndexes(); len(indexes) > 0 {
+				m.buildIndex = indexes[len(indexes)-1]
+				cmds := m.onBuildIndexChanged()
+				return m, tea.Batch(cmds...)
+			}
+			return m, nil
+		}
 		if len(m.builds) > 0 {
 			m.buildIndex = len(m.builds) - 1
 			cmds := m.onBuildIndexChanged()
@@ -350,6 +450,31 @@ func (m *Model) refresh() tea.Cmd {
 	m.annotsInFlight = false
 	m.artifactsInFlight = false
 	return loadOrgsCmd(m.client)
+}
+
+func (m *Model) ensureSelectionVisible() []tea.Cmd {
+	if !m.hasSearch() {
+		return nil
+	}
+	switch m.activePane {
+	case leftPane:
+		indexes := m.filteredPipelineIndexes()
+		if len(indexes) == 0 || positionInIndexes(indexes, m.pipeIndex) >= 0 {
+			return nil
+		}
+		m.pipeIndex = indexes[0]
+		if cmd := m.onPipelineChange(); cmd != nil {
+			return []tea.Cmd{cmd}
+		}
+	case centerPane:
+		indexes := m.filteredBuildIndexes()
+		if len(indexes) == 0 || positionInIndexes(indexes, m.buildIndex) >= 0 {
+			return nil
+		}
+		m.buildIndex = indexes[0]
+		return m.onBuildIndexChanged()
+	}
+	return nil
 }
 
 func (m *Model) resetBuildState() {
