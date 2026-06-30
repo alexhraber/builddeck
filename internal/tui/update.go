@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -67,6 +68,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.errMsg = "failed to load builds"
+			m.pendingLogsForLatestBuild = false
 			return m, nil
 		}
 		prevBuildNumber := 0
@@ -84,15 +86,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedBuild = nil
 					m.annotations = nil
 					m.artifacts = nil
+					m.pendingLogsForLatestBuild = false
 					return m, nil
 				}
 				if !containsIndex(indices, m.buildIndex) {
 					m.buildIndex = indices[0]
 				}
 			}
+
+			if m.pendingLogsForLatestBuild {
+				m.pendingLogsForLatestBuild = false
+				m.buildIndex = 0
+				m.selectedBuild = &m.builds[0]
+				m.showLogs = true
+				m.logScroll = 0
+				
+				var targetJob *buildkite.Job
+				for i := range m.selectedBuild.Jobs {
+					if m.selectedBuild.Jobs[i].Type != "waiter" {
+						targetJob = &m.selectedBuild.Jobs[i]
+						break
+					}
+				}
+				
+				var cmds []tea.Cmd
+				cmds = append(cmds, m.onBuildIndexChanged()...)
+				
+				if targetJob != nil {
+					m.logJobID = targetJob.ID
+					m.ensureCachesInitialized()
+					if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+						m.currentLog = cachedLog
+						m.loadingLog = false
+					} else {
+						m.currentLog = ""
+						m.loadingLog = true
+						org := m.selectedOrg()
+						pipe := m.selectedPipeline()
+						cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetJob.ID))
+					}
+				} else {
+					m.logJobID = ""
+					m.currentLog = ""
+					m.loadingLog = true
+				}
+				return m, tea.Batch(cmds...)
+			}
+
 			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
+		m.pendingLogsForLatestBuild = false
 		m.selectedBuild = nil
 		m.annotations = nil
 		m.artifacts = nil
@@ -106,6 +150,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.buildDetails[msg.buildID] = msg.build
 			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
 				m.selectedBuild = msg.build
+				if m.showLogs && m.logJobID == "" {
+					var targetJob *buildkite.Job
+					for i := range msg.build.Jobs {
+						if msg.build.Jobs[i].Type != "waiter" {
+							targetJob = &msg.build.Jobs[i]
+							break
+						}
+					}
+					if targetJob != nil {
+						m.logJobID = targetJob.ID
+						m.logScroll = 0
+						if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+							m.currentLog = cachedLog
+							m.loadingLog = false
+						} else {
+							m.currentLog = ""
+							m.loadingLog = true
+							org := m.selectedOrg()
+							pipe := m.selectedPipeline()
+							return m, loadLogCmd(m.client, org.Slug, pipe.Slug, msg.build.Number, targetJob.ID)
+						}
+					} else {
+						m.currentLog = "No jobs found for this build"
+						m.loadingLog = false
+					}
+				}
 			}
 		}
 		return m, nil
@@ -141,6 +211,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case logLoadedMsg:
+		m.loadingLog = false
+		if msg.err != nil {
+			m.err = msg.err
+			m.errMsg = "failed to load logs"
+			m.currentLog = "Error loading logs: " + msg.err.Error()
+			return m, nil
+		}
+		m.ensureCachesInitialized()
+		m.jobLogs[msg.jobID] = msg.log
+		if m.showLogs && m.logJobID == msg.jobID {
+			m.currentLog = msg.log
+		}
+		return m, nil
+
 	case tickMsg:
 		cmds := []tea.Cmd{tickCmd()}
 		org := m.selectedOrg()
@@ -167,6 +252,142 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.showHelp {
 		if key.Matches(msg, keys.Help) || key.Matches(msg, keys.Quit) || msg.String() == "esc" {
 			m.showHelp = false
+			return m, nil
+		}
+		return m, nil
+	}
+
+	if key.Matches(msg, keys.Logs) {
+		if m.showLogs {
+			m.showLogs = false
+			return m, nil
+		}
+		
+		if m.activePane == leftPane {
+			org := m.selectedOrg()
+			pipe := m.selectedPipeline()
+			if org == nil || pipe == nil {
+				m.searchMsg = "No pipeline selected"
+				return m, nil
+			}
+
+			if len(m.builds) > 0 {
+				m.showLogs = true
+				m.logScroll = 0
+				m.buildIndex = 0
+				m.selectedBuild = &m.builds[0]
+				
+				var targetJob *buildkite.Job
+				for i := range m.selectedBuild.Jobs {
+					if m.selectedBuild.Jobs[i].Type != "waiter" {
+						targetJob = &m.selectedBuild.Jobs[i]
+						break
+					}
+				}
+				
+				if targetJob == nil {
+					m.logJobID = ""
+					m.currentLog = ""
+					m.loadingLog = true
+					cmd := m.loadSelectedBuildDetailsForce()
+					return m, cmd
+				}
+				
+				m.logJobID = targetJob.ID
+				m.ensureCachesInitialized()
+				if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+					m.currentLog = cachedLog
+					m.loadingLog = false
+					return m, nil
+				}
+				
+				m.currentLog = ""
+				m.loadingLog = true
+				return m, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetJob.ID)
+			}
+
+			m.pendingLogsForLatestBuild = true
+			if !m.buildsInFlight && !m.loadingBuilds {
+				m.loadingBuilds = true
+				m.buildsInFlight = true
+				return m, loadBuildsCmd(m.client, org.Slug, pipe.Slug)
+			}
+			return m, nil
+		}
+
+		b := m.selectedBuildEntry()
+		if b == nil {
+			m.searchMsg = "No build selected to show logs"
+			return m, nil
+		}
+		m.showLogs = true
+		m.logScroll = 0
+		m.selectedBuild = b
+		var targetJob *buildkite.Job
+		for i := range b.Jobs {
+			if b.Jobs[i].Type != "waiter" {
+				targetJob = &b.Jobs[i]
+				break
+			}
+		}
+		if targetJob == nil {
+			if m.loadingDetail || len(b.Jobs) == 0 {
+				m.logJobID = ""
+				m.currentLog = ""
+				m.loadingLog = true
+				var cmd tea.Cmd
+				if !m.detailInFlight && !m.loadingDetail {
+					cmd = m.loadSelectedBuildDetailsForce()
+				}
+				return m, cmd
+			}
+			m.searchMsg = "No jobs found for this build"
+			m.showLogs = false
+			return m, nil
+		}
+		m.logJobID = targetJob.ID
+		m.ensureCachesInitialized()
+		if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+			m.currentLog = cachedLog
+			m.loadingLog = false
+			return m, nil
+		}
+		m.currentLog = ""
+		m.loadingLog = true
+		org := m.selectedOrg()
+		pipe := m.selectedPipeline()
+		return m, loadLogCmd(m.client, org.Slug, pipe.Slug, b.Number, targetJob.ID)
+	}
+
+	if m.showLogs {
+		switch {
+		case key.Matches(msg, keys.Quit):
+			return m, tea.Quit
+		case key.Matches(msg, keys.Up):
+			if m.logScroll > 0 {
+				m.logScroll--
+			}
+			return m, nil
+		case key.Matches(msg, keys.Down):
+			lines := strings.Split(m.currentLog, "\n")
+			maxScroll := len(lines) - (m.height - 2)
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+			if m.logScroll < maxScroll {
+				m.logScroll++
+			}
+			return m, nil
+		case key.Matches(msg, keys.Top):
+			m.logScroll = 0
+			return m, nil
+		case key.Matches(msg, keys.Bottom):
+			lines := strings.Split(m.currentLog, "\n")
+			maxScroll := len(lines) - (m.height - 2)
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+			m.logScroll = maxScroll
 			return m, nil
 		}
 		return m, nil
@@ -583,4 +804,20 @@ func indexPosition(indices []int, idx int) int {
 
 func containsIndex(indices []int, idx int) bool {
 	return indexPosition(indices, idx) >= 0
+}
+
+type logLoadedMsg struct {
+	jobID string
+	log   string
+	err   error
+}
+
+func loadLogCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+	return func() tea.Msg {
+		log, err := client.GetJobLog(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
+		if err != nil {
+			return logLoadedMsg{jobID: jobID, err: err}
+		}
+		return logLoadedMsg{jobID: jobID, log: log.Content, err: nil}
+	}
 }

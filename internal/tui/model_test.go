@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestIsTerminalState(t *testing.T) {
@@ -96,3 +97,119 @@ func TestModelCachingAndDebouncing(t *testing.T) {
 		t.Errorf("Expected buildSelectionSeq to increment to 1, got %d", m.buildSelectionSeq)
 	}
 }
+
+func TestLogsToggle(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+
+	// 1. Pressing L with no build selected
+	m1, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
+	model1 := m1.(Model)
+	if model1.showLogs {
+		t.Error("Expected showLogs to remain false when no build is selected")
+	}
+	if model1.searchMsg == "" {
+		t.Error("Expected error search message when logs requested with no build")
+	}
+
+	// 2. Select a build and toggle logs
+	build := buildkite.Build{ID: "build-1", Number: 10, State: "running"}
+	m.builds = []buildkite.Build{build}
+	m.buildIndex = 0
+	m.selectedBuild = &build
+	m.orgs = []buildkite.Organization{{Slug: "org"}}
+	m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
+	m.loadingDetail = true
+	m.activePane = centerPane
+
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
+	model2 := m2.(Model)
+	if !model2.showLogs {
+		t.Error("Expected showLogs to be true after pressing L")
+	}
+	if !model2.loadingLog {
+		t.Error("Expected loadingLog to be true since build has no jobs initially")
+	}
+
+	// 3. Simulate build detail loaded with jobs
+	buildWithJobs := buildkite.Build{
+		ID:     "build-1",
+		Number: 10,
+		State:  "running",
+		Jobs: []buildkite.Job{
+			{ID: "job-wait", Type: "waiter"},
+			{ID: "job-run", Type: "script", Label: "Run tests"},
+		},
+	}
+	m2Detail, cmd := model2.Update(buildDetailMsg{
+		buildID: "build-1",
+		build:   &buildWithJobs,
+	})
+	modelDetail := m2Detail.(Model)
+	if modelDetail.logJobID != "job-run" {
+		t.Errorf("Expected logJobID to be job-run, got %s", modelDetail.logJobID)
+	}
+	if cmd == nil {
+		t.Error("Expected command to load logs after jobs are loaded")
+	}
+
+	// 4. Simulate log loaded
+	mLoaded, _ := modelDetail.Update(logLoadedMsg{
+		jobID: "job-run",
+		log:   "test output",
+	})
+	modelLoaded := mLoaded.(Model)
+	if modelLoaded.loadingLog {
+		t.Error("Expected loadingLog to be false after log is loaded")
+	}
+	if modelLoaded.currentLog != "test output" {
+		t.Errorf("Expected currentLog to be 'test output', got %s", modelLoaded.currentLog)
+	}
+
+	// 5. Toggle logs off
+	m3, _ := modelLoaded.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
+	model3 := m3.(Model)
+	if model3.showLogs {
+		t.Error("Expected showLogs to be false after pressing L again")
+	}
+}
+
+func TestLogsToggleLeftPane(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+
+	m.orgs = []buildkite.Organization{{Slug: "org"}}
+	m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
+	m.activePane = leftPane
+
+	// Press L on left pane -> builds not loaded
+	m1, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
+	model1 := m1.(Model)
+	if model1.showLogs {
+		t.Error("Expected showLogs to remain false until builds load")
+	}
+	if !model1.pendingLogsForLatestBuild {
+		t.Error("Expected pendingLogsForLatestBuild to be true")
+	}
+	if cmd == nil {
+		t.Error("Expected loadBuildsCmd to be triggered")
+	}
+
+	// Simulate builds loaded
+	builds := []buildkite.Build{
+		{ID: "build-latest", Number: 20, State: "passed", Jobs: []buildkite.Job{{ID: "job-1", Type: "script"}}},
+		{ID: "build-old", Number: 19, State: "passed"},
+	}
+	m2, _ := model1.Update(buildsLoadedMsg{builds: builds})
+	model2 := m2.(Model)
+	if !model2.showLogs {
+		t.Error("Expected showLogs to be true after builds load")
+	}
+	if model2.buildIndex != 0 || model2.selectedBuild.ID != "build-latest" {
+		t.Errorf("Expected latest build to be selected, got index %d ID %s", model2.buildIndex, model2.selectedBuild.ID)
+	}
+	if model2.logJobID != "job-1" {
+		t.Errorf("Expected logJobID to be job-1, got %s", model2.logJobID)
+	}
+}
+
