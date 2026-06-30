@@ -16,6 +16,9 @@ type keyMap struct {
 	Refresh  key.Binding
 	Help     key.Binding
 	Logs     key.Binding
+	RetryJob key.Binding
+	Rebuild  key.Binding
+	Cancel   key.Binding
 	Quit     key.Binding
 }
 
@@ -61,8 +64,8 @@ var keys = keyMap{
 		key.WithHelp("/", "search"),
 	),
 	Refresh: key.NewBinding(
-		key.WithKeys("r"),
-		key.WithHelp("r", "refresh"),
+		key.WithKeys("R"),
+		key.WithHelp("R", "refresh"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
@@ -71,6 +74,18 @@ var keys = keyMap{
 	Logs: key.NewBinding(
 		key.WithKeys("L"),
 		key.WithHelp("L", "logs"),
+	),
+	RetryJob: key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "retry job"),
+	),
+	Rebuild: key.NewBinding(
+		key.WithKeys("b"),
+		key.WithHelp("b", "rebuild"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("x"),
+		key.WithHelp("x", "cancel"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
@@ -81,7 +96,7 @@ var keys = keyMap{
 func (k keyMap) ShortHelp() []key.Binding {
 	return []key.Binding{
 		k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab,
-		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh, k.Logs, k.Help, k.Quit,
+		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh, k.Logs, k.RetryJob, k.Rebuild, k.Cancel, k.Help, k.Quit,
 	}
 }
 
@@ -90,6 +105,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.Tab, k.ShiftTab, k.Enter},
 		{k.Top, k.Bottom, k.Search, k.Refresh, k.Logs},
+		{k.RetryJob, k.Rebuild, k.Cancel},
 		{k.Help, k.Quit},
 	}
 }

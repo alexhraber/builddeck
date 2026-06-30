@@ -350,6 +350,7 @@ func (m Model) rightPaneView(w, h int) string {
 			b.WriteString(dimStyle.Render("No matching jobs"))
 			b.WriteString("\n")
 		} else {
+			jobIndex := 0
 			for _, job := range jobs {
 				if job.Type == "waiter" {
 					continue
@@ -361,19 +362,29 @@ func (m Model) rightPaneView(w, h int) string {
 				if len(label) > w-20 {
 					label = label[:w-20]
 				}
-				b.WriteString(fmt.Sprintf(" %s %s", stateBadge(job.State), label))
+				cursor := "  "
+				if m.activePane == rightPane && jobIndex == m.rightScroll {
+					cursor = "▶ "
+				}
+				line := fmt.Sprintf("%s%s %s", cursor, stateBadge(job.State), label)
 
 				if job.Agent != nil {
-					b.WriteString(dimStyle.Render(fmt.Sprintf(" [%s]", job.Agent.Name)))
+					line += dimStyle.Render(fmt.Sprintf(" [%s]", job.Agent.Name))
 				}
 				if job.ExitStatus != nil {
 					exitStyle := dimStyle
 					if *job.ExitStatus != 0 {
 						exitStyle = errorStyle
 					}
-					b.WriteString(exitStyle.Render(fmt.Sprintf(" exit:%d", *job.ExitStatus)))
+					line += exitStyle.Render(fmt.Sprintf(" exit:%d", *job.ExitStatus))
+				}
+				if m.activePane == rightPane && jobIndex == m.rightScroll {
+					b.WriteString(selectedItemStyle.Render(line))
+				} else {
+					b.WriteString(normalItemStyle.Render(line))
 				}
 				b.WriteString("\n")
+				jobIndex++
 			}
 		}
 
@@ -486,7 +497,7 @@ func (m Model) statusBarView(w int) string {
 		parts = append(parts, fmt.Sprintf("Updated: %s", m.lastRefresh.Format("15:04:05")))
 	}
 
-	parts = append(parts, helpStyle.Render("?:help  q:quit  r:refresh  tab:pane  g/G:top/bot"))
+	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x:actions  tab:pane  g/G:top/bot"))
 
 	return statusStyle.Width(w).Render(strings.Join(parts, "  │  "))
 }
@@ -507,7 +518,11 @@ func (m Model) helpView() string {
 	b.WriteString("  enter       Select / drill down\n")
 	b.WriteString("\n")
 	b.WriteString("Actions:\n")
-	b.WriteString("  r           Refresh all data\n")
+	b.WriteString("  R           Refresh all data\n")
+	b.WriteString("  r           Retry selected/top job\n")
+	b.WriteString("  b           Rebuild selected/top build\n")
+	b.WriteString("  x           Cancel selected/top running build\n")
+	b.WriteString("  L           Tail selected/top job logs\n")
 	b.WriteString("  /           Filter active pane\n")
 	b.WriteString("  esc/enter   Close filter input\n")
 	b.WriteString("  ctrl+u      Clear filter input\n")
@@ -515,12 +530,8 @@ func (m Model) helpView() string {
 	b.WriteString("  q           Quit\n")
 	b.WriteString("\n")
 	b.WriteString("Planned (not yet implemented):\n")
-	b.WriteString("  x           Cancel build\n")
-	b.WriteString("  R           Retry job\n")
-	b.WriteString("  b           Rebuild build\n")
 	b.WriteString("  u           Unblock job\n")
 	b.WriteString("  o           Open in browser\n")
-	b.WriteString("  l           Tail logs\n")
 	b.WriteString("  d           Download artifact\n")
 	b.WriteString("\n\n")
 	b.WriteString(dimStyle.Render("Press ? or esc to close"))
@@ -644,10 +655,9 @@ func (m Model) logsView() string {
 		statusParts = append(statusParts, fmt.Sprintf("Line %d/%d (%d%%)", m.logScroll+1, len(lines), scrollPercent))
 	}
 
-	statusParts = append(statusParts, helpStyle.Render("L:back  ↑/k:up  ↓/j:down  g:top  G:bottom  q:quit"))
+	statusParts = append(statusParts, helpStyle.Render("L/esc:back  ↑/k:up  ↓/j:down  g:top  G:bottom  q:quit"))
 
 	b.WriteString(statusStyle.Width(m.width).Render(strings.Join(statusParts, "  │  ")))
 
 	return b.String()
 }
-

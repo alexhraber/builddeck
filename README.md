@@ -44,7 +44,7 @@ Required scopes:
 
 If the token is missing, `builddeck` will exit immediately with a clear error message.
 
-## Current Features (Read-Only)
+## Current Features
 
 ### Data Loaded
 - **Organizations** — browse all orgs you have access to
@@ -52,9 +52,11 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Builds** — recent 25 builds per pipeline with build health summary
 - **Build Detail** — full metadata: state, branch, commit, message, creator, timestamps, duration
 - **Jobs** — all jobs for the selected build with state, label, agent, exit status
+- **Logs** — tail the selected/top job log in a dedicated log pane
 - **Annotations** — build annotations (info, warning, error, success styles)
 - **Artifacts** — build artifacts with filename and size
 - **Agents** — organization agent listing (available in API client)
+- **Buildkite actions** — retry jobs, rebuild builds, and cancel running builds from the TUI
 
 ### TUI
 - **Three-pane layout** — orgs/pipelines | builds | detail+jobs+annotations+artifacts
@@ -80,7 +82,11 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `g` | Jump to top of active list |
 | `G` | Jump to bottom of active list |
 | `enter` | Select / drill down |
-| `r` | Refresh all data |
+| `R` | Refresh all data |
+| `L` | Tail selected/top job logs; press `L` or `esc` to return |
+| `r` | Retry selected/top job |
+| `b` | Rebuild selected/top build |
+| `x` | Cancel selected/top running build |
 | `/` | Filter active pane |
 | `esc` / `enter` | Close filter input |
 | `ctrl+u` | Clear filter input |
@@ -90,9 +96,15 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 ### Refresh Behavior
 - Polls selected pipeline builds every 5 seconds
 - In-flight guards prevent duplicate concurrent requests
-- Manual refresh (`r`) is always responsive
+- Manual refresh (`R`) is always responsive
 - Current selection preserved across refreshes when possible
 - Falls back gracefully if selected items disappear
+
+### Action Targeting
+- On the org/pipeline pane, `L`, `r`, `b`, and `x` target the top/latest build for the selected pipeline
+- On the builds pane, actions target the highlighted build
+- On the detail pane, `r` targets the highlighted job, while `b` and `x` target the selected build
+- `x` only sends a cancel request for builds currently reported as running
 
 ### Data Flow
 - Changing organization resets pipelines, builds, jobs, annotations, artifacts
@@ -123,15 +135,13 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 │                 │                          │  Artifacts           │
 │                 │                          │   • log.txt (1.2KB)  │
 ├─────────────────┴──────────────────────────┴──────────────────────┤
-│ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit r:refresh ...    │
+│ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit R:refresh ...    │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
 ## Known Limitations
 
-- **Read-only** — no retry, cancel, rebuild, unblock, or other mutating actions
 - **REST API only** — GraphQL support planned for more efficient nested queries
-- **No log tailing** — build log streaming is not yet supported
 - **No artifact download** — only listing; download is not yet implemented
 - **No config file** — authentication is via environment variable only
 - **Limited pagination** — builds show first 25; pipelines and agents paginate up to 500
@@ -141,9 +151,6 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 
 ## Planned Next Features
 
-- **Log tailing** — stream build/job logs in a sub-pane or split view
-- **Retry / rebuild** — `R` to retry a job, `b` to rebuild a build
-- **Cancel builds** — `x` to cancel a running build
 - **Unblock jobs** — `u` to unblock a blocked job
 - **Open in browser** — `o` to open the current resource in the Buildkite web UI
 - **Artifact download** — `d` to download an artifact
