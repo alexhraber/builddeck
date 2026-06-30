@@ -46,6 +46,7 @@ type Model struct {
 	loadingDetail      bool
 	loadingAnnotations bool
 	loadingArtifacts   bool
+	actionInFlight     bool
 
 	buildsInFlight    bool
 	detailInFlight    bool
@@ -75,7 +76,6 @@ type Model struct {
 	currentLog                string
 	logJobID                  string
 	pendingLogsForLatestBuild bool
-
 
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
@@ -127,7 +127,7 @@ type annotationsLoadedMsg struct {
 type artifactsLoadedMsg struct {
 	buildID   string
 	artifacts []buildkite.Artifact
-	err         error
+	err       error
 }
 
 type buildSelectionDebounceMsg struct {
@@ -135,6 +135,14 @@ type buildSelectionDebounceMsg struct {
 }
 
 type tickMsg time.Time
+
+type buildAction string
+
+const (
+	actionRetryJob buildAction = "retry job"
+	actionRebuild  buildAction = "rebuild"
+	actionCancel   buildAction = "cancel"
+)
 
 func isTerminalState(state string) bool {
 	switch state {

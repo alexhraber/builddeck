@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -10,6 +11,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+var errNoRetryableJob = errors.New("no retryable job found")
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(loadOrgsCmd(m.client), tickCmd())
@@ -100,7 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedBuild = &m.builds[0]
 				m.showLogs = true
 				m.logScroll = 0
-				
+
 				var targetJob *buildkite.Job
 				for i := range m.selectedBuild.Jobs {
 					if m.selectedBuild.Jobs[i].Type != "waiter" {
@@ -108,10 +111,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						break
 					}
 				}
-				
+
 				var cmds []tea.Cmd
 				cmds = append(cmds, m.onBuildIndexChanged()...)
-				
+
 				if targetJob != nil {
 					m.logJobID = targetJob.ID
 					m.ensureCachesInitialized()
@@ -226,6 +229,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case buildActionMsg:
+		m.actionInFlight = false
+		if msg.err != nil {
+			m.err = msg.err
+			m.errMsg = "failed to " + string(msg.action)
+			return m, nil
+		}
+		m.err = nil
+		m.errMsg = ""
+		switch msg.action {
+		case actionRetryJob:
+			m.searchMsg = "Retry queued"
+		case actionRebuild:
+			m.searchMsg = "Rebuild queued"
+		case actionCancel:
+			m.searchMsg = "Cancel requested"
+		}
+		return m, m.refreshBuilds()
+
 	case tickMsg:
 		cmds := []tea.Cmd{tickCmd()}
 		org := m.selectedOrg()
@@ -262,7 +284,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.showLogs = false
 			return m, nil
 		}
-		
+
 		if m.activePane == leftPane {
 			org := m.selectedOrg()
 			pipe := m.selectedPipeline()
@@ -276,7 +298,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.logScroll = 0
 				m.buildIndex = 0
 				m.selectedBuild = &m.builds[0]
-				
+
 				var targetJob *buildkite.Job
 				for i := range m.selectedBuild.Jobs {
 					if m.selectedBuild.Jobs[i].Type != "waiter" {
@@ -284,7 +306,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 						break
 					}
 				}
-				
+
 				if targetJob == nil {
 					m.logJobID = ""
 					m.currentLog = ""
@@ -292,7 +314,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					cmd := m.loadSelectedBuildDetailsForce()
 					return m, cmd
 				}
-				
+
 				m.logJobID = targetJob.ID
 				m.ensureCachesInitialized()
 				if cachedLog, has := m.jobLogs[targetJob.ID]; has {
@@ -300,7 +322,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.loadingLog = false
 					return m, nil
 				}
-				
+
 				m.currentLog = ""
 				m.loadingLog = true
 				return m, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetJob.ID)
@@ -361,6 +383,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	if m.showLogs {
 		switch {
+		case msg.String() == "esc":
+			m.showLogs = false
+			return m, nil
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, keys.Up):
@@ -403,6 +428,18 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, keys.Refresh):
 		cmd := m.refresh()
+		return m, cmd
+
+	case key.Matches(msg, keys.RetryJob):
+		cmd := m.retrySelectedJob()
+		return m, cmd
+
+	case key.Matches(msg, keys.Rebuild):
+		cmd := m.rebuildSelectedBuild()
+		return m, cmd
+
+	case key.Matches(msg, keys.Cancel):
+		cmd := m.cancelSelectedBuild()
 		return m, cmd
 
 	case key.Matches(msg, keys.Tab), key.Matches(msg, keys.Right):
@@ -542,7 +579,13 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmds...)
 		}
 	case rightPane:
-		m.rightScroll++
+		maxScroll := len(m.visibleRunnableJobs()) - 1
+		if maxScroll < 0 {
+			maxScroll = 0
+		}
+		if m.rightScroll < maxScroll {
+			m.rightScroll++
+		}
 	}
 	return m, nil
 }
@@ -634,6 +677,17 @@ func (m *Model) onPipelineChange() tea.Cmd {
 	return nil
 }
 
+func (m *Model) refreshBuilds() tea.Cmd {
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	if org == nil || pipe == nil {
+		return nil
+	}
+	m.loadingBuilds = true
+	m.buildsInFlight = true
+	return loadBuildsCmd(m.client, org.Slug, pipe.Slug)
+}
+
 func (m *Model) onBuildIndexChanged() []tea.Cmd {
 	m.ensureCachesInitialized()
 
@@ -720,6 +774,109 @@ func (m *Model) onEnter() tea.Cmd {
 	return nil
 }
 
+func (m *Model) retrySelectedJob() tea.Cmd {
+	if m.actionInFlight {
+		m.searchMsg = "Action already in flight"
+		return nil
+	}
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	build := m.actionBuild()
+	if org == nil || pipe == nil || build == nil {
+		m.searchMsg = "No build selected to retry"
+		return nil
+	}
+
+	jobID := ""
+	if m.activePane == rightPane {
+		job := m.selectedRightPaneJob()
+		if job == nil {
+			m.searchMsg = "No job selected to retry"
+			return nil
+		}
+		jobID = job.ID
+	} else if job := firstRunnableJob(build.Jobs); job != nil {
+		jobID = job.ID
+	}
+
+	m.actionInFlight = true
+	m.searchMsg = "Retrying job..."
+	return retryJobCmd(m.client, org.Slug, pipe.Slug, build.Number, jobID)
+}
+
+func (m *Model) rebuildSelectedBuild() tea.Cmd {
+	if m.actionInFlight {
+		m.searchMsg = "Action already in flight"
+		return nil
+	}
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	build := m.actionBuild()
+	if org == nil || pipe == nil || build == nil {
+		m.searchMsg = "No build selected to rebuild"
+		return nil
+	}
+
+	m.actionInFlight = true
+	m.searchMsg = "Rebuilding build..."
+	return rebuildBuildCmd(m.client, org.Slug, pipe.Slug, build.Number)
+}
+
+func (m *Model) cancelSelectedBuild() tea.Cmd {
+	if m.actionInFlight {
+		m.searchMsg = "Action already in flight"
+		return nil
+	}
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	build := m.actionBuild()
+	if org == nil || pipe == nil || build == nil {
+		m.searchMsg = "No build selected to cancel"
+		return nil
+	}
+	if build.State != "running" {
+		m.searchMsg = "Only running builds can be canceled"
+		return nil
+	}
+
+	m.actionInFlight = true
+	m.searchMsg = "Canceling build..."
+	return cancelBuildCmd(m.client, org.Slug, pipe.Slug, build.Number)
+}
+
+func (m Model) actionBuild() *buildkite.Build {
+	if m.activePane == leftPane {
+		if len(m.builds) == 0 {
+			return nil
+		}
+		return &m.builds[0]
+	}
+	if m.activePane == rightPane && m.selectedBuild != nil {
+		return m.selectedBuild
+	}
+	return m.selectedBuildEntry()
+}
+
+func (m Model) selectedRightPaneJob() *buildkite.Job {
+	jobs := m.visibleRunnableJobs()
+	if m.rightScroll < 0 || m.rightScroll >= len(jobs) {
+		return nil
+	}
+	return &jobs[m.rightScroll]
+}
+
+func (m Model) visibleRunnableJobs() []buildkite.Job {
+	filtered := m.filteredJobs()
+	jobs := make([]buildkite.Job, 0, len(filtered))
+	for _, job := range filtered {
+		if job.Type == "waiter" {
+			continue
+		}
+		jobs = append(jobs, job)
+	}
+	return jobs
+}
+
 func (m *Model) refresh() tea.Cmd {
 	m.loadingOrgs = true
 	m.resetBuildState()
@@ -793,6 +950,15 @@ func hasNoJobs(b *buildkite.Build) bool {
 	return b == nil || len(b.Jobs) == 0
 }
 
+func firstRunnableJob(jobs []buildkite.Job) *buildkite.Job {
+	for i := range jobs {
+		if jobs[i].Type != "waiter" {
+			return &jobs[i]
+		}
+	}
+	return nil
+}
+
 func indexPosition(indices []int, idx int) int {
 	for i, candidate := range indices {
 		if candidate == idx {
@@ -812,6 +978,13 @@ type logLoadedMsg struct {
 	err   error
 }
 
+type buildActionMsg struct {
+	action      buildAction
+	buildNumber int
+	jobID       string
+	err         error
+}
+
 func loadLogCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
 	return func() tea.Msg {
 		log, err := client.GetJobLog(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
@@ -819,5 +992,37 @@ func loadLogCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNum
 			return logLoadedMsg{jobID: jobID, err: err}
 		}
 		return logLoadedMsg{jobID: jobID, log: log.Content, err: nil}
+	}
+}
+
+func retryJobCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+	return func() tea.Msg {
+		if jobID == "" {
+			build, err := client.GetBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
+			if err != nil {
+				return buildActionMsg{action: actionRetryJob, buildNumber: buildNumber, err: err}
+			}
+			job := firstRunnableJob(build.Jobs)
+			if job == nil {
+				return buildActionMsg{action: actionRetryJob, buildNumber: buildNumber, err: errNoRetryableJob}
+			}
+			jobID = job.ID
+		}
+		err := client.RetryJob(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
+		return buildActionMsg{action: actionRetryJob, buildNumber: buildNumber, jobID: jobID, err: err}
+	}
+}
+
+func rebuildBuildCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int) tea.Cmd {
+	return func() tea.Msg {
+		_, err := client.RebuildBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
+		return buildActionMsg{action: actionRebuild, buildNumber: buildNumber, err: err}
+	}
+}
+
+func cancelBuildCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int) tea.Cmd {
+	return func() tea.Msg {
+		_, err := client.CancelBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
+		return buildActionMsg{action: actionCancel, buildNumber: buildNumber, err: err}
 	}
 }

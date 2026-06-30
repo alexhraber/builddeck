@@ -72,6 +72,40 @@ func (c *Client) get(ctx context.Context, path string, params map[string]string)
 	return &apiResponse{Body: body, Headers: resp.Header, NextPage: nextPage}, nil
 }
 
+func (c *Client) put(ctx context.Context, path string) (*apiResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.BaseURL+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request for %s: %w", path, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response from %s: %w", path, err)
+	}
+
+	if resp.StatusCode >= 400 {
+		var errResp ErrorResponse
+		if json.Unmarshal(body, &errResp) == nil && errResp.Message != "" {
+			return nil, fmt.Errorf("API %s (status %d): %s", path, resp.StatusCode, errResp.Message)
+		}
+		bodyStr := string(body)
+		if len(bodyStr) > 200 {
+			bodyStr = bodyStr[:200] + "..."
+		}
+		return nil, fmt.Errorf("API %s (status %d): %s", path, resp.StatusCode, bodyStr)
+	}
+
+	return &apiResponse{Body: body, Headers: resp.Header}, nil
+}
+
 func extractPageParam(urlStr string) int {
 	for _, prefix := range []string{"?page=", "&page="} {
 		if idx := strings.Index(urlStr, prefix); idx >= 0 {
@@ -187,6 +221,36 @@ func (c *Client) GetBuild(ctx context.Context, orgSlug, pipelineSlug string, bui
 	return &build, nil
 }
 
+func (c *Client) RebuildBuild(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int) (*Build, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/rebuild", orgSlug, pipelineSlug, buildNumber)
+	resp, err := c.put(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("rebuilding build %s/%s#%d: %w", orgSlug, pipelineSlug, buildNumber, err)
+	}
+	var build Build
+	if len(resp.Body) > 0 {
+		if err := json.Unmarshal(resp.Body, &build); err != nil {
+			return nil, fmt.Errorf("decoding rebuilt build %s/%s#%d: %w", orgSlug, pipelineSlug, buildNumber, err)
+		}
+	}
+	return &build, nil
+}
+
+func (c *Client) CancelBuild(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int) (*Build, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/cancel", orgSlug, pipelineSlug, buildNumber)
+	resp, err := c.put(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("canceling build %s/%s#%d: %w", orgSlug, pipelineSlug, buildNumber, err)
+	}
+	var build Build
+	if len(resp.Body) > 0 {
+		if err := json.Unmarshal(resp.Body, &build); err != nil {
+			return nil, fmt.Errorf("decoding canceled build %s/%s#%d: %w", orgSlug, pipelineSlug, buildNumber, err)
+		}
+	}
+	return &build, nil
+}
+
 func (c *Client) ListAgents(ctx context.Context, orgSlug string) ([]Agent, error) {
 	path := fmt.Sprintf("/organizations/%s/agents", orgSlug)
 	resp, err := c.get(ctx, path, map[string]string{"per_page": "100"})
@@ -244,3 +308,10 @@ func (c *Client) GetJobLog(ctx context.Context, orgSlug, pipelineSlug string, bu
 	return &jobLog, nil
 }
 
+func (c *Client) RetryJob(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID string) error {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/retry", orgSlug, pipelineSlug, buildNumber, jobID)
+	if _, err := c.put(ctx, path); err != nil {
+		return fmt.Errorf("retrying job %s/%s#%d %s: %w", orgSlug, pipelineSlug, buildNumber, jobID, err)
+	}
+	return nil
+}

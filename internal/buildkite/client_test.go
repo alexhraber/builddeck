@@ -322,3 +322,63 @@ func TestGetJobLog(t *testing.T) {
 	}
 }
 
+func TestRetryJob(t *testing.T) {
+	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42/jobs/j1/retry" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusAccepted)
+	})
+	defer srv.Close()
+
+	if err := testClient(srv).RetryJob(context.Background(), "org", "pipe", 42, "j1"); err != nil {
+		t.Fatalf("RetryJob: %v", err)
+	}
+}
+
+func TestRebuildBuild(t *testing.T) {
+	buildResp := Build{ID: "b2", Number: 43, State: "scheduled"}
+	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42/rebuild" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		json.NewEncoder(w).Encode(buildResp)
+	})
+	defer srv.Close()
+
+	got, err := testClient(srv).RebuildBuild(context.Background(), "org", "pipe", 42)
+	if err != nil {
+		t.Fatalf("RebuildBuild: %v", err)
+	}
+	if got.Number != 43 {
+		t.Errorf("expected rebuilt build 43, got %d", got.Number)
+	}
+}
+
+func TestCancelBuild(t *testing.T) {
+	buildResp := Build{ID: "b1", Number: 42, State: "canceling"}
+	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42/cancel" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		json.NewEncoder(w).Encode(buildResp)
+	})
+	defer srv.Close()
+
+	got, err := testClient(srv).CancelBuild(context.Background(), "org", "pipe", 42)
+	if err != nil {
+		t.Fatalf("CancelBuild: %v", err)
+	}
+	if got.State != "canceling" {
+		t.Errorf("expected canceling state, got %s", got.State)
+	}
+}

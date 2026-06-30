@@ -174,6 +174,85 @@ func TestLogsToggle(t *testing.T) {
 	}
 }
 
+func TestLogsEscapeClosesPane(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+	m.showLogs = true
+	m.currentLog = "test output"
+
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model := next.(Model)
+	if cmd != nil {
+		t.Error("Expected Esc to close logs without returning a command")
+	}
+	if model.showLogs {
+		t.Error("Expected showLogs to be false after pressing Esc")
+	}
+}
+
+func TestBuildActionKeyBindings(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+		msg  string
+	}{
+		{"retry job", "r", "Retrying job..."},
+		{"rebuild build", "b", "Rebuilding build..."},
+		{"cancel build", "x", "Canceling build..."},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := buildkite.NewClient("dummy-token")
+			m := NewModel(client)
+			m.orgs = []buildkite.Organization{{Slug: "org"}}
+			m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
+			m.builds = []buildkite.Build{{
+				ID:     "build-1",
+				Number: 10,
+				State:  "running",
+				Jobs:   []buildkite.Job{{ID: "job-1", Type: "script"}},
+			}}
+			m.selectedBuild = &m.builds[0]
+			m.activePane = centerPane
+
+			next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)})
+			model := next.(Model)
+			if cmd == nil {
+				t.Fatal("Expected action command")
+			}
+			if !model.actionInFlight {
+				t.Fatal("Expected actionInFlight to be true")
+			}
+			if model.searchMsg != tt.msg {
+				t.Fatalf("searchMsg = %q, want %q", model.searchMsg, tt.msg)
+			}
+		})
+	}
+}
+
+func TestShiftRRefreshesInsteadOfRetrying(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+	m.orgs = []buildkite.Organization{{Slug: "org"}}
+	m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
+	m.builds = []buildkite.Build{{ID: "build-1", Number: 10, State: "running"}}
+	m.selectedBuild = &m.builds[0]
+	m.activePane = centerPane
+
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("R")})
+	model := next.(Model)
+	if cmd == nil {
+		t.Fatal("Expected refresh command")
+	}
+	if model.actionInFlight {
+		t.Fatal("Expected Shift+R to refresh, not start retry action")
+	}
+	if !model.loadingOrgs {
+		t.Fatal("Expected Shift+R to set loadingOrgs")
+	}
+}
+
 func TestLogsToggleLeftPane(t *testing.T) {
 	client := buildkite.NewClient("dummy-token")
 	m := NewModel(client)
@@ -212,4 +291,3 @@ func TestLogsToggleLeftPane(t *testing.T) {
 		t.Errorf("Expected logJobID to be job-1, got %s", model2.logJobID)
 	}
 }
-
