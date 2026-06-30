@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 [init]
 specs = true
 ci = true
-diagram_style = "mermaid"
+diagram_style = "ascii"
 entrypoints = [
     "AGENTS.md",
     "CLAUDE.md",
@@ -12,19 +12,13 @@ entrypoints = [
 ]
 
 [repo]
-product_name = "builddeck"
-product_summary = "The foundation for builddeck, a production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health, starting with safe read-only visibility into real Buildkite API data and a clean internal architecture that can later support operational actions like retry, rebuild, unblock, cancel, log tailing, artifact download, browser handoff, bottleneck diagnosis, queue/agent saturation views, and incident-command workflows; b7k may be used as a short moniker, but the product, repository, documentation, and command identity should consistently present as builddeck."
-architecture_direction = "cli"
-done_criteria = "Done means `builddeck` is a compiling Go application with a clean repository structure, a typed internal Buildkite API client, authentication through `BUILDKITE_API_TOKEN`, real read-only Buildkite data loading for organizations, pipelines, recent builds, and build jobs, and a Bubble Tea/Lip Gloss TUI that supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop; the README clearly explains what `builddeck` is, how to install and run it, required token setup, current MVP scope, keybindings, and planned next features, and the codebase passes `go fmt ./...`, `go test ./...`, and `go build ./cmd/builddeck` without failures."
-primary_languages = ["Go"]
+product_name = "agent-unknown-feat-01kwb9wdypa12t27-01kwbft0"
+product_summary = "A Buildkite terminal flight deck — a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, annotations, artifacts, and build health."
+architecture_direction = "Composable repository architecture with explicit boundaries and proof-backed delivery invariants."
+product_type = "service_or_library"
+done_criteria = "Decapod validate passes, required tests pass, and promotion-relevant artifacts are present."
+primary_languages = ["go"]
+detected_surfaces = ["go"]
 external_tracker = false
 container_workspaces = true
 mode = "local"
-
-[cloud]
-enabled = false
-experimental = true
-provider = "decapod"
-api_url = "https://api.decapodlabs.com"
-project_id = ""
-repo_id = ""

@@ -8,15 +8,8 @@
 - [ ] Rollback plan validated.
 - [ ] Capacity guardrails documented.
 
-## Workspace Isolation
-Git worktrees and optional Docker containers provide isolated workspaces scoped to specific todos, preventing interference with the main repository checkout. Key features:
-- **Todo-scoped Worktrees**: Each todo gets an isolated git worktree with branch naming that includes todo IDs/hashes
-- **Exclusive Agent Ownership**: Claiming mechanism ensures only one agent can work on a todo at a time
-- **Event Journaling**: Todo state changes are journaled for deterministic rebuild
-- **Health Subsystem Integration**: Proof events can be associated with todos via health claims
-
-## Generated Artifact Operations
-Generated artifacts are operational outputs, not static docs. Agents should expect Decapod to refresh `.decapod/generated/specs/*.md` during explicit refresh operations and validation-assisted refresh. The operation is bounded: product docs under `docs/` remain the human learning surface for Decapod itself, while generated specs carry repo-specific live architecture, interface, validation, semantic, operational, and security facts.
+## Deployment Model
+Describe the operational runtime model, scheduling, and system deployment architecture.
 
 ## Service Level Objectives
 | SLI | SLO Target | Measurement Window | Owner |

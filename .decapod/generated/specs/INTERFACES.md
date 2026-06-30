@@ -5,20 +5,12 @@
 - Every mutating interface defines idempotency semantics.
 - Every failure path maps to a typed, documented error code.
 
-## CLI Layer
-Defines command-line interface and argument parsing for all Decapod commands. CLI contracts should describe command purpose, preconditions, expected side effects, output shape, recovery path, and whether the command may mutate `.decapod/` state.
-
-## Agent Interface
-Agent-facing documentation (AGENTS.md, CLAUDE.md, etc.) and the Universal Agent Contract mandate Decapod usage patterns. Product docs under `docs/agent` and `docs/book` teach Decapod itself; generated specs under `.decapod/generated/specs/` teach the current repository to active agents.
-
 ## Generated Contract Depth
-Generated interface specs should include more than endpoint names:
-- Command/RPC trigger conditions and required prior Decapod calls.
-- Read/write ownership for each store and generated artifact path.
+Generated interface specs should include:
+- API/CLI contracts with request/response schemas.
+- Read/write ownership for each storage path.
 - Idempotency and retry behavior for mutations.
-- Typed failure classes and concrete recovery instructions.
-- Compatibility expectations for existing agent workflows.
-- Evidence an agent must attach before claiming an interface change complete.
+- Typed failure classes and recovery instructions.
 
 ## API / RPC Contracts
 | Interface | Method | Request Schema | Response Schema | Errors | Idempotency |
@@ -39,14 +31,14 @@ Generated interface specs should include more than endpoint names:
 - API / RPC entrypoints:
 - CLI surfaces:
 - Event/webhook consumers:
-- Repository-detected surfaces: not detected yet
+- Repository-detected surfaces: go
 
 ## Data Ownership
 - Source-of-truth tables/collections:
 - Cross-boundary read models:
 - Consistency expectations:
 
-## Error Taxonomy Example (not classified yet)
+## Error Taxonomy Example (service_or_library)
 ```go
 var (
     ErrValidation = errors.New("validation_failed")

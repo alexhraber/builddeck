@@ -73,9 +73,9 @@ flowchart LR
 - [ ] No unresolved critical/high security findings.
 
 ## Strongest Security Primitives
-1. **Constitution Access System**: The assets module provides robust, versioned access to embedded constitution documents with override capability via OVERRIDE.md. This is a mature, well-tested system for declarative governance.
-2. **Proof System**: The proof.rs module enables configurable, auditable proof execution with health claim synchronization and event logging.
-3. **Workspace Isolation**: The workspace.rs module provides sophisticated git worktree management with branch protection, containerization support, and todo-scoped branch naming.
+Describe the security primitives and security controls implemented in this repository.
 
-## Generated Security Analysis
-Generated security specs should document the active trust boundaries exposed by repository facts: local state stores, generated artifacts, session tokens, workspace paths, command execution surfaces, policy gates, proof artifacts, and any external service integrations. Security output must distinguish confirmed repo facts from inferred risks and leave unresolved questions visible for future agents.
+## Security Practices
+- **Least Privilege**: Ensure minimal access permissions for all subsystems and roles.
+- **Input Validation**: Strictly validate all inputs at trust boundaries.
+- **Secure Storage**: Encrypt sensitive data at rest and in transit.

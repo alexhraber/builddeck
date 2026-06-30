@@ -4,13 +4,11 @@
 > Validation is a release gate, not documentation theater.
 
 ## Validation Harness
-The validate.rs module implements a comprehensive, extensible validation suite with clear pass/fail/warn semantics and auto-remediation hints. Key features include:
-- **Methodology Gates**: Numerous validation gates enforce intent-driven development practices
-- **Auto-Remediation Hints**: Provides specific guidance on how to fix validation failures
-- **Workspace Enforcement**: Ensures agents work in isolated git worktrees or containers
-- **Specs Integrity**: Validates that living specs match repository state
-- **Proof Requirements**: Requires evidence artifacts for promotion gates
-- **Constitution Integration**: Validates adherence to embedded constitution directives
+Define the test and verification harness used by this project.
+Key features:
+- **Automated Tests**: Unit and integration test suites.
+- **Linting & Formatting**: Static analysis tools and checkers.
+- **CI/CD Integration**: Automatic execution of validation gates on push.
 
 ## Generated Spec Refresh Gates
 Decapod must keep generated specs synchronized at governance pressure points. When repository surfaces change, validation should either fail with a concrete refresh instruction or, when explicitly requested through a refresh path, regenerate the existing spec files and update the manifest fingerprint. Refresh must update the canonical spec set rather than creating one-off analysis files.
