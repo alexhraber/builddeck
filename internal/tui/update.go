@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -106,6 +107,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.buildDetails[msg.buildID] = msg.build
 			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
 				m.selectedBuild = msg.build
+				if m.showLogs && m.logJobID == "" {
+					var targetJob *buildkite.Job
+					for i := range msg.build.Jobs {
+						if msg.build.Jobs[i].Type != "waiter" {
+							targetJob = &msg.build.Jobs[i]
+							break
+						}
+					}
+					if targetJob != nil {
+						m.logJobID = targetJob.ID
+						m.logScroll = 0
+						if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+							m.currentLog = cachedLog
+							m.loadingLog = false
+						} else {
+							m.currentLog = ""
+							m.loadingLog = true
+							org := m.selectedOrg()
+							pipe := m.selectedPipeline()
+							return m, loadLogCmd(m.client, org.Slug, pipe.Slug, msg.build.Number, targetJob.ID)
+						}
+					} else {
+						m.currentLog = "No jobs found for this build"
+						m.loadingLog = false
+					}
+				}
 			}
 		}
 		return m, nil
@@ -141,6 +168,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case logLoadedMsg:
+		m.loadingLog = false
+		if msg.err != nil {
+			m.err = msg.err
+			m.errMsg = "failed to load logs"
+			m.currentLog = "Error loading logs: " + msg.err.Error()
+			return m, nil
+		}
+		m.ensureCachesInitialized()
+		m.jobLogs[msg.jobID] = msg.log
+		if m.showLogs && m.logJobID == msg.jobID {
+			m.currentLog = msg.log
+		}
+		return m, nil
+
 	case tickMsg:
 		cmds := []tea.Cmd{tickCmd()}
 		org := m.selectedOrg()
@@ -167,6 +209,84 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.showHelp {
 		if key.Matches(msg, keys.Help) || key.Matches(msg, keys.Quit) || msg.String() == "esc" {
 			m.showHelp = false
+			return m, nil
+		}
+		return m, nil
+	}
+
+	if key.Matches(msg, keys.Logs) {
+		if m.showLogs {
+			m.showLogs = false
+			return m, nil
+		}
+		b := m.selectedBuild
+		if b == nil {
+			m.searchMsg = "No build selected to show logs"
+			return m, nil
+		}
+		m.showLogs = true
+		m.logScroll = 0
+		var targetJob *buildkite.Job
+		for i := range b.Jobs {
+			if b.Jobs[i].Type != "waiter" {
+				targetJob = &b.Jobs[i]
+				break
+			}
+		}
+		if targetJob == nil {
+			if m.loadingDetail {
+				m.logJobID = ""
+				m.currentLog = ""
+				m.loadingLog = true
+				return m, nil
+			}
+			m.searchMsg = "No jobs found for this build"
+			m.showLogs = false
+			return m, nil
+		}
+		m.logJobID = targetJob.ID
+		m.ensureCachesInitialized()
+		if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+			m.currentLog = cachedLog
+			m.loadingLog = false
+			return m, nil
+		}
+		m.currentLog = ""
+		m.loadingLog = true
+		org := m.selectedOrg()
+		pipe := m.selectedPipeline()
+		return m, loadLogCmd(m.client, org.Slug, pipe.Slug, b.Number, targetJob.ID)
+	}
+
+	if m.showLogs {
+		switch {
+		case key.Matches(msg, keys.Quit):
+			return m, tea.Quit
+		case key.Matches(msg, keys.Up):
+			if m.logScroll > 0 {
+				m.logScroll--
+			}
+			return m, nil
+		case key.Matches(msg, keys.Down):
+			lines := strings.Split(m.currentLog, "\n")
+			maxScroll := len(lines) - (m.height - 2)
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+			if m.logScroll < maxScroll {
+				m.logScroll++
+			}
+			return m, nil
+		case key.Matches(msg, keys.Top):
+			m.logScroll = 0
+			return m, nil
+		case key.Matches(msg, keys.Bottom):
+			lines := strings.Split(m.currentLog, "\n")
+			maxScroll := len(lines) - (m.height - 2)
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+			m.logScroll = maxScroll
 			return m, nil
 		}
 		return m, nil
@@ -583,4 +703,20 @@ func indexPosition(indices []int, idx int) int {
 
 func containsIndex(indices []int, idx int) bool {
 	return indexPosition(indices, idx) >= 0
+}
+
+type logLoadedMsg struct {
+	jobID string
+	log   string
+	err   error
+}
+
+func loadLogCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+	return func() tea.Msg {
+		log, err := client.GetJobLog(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
+		if err != nil {
+			return logLoadedMsg{jobID: jobID, err: err}
+		}
+		return logLoadedMsg{jobID: jobID, log: log.Content, err: nil}
+	}
 }

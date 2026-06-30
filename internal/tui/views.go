@@ -25,6 +25,10 @@ func (m Model) View() string {
 		return m.helpView()
 	}
 
+	if m.showLogs {
+		return m.logsView()
+	}
+
 	headerHeight := 1
 	statusHeight := 1
 	mainHeight := m.height - headerHeight - statusHeight
@@ -556,3 +560,94 @@ func formatFileSize(bytes int) string {
 	}
 	return fmt.Sprintf("%.1fMB", float64(bytes)/(1024*1024))
 }
+
+func (m Model) logsView() string {
+	var b strings.Builder
+
+	headerH := 1
+
+	bd := m.selectedBuild
+	jobName := "unknown job"
+	if bd != nil {
+		for _, job := range bd.Jobs {
+			if job.ID == m.logJobID {
+				jobName = job.Label
+				if jobName == "" {
+					jobName = job.Command
+				}
+				break
+			}
+		}
+	}
+
+	title := titleStyle.Render(fmt.Sprintf("Logs — %s", jobName))
+	if bd != nil {
+		title += " " + subtitleStyle.Render(fmt.Sprintf("#%d", bd.Number))
+	}
+
+	if m.loadingLog {
+		title += " " + loadingStyle.Render("⟳ loading logs...")
+	}
+
+	b.WriteString(title)
+	b.WriteString("\n")
+
+	contentHeight := m.height - headerH - 1
+	if contentHeight < 2 {
+		contentHeight = 2
+	}
+
+	var logBox strings.Builder
+	if m.loadingLog {
+		logBox.WriteString(loadingStyle.Render("Retrieving build logs from Buildkite API..."))
+	} else if m.currentLog == "" {
+		logBox.WriteString(dimStyle.Render("No log output recorded for this job."))
+	} else {
+		lines := strings.Split(m.currentLog, "\n")
+		start := m.logScroll
+		if start < 0 {
+			start = 0
+		}
+		if start > len(lines) {
+			start = len(lines)
+		}
+		end := start + contentHeight - 2
+		if end > len(lines) {
+			end = len(lines)
+		}
+
+		for i := start; i < end; i++ {
+			logBox.WriteString(lines[i])
+			logBox.WriteString("\n")
+		}
+	}
+
+	logBorder := activeBorderStyle
+	if m.loadingLog {
+		logBorder = borderStyle
+	}
+
+	b.WriteString(logBorder.Width(m.width).Height(contentHeight).Render(logBox.String()))
+	b.WriteString("\n")
+
+	var statusParts []string
+	if m.currentLog != "" {
+		lines := strings.Split(m.currentLog, "\n")
+		scrollPercent := 0
+		maxScroll := len(lines) - (contentHeight - 2)
+		if maxScroll > 0 {
+			scrollPercent = (m.logScroll * 100) / maxScroll
+			if scrollPercent > 100 {
+				scrollPercent = 100
+			}
+		}
+		statusParts = append(statusParts, fmt.Sprintf("Line %d/%d (%d%%)", m.logScroll+1, len(lines), scrollPercent))
+	}
+
+	statusParts = append(statusParts, helpStyle.Render("L:back  ↑/k:up  ↓/j:down  g:top  G:bottom  q:quit"))
+
+	b.WriteString(statusStyle.Width(m.width).Render(strings.Join(statusParts, "  │  ")))
+
+	return b.String()
+}
+

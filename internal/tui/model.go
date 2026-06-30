@@ -68,11 +68,18 @@ type Model struct {
 	leftScroll   int
 	centerScroll int
 	rightScroll  int
+	logScroll    int
+
+	showLogs   bool
+	loadingLog bool
+	currentLog string
+	logJobID   string
 
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
 	buildAnnotations  map[string][]buildkite.Annotation
 	buildArtifacts    map[string][]buildkite.Artifact
+	jobLogs           map[string]string
 	buildSelectionSeq int
 }
 
@@ -84,6 +91,7 @@ func NewModel(client *buildkite.Client) Model {
 		buildDetails:     make(map[string]*buildkite.Build),
 		buildAnnotations: make(map[string][]buildkite.Annotation),
 		buildArtifacts:   make(map[string][]buildkite.Artifact),
+		jobLogs:          make(map[string]string),
 	}
 }
 
@@ -150,12 +158,16 @@ func (m *Model) ensureCachesInitialized() {
 	if m.buildArtifacts == nil {
 		m.buildArtifacts = make(map[string][]buildkite.Artifact)
 	}
+	if m.jobLogs == nil {
+		m.jobLogs = make(map[string]string)
+	}
 }
 
 func (m *Model) clearCaches() {
 	m.buildDetails = make(map[string]*buildkite.Build)
 	m.buildAnnotations = make(map[string][]buildkite.Annotation)
 	m.buildArtifacts = make(map[string][]buildkite.Artifact)
+	m.jobLogs = make(map[string]string)
 }
 
 func loadOrgsCmd(client *buildkite.Client) tea.Cmd {
