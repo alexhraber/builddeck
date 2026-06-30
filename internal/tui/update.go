@@ -102,7 +102,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loadingDetail = false
 		m.detailInFlight = false
 		if msg.err == nil && msg.build != nil {
-			m.selectedBuild = msg.build
+			m.ensureCachesInitialized()
+			m.buildDetails[msg.buildID] = msg.build
+			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
+				m.selectedBuild = msg.build
+			}
 		}
 		return m, nil
 
@@ -110,7 +114,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loadingAnnotations = false
 		m.annotsInFlight = false
 		if msg.err == nil {
-			m.annotations = msg.annotations
+			m.ensureCachesInitialized()
+			m.buildAnnotations[msg.buildID] = msg.annotations
+			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
+				m.annotations = msg.annotations
+			}
 		}
 		return m, nil
 
@@ -118,7 +126,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loadingArtifacts = false
 		m.artifactsInFlight = false
 		if msg.err == nil {
-			m.artifacts = msg.artifacts
+			m.ensureCachesInitialized()
+			m.buildArtifacts[msg.buildID] = msg.artifacts
+			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
+				m.artifacts = msg.artifacts
+			}
+		}
+		return m, nil
+
+	case buildSelectionDebounceMsg:
+		if msg.seq == m.buildSelectionSeq {
+			cmd := m.loadSelectedBuildDetailsForce()
+			return m, cmd
 		}
 		return m, nil
 
@@ -395,37 +414,78 @@ func (m *Model) onPipelineChange() tea.Cmd {
 }
 
 func (m *Model) onBuildIndexChanged() []tea.Cmd {
-	var cmds []tea.Cmd
-	if b := m.selectedBuildEntry(); b != nil {
-		m.selectedBuild = b
-		m.rightScroll = 0
-		org := m.selectedOrg()
-		pipe := m.selectedPipeline()
-		if org != nil && pipe != nil {
-			if hasNoJobs(b) && !m.detailInFlight {
-				m.loadingDetail = true
-				m.detailInFlight = true
-				cmds = append(cmds, loadBuildDetailCmd(m.client, org.Slug, pipe.Slug, b.Number))
-			}
-			if !m.annotsInFlight {
-				m.loadingAnnotations = true
-				m.annotsInFlight = true
-				m.annotations = nil
-				cmds = append(cmds, loadAnnotationsCmd(m.client, org.Slug, pipe.Slug, b.Number))
-			}
-			if !m.artifactsInFlight {
-				m.loadingArtifacts = true
-				m.artifactsInFlight = true
-				m.artifacts = nil
-				cmds = append(cmds, loadArtifactsCmd(m.client, org.Slug, pipe.Slug, b.Number))
-			}
-		}
-	} else {
+	m.ensureCachesInitialized()
+
+	b := m.selectedBuildEntry()
+	if b == nil {
 		m.selectedBuild = nil
 		m.annotations = nil
 		m.artifacts = nil
+		return nil
 	}
-	return cmds
+
+	m.rightScroll = 0
+
+	// Check if we have fully cached detail, annotations, and artifacts
+	cachedDetail, hasDetail := m.buildDetails[b.ID]
+	cachedAnnots, hasAnnots := m.buildAnnotations[b.ID]
+	cachedArts, hasArts := m.buildArtifacts[b.ID]
+
+	if hasDetail && hasAnnots && hasArts {
+		m.selectedBuild = cachedDetail
+		m.annotations = cachedAnnots
+		m.artifacts = cachedArts
+
+		// If the build is in a terminal state, we do not need to fetch anything from the API!
+		if isTerminalState(cachedDetail.State) {
+			return nil
+		}
+	} else {
+		// Not fully cached, display the list build entry and clear details
+		m.selectedBuild = b
+		m.annotations = nil
+		m.artifacts = nil
+	}
+
+	// Increment selection sequence for debouncing selection change API calls
+	m.buildSelectionSeq++
+	seq := m.buildSelectionSeq
+
+	return []tea.Cmd{
+		debounceSelectionCmd(seq),
+	}
+}
+
+func (m *Model) loadSelectedBuildDetailsForce() tea.Cmd {
+	b := m.selectedBuild
+	if b == nil {
+		return nil
+	}
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	if org == nil || pipe == nil {
+		return nil
+	}
+
+	var cmds []tea.Cmd
+
+	if hasNoJobs(b) && !m.detailInFlight {
+		m.loadingDetail = true
+		m.detailInFlight = true
+		cmds = append(cmds, loadBuildDetailCmd(m.client, org.Slug, pipe.Slug, b.ID, b.Number))
+	}
+	if !m.annotsInFlight {
+		m.loadingAnnotations = true
+		m.annotsInFlight = true
+		cmds = append(cmds, loadAnnotationsCmd(m.client, org.Slug, pipe.Slug, b.ID, b.Number))
+	}
+	if !m.artifactsInFlight {
+		m.loadingArtifacts = true
+		m.artifactsInFlight = true
+		cmds = append(cmds, loadArtifactsCmd(m.client, org.Slug, pipe.Slug, b.ID, b.Number))
+	}
+
+	return tea.Batch(cmds...)
 }
 
 func (m *Model) onEnter() tea.Cmd {
@@ -442,6 +502,7 @@ func (m *Model) onEnter() tea.Cmd {
 func (m *Model) refresh() tea.Cmd {
 	m.loadingOrgs = true
 	m.resetBuildState()
+	m.clearCaches() // Clear API caches on manual full refresh
 	m.orgs = nil
 	m.pipelines = nil
 	m.err = nil

@@ -68,13 +68,22 @@ type Model struct {
 	leftScroll   int
 	centerScroll int
 	rightScroll  int
+
+	// Cache maps to prevent duplicate, rate-limiting API requests
+	buildDetails      map[string]*buildkite.Build
+	buildAnnotations  map[string][]buildkite.Annotation
+	buildArtifacts    map[string][]buildkite.Artifact
+	buildSelectionSeq int
 }
 
 func NewModel(client *buildkite.Client) Model {
 	return Model{
-		client:      client,
-		activePane:  leftPane,
-		loadingOrgs: true,
+		client:           client,
+		activePane:       leftPane,
+		loadingOrgs:      true,
+		buildDetails:     make(map[string]*buildkite.Build),
+		buildAnnotations: make(map[string][]buildkite.Annotation),
+		buildArtifacts:   make(map[string][]buildkite.Artifact),
 	}
 }
 
@@ -94,21 +103,60 @@ type buildsLoadedMsg struct {
 }
 
 type buildDetailMsg struct {
-	build *buildkite.Build
-	err   error
+	buildID string
+	build   *buildkite.Build
+	err     error
 }
 
 type annotationsLoadedMsg struct {
+	buildID     string
 	annotations []buildkite.Annotation
 	err         error
 }
 
 type artifactsLoadedMsg struct {
+	buildID   string
 	artifacts []buildkite.Artifact
-	err       error
+	err         error
+}
+
+type buildSelectionDebounceMsg struct {
+	seq int
 }
 
 type tickMsg time.Time
+
+func isTerminalState(state string) bool {
+	switch state {
+	case "passed", "failed", "canceled", "cancelled", "skipped", "timed_out", "broken", "not_run":
+		return true
+	}
+	return false
+}
+
+func debounceSelectionCmd(seq int) tea.Cmd {
+	return tea.Tick(250*time.Millisecond, func(t time.Time) tea.Msg {
+		return buildSelectionDebounceMsg{seq: seq}
+	})
+}
+
+func (m *Model) ensureCachesInitialized() {
+	if m.buildDetails == nil {
+		m.buildDetails = make(map[string]*buildkite.Build)
+	}
+	if m.buildAnnotations == nil {
+		m.buildAnnotations = make(map[string][]buildkite.Annotation)
+	}
+	if m.buildArtifacts == nil {
+		m.buildArtifacts = make(map[string][]buildkite.Artifact)
+	}
+}
+
+func (m *Model) clearCaches() {
+	m.buildDetails = make(map[string]*buildkite.Build)
+	m.buildAnnotations = make(map[string][]buildkite.Annotation)
+	m.buildArtifacts = make(map[string][]buildkite.Artifact)
+}
 
 func loadOrgsCmd(client *buildkite.Client) tea.Cmd {
 	return func() tea.Msg {
@@ -131,24 +179,24 @@ func loadBuildsCmd(client *buildkite.Client, orgSlug, pipelineSlug string) tea.C
 	}
 }
 
-func loadBuildDetailCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int) tea.Cmd {
+func loadBuildDetailCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildID string, buildNumber int) tea.Cmd {
 	return func() tea.Msg {
 		build, err := client.GetBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
-		return buildDetailMsg{build: build, err: err}
+		return buildDetailMsg{buildID: buildID, build: build, err: err}
 	}
 }
 
-func loadAnnotationsCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int) tea.Cmd {
+func loadAnnotationsCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildID string, buildNumber int) tea.Cmd {
 	return func() tea.Msg {
 		anns, err := client.ListAnnotations(context.Background(), orgSlug, pipelineSlug, buildNumber)
-		return annotationsLoadedMsg{annotations: anns, err: err}
+		return annotationsLoadedMsg{buildID: buildID, annotations: anns, err: err}
 	}
 }
 
-func loadArtifactsCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int) tea.Cmd {
+func loadArtifactsCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildID string, buildNumber int) tea.Cmd {
 	return func() tea.Msg {
 		arts, err := client.ListArtifacts(context.Background(), orgSlug, pipelineSlug, buildNumber)
-		return artifactsLoadedMsg{artifacts: arts, err: err}
+		return artifactsLoadedMsg{buildID: buildID, artifacts: arts, err: err}
 	}
 }
 
