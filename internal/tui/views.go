@@ -145,8 +145,12 @@ func (m Model) leftPaneView(w, h int) string {
 
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Pipelines"))
+	if query := normalizedQueryForPane(m, leftPane); query != "" {
+		b.WriteString(subtitleStyle.Render(fmt.Sprintf(" /%s", query)))
+	}
 	b.WriteString("\n")
 
+	pipelineIndices := m.filteredPipelineIndices()
 	if m.loadingPipes {
 		b.WriteString(loadingStyle.Render("Loading..."))
 		b.WriteString("\n")
@@ -156,8 +160,12 @@ func (m Model) leftPaneView(w, h int) string {
 	} else if len(m.pipelines) == 0 {
 		b.WriteString(dimStyle.Render("No pipelines"))
 		b.WriteString("\n")
+	} else if len(pipelineIndices) == 0 {
+		b.WriteString(dimStyle.Render("No matching pipelines"))
+		b.WriteString("\n")
 	} else {
-		for i, pipe := range m.pipelines {
+		for _, i := range pipelineIndices {
+			pipe := m.pipelines[i]
 			cursor := "  "
 			if i == m.pipeIndex {
 				cursor = "▶ "
@@ -191,10 +199,14 @@ func (m Model) centerPaneView(w, h int) string {
 	if m.selectedOrg() != nil && m.selectedPipeline() != nil {
 		b.WriteString(subtitleStyle.Render(fmt.Sprintf(" — %s/%s", m.selectedOrg().Slug, m.selectedPipeline().Slug)))
 	}
+	if query := normalizedQueryForPane(m, centerPane); query != "" {
+		b.WriteString(subtitleStyle.Render(fmt.Sprintf(" /%s", query)))
+	}
 	b.WriteString("\n")
 
-	if len(m.builds) > 0 {
-		summary := SummarizeBuilds(m.builds)
+	buildIndices := m.filteredBuildIndices()
+	if len(buildIndices) > 0 {
+		summary := SummarizeBuilds(buildsByIndex(m.builds, buildIndices))
 		b.WriteString(m.renderBuildSummary(summary))
 		b.WriteString("\n")
 	}
@@ -208,9 +220,13 @@ func (m Model) centerPaneView(w, h int) string {
 	} else if len(m.builds) == 0 {
 		b.WriteString(dimStyle.Render("No builds"))
 		b.WriteString("\n")
+	} else if len(buildIndices) == 0 {
+		b.WriteString(dimStyle.Render("No matching builds"))
+		b.WriteString("\n")
 	} else {
 		b.WriteString(dimStyle.Render(fmt.Sprintf("%-8s %-10s %-9s %-9s %-12s %s\n", "BUILD", "BRANCH", "COMMIT", "STATE", "CREATOR", "DURATION")))
-		for i, build := range m.builds {
+		for _, i := range buildIndices {
+			build := m.builds[i]
 			b.WriteString(m.renderBuildRow(i, build))
 		}
 	}
@@ -314,16 +330,23 @@ func (m Model) rightPaneView(w, h int) string {
 
 		b.WriteString("\n")
 		b.WriteString(titleStyle.Render("Jobs"))
+		if query := normalizedQueryForPane(m, rightPane); query != "" {
+			b.WriteString(subtitleStyle.Render(fmt.Sprintf(" /%s", query)))
+		}
 		b.WriteString("\n")
 
+		jobs := m.filteredJobs()
 		if len(bd.Jobs) == 0 && m.loadingDetail {
 			b.WriteString(loadingStyle.Render("Loading..."))
 			b.WriteString("\n")
 		} else if len(bd.Jobs) == 0 {
 			b.WriteString(dimStyle.Render("No jobs"))
 			b.WriteString("\n")
+		} else if len(jobs) == 0 {
+			b.WriteString(dimStyle.Render("No matching jobs"))
+			b.WriteString("\n")
 		} else {
-			for _, job := range bd.Jobs {
+			for _, job := range jobs {
 				if job.Type == "waiter" {
 					continue
 				}
@@ -440,6 +463,12 @@ func (m Model) statusBarView(w int) string {
 		parts = append(parts, loadingStyle.Render(m.searchMsg))
 	}
 
+	if m.searching {
+		parts = append(parts, loadingStyle.Render(fmt.Sprintf("Filter: /%s", m.filterQuery)))
+	} else if m.filterQuery != "" {
+		parts = append(parts, dimStyle.Render(fmt.Sprintf("Filter: /%s", m.filterQuery)))
+	}
+
 	paneName := "Orgs/Pipes"
 	switch m.activePane {
 	case centerPane:
@@ -475,7 +504,9 @@ func (m Model) helpView() string {
 	b.WriteString("\n")
 	b.WriteString("Actions:\n")
 	b.WriteString("  r           Refresh all data\n")
-	b.WriteString("  /           Search (not yet implemented)\n")
+	b.WriteString("  /           Filter active pane\n")
+	b.WriteString("  esc/enter   Close filter input\n")
+	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("  ?           Toggle this help\n")
 	b.WriteString("  q           Quit\n")
 	b.WriteString("\n")

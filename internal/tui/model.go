@@ -57,6 +57,9 @@ type Model struct {
 
 	lastRefresh time.Time
 	showHelp    bool
+	searching   bool
+	filterPane  pane
+	filterQuery string
 	searchMsg   string
 	ready       bool
 	width       int

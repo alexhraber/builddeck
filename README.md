@@ -62,6 +62,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Build health summary** — count of running/failed/passed/blocked builds with failure rate
 - **State badges** — compact, color-coded state labels (PASS/FAIL/RUN/BLCK/etc.)
 - **Active pane highlighting** — clear border on the focused pane
+- **Read-only filtering** — `/` filters the active pane across pipelines, builds, or build jobs
 - **Live updates** — 5-second polling with in-flight request guards
 - **Graceful degradation** — compact fallback for small terminals
 - **Loading/error states** — visible without crashing
@@ -80,7 +81,9 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `G` | Jump to bottom of active list |
 | `enter` | Select / drill down |
 | `r` | Refresh all data |
-| `/` | Search (placeholder — not yet implemented) |
+| `/` | Filter active pane |
+| `esc` / `enter` | Close filter input |
+| `ctrl+u` | Clear filter input |
 | `?` | Toggle help |
 | `q` | Quit |
 
@@ -95,6 +98,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - Changing organization resets pipelines, builds, jobs, annotations, artifacts
 - Changing pipeline resets builds, jobs, annotations, artifacts
 - Changing selected build fetches detail (if jobs missing), annotations, and artifacts
+- Filtering never mutates Buildkite data; it narrows already-loaded pipelines, builds, or jobs in the active pane
 - Nil-pointer and index safety throughout
 
 ## Layout
@@ -131,7 +135,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **No artifact download** — only listing; download is not yet implemented
 - **No config file** — authentication is via environment variable only
 - **Limited pagination** — builds show first 25; pipelines and agents paginate up to 500
-- **No search/filter** — `/` key shows placeholder message
+- **Pane-local filtering only** — `/` filters the active pane; there is no cross-organization global search yet
 - **Annotations are HTML-stripped** — rich content is flattened to text
 - **Agent view not yet in TUI** — agent data is in the API client only
 
@@ -144,11 +148,11 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Open in browser** — `o` to open the current resource in the Buildkite web UI
 - **Artifact download** — `d` to download an artifact
 - **Queue/agent saturation views** — dedicated pane for agent utilization and queue depth
-- **Filtering/search** — `/` to filter builds, pipelines, or jobs by name/state
+- **Global search** — fuzzy search across organizations, pipelines, builds, and jobs
 - **GraphQL dashboard snapshots** — efficient nested queries for dashboard views
 - **Incident command mode** — focused view for diagnosing and resolving build failures
 - **Config file** — token and preferences in `~/.config/builddeck/config.toml`
-- **Build/pipeline search** — fuzzy search across all pipelines and builds
+- **Saved filter presets** — quick recall for common branch, state, queue, and owner filters
 
 ## Development
 
