@@ -114,10 +114,13 @@ func TestLogsToggle(t *testing.T) {
 
 	// 2. Select a build and toggle logs
 	build := buildkite.Build{ID: "build-1", Number: 10, State: "running"}
+	m.builds = []buildkite.Build{build}
+	m.buildIndex = 0
 	m.selectedBuild = &build
 	m.orgs = []buildkite.Organization{{Slug: "org"}}
 	m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
 	m.loadingDetail = true
+	m.activePane = centerPane
 
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
 	model2 := m2.(Model)
@@ -170,3 +173,43 @@ func TestLogsToggle(t *testing.T) {
 		t.Error("Expected showLogs to be false after pressing L again")
 	}
 }
+
+func TestLogsToggleLeftPane(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+
+	m.orgs = []buildkite.Organization{{Slug: "org"}}
+	m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
+	m.activePane = leftPane
+
+	// Press L on left pane -> builds not loaded
+	m1, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("L")})
+	model1 := m1.(Model)
+	if model1.showLogs {
+		t.Error("Expected showLogs to remain false until builds load")
+	}
+	if !model1.pendingLogsForLatestBuild {
+		t.Error("Expected pendingLogsForLatestBuild to be true")
+	}
+	if cmd == nil {
+		t.Error("Expected loadBuildsCmd to be triggered")
+	}
+
+	// Simulate builds loaded
+	builds := []buildkite.Build{
+		{ID: "build-latest", Number: 20, State: "passed", Jobs: []buildkite.Job{{ID: "job-1", Type: "script"}}},
+		{ID: "build-old", Number: 19, State: "passed"},
+	}
+	m2, _ := model1.Update(buildsLoadedMsg{builds: builds})
+	model2 := m2.(Model)
+	if !model2.showLogs {
+		t.Error("Expected showLogs to be true after builds load")
+	}
+	if model2.buildIndex != 0 || model2.selectedBuild.ID != "build-latest" {
+		t.Errorf("Expected latest build to be selected, got index %d ID %s", model2.buildIndex, model2.selectedBuild.ID)
+	}
+	if model2.logJobID != "job-1" {
+		t.Errorf("Expected logJobID to be job-1, got %s", model2.logJobID)
+	}
+}
+

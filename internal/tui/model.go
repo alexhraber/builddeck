@@ -70,10 +70,12 @@ type Model struct {
 	rightScroll  int
 	logScroll    int
 
-	showLogs   bool
-	loadingLog bool
-	currentLog string
-	logJobID   string
+	showLogs                  bool
+	loadingLog                bool
+	currentLog                string
+	logJobID                  string
+	pendingLogsForLatestBuild bool
+
 
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
