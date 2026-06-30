@@ -162,7 +162,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, keys.Refresh):
-		return m, m.refresh()
+		cmd := m.refresh()
+		return m, cmd
 
 	case key.Matches(msg, keys.Tab), key.Matches(msg, keys.Right):
 		m.activePane = m.activePane.next()
@@ -238,17 +239,20 @@ func (m Model) moveUp() (tea.Model, tea.Cmd) {
 			pos := indexPosition(indices, m.pipeIndex)
 			if pos > 0 {
 				m.pipeIndex = indices[pos-1]
-				return m, m.onPipelineChange()
+				cmd := m.onPipelineChange()
+				return m, cmd
 			}
 			return m, nil
 		}
 		if m.pipeIndex > 0 {
 			m.pipeIndex--
-			return m, m.onPipelineChange()
+			cmd := m.onPipelineChange()
+			return m, cmd
 		}
 		if m.orgIndex > 0 {
 			m.orgIndex--
-			return m, m.onOrgChange()
+			cmd := m.onOrgChange()
+			return m, cmd
 		}
 	case centerPane:
 		indices := m.filteredBuildIndices()
@@ -274,17 +278,20 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 			pos := indexPosition(indices, m.pipeIndex)
 			if pos >= 0 && pos < len(indices)-1 {
 				m.pipeIndex = indices[pos+1]
-				return m, m.onPipelineChange()
+				cmd := m.onPipelineChange()
+				return m, cmd
 			}
 			return m, nil
 		}
 		if m.pipeIndex < len(m.pipelines)-1 {
 			m.pipeIndex++
-			return m, m.onPipelineChange()
+			cmd := m.onPipelineChange()
+			return m, cmd
 		}
 		if m.orgIndex < len(m.orgs)-1 {
 			m.orgIndex++
-			return m, m.onOrgChange()
+			cmd := m.onOrgChange()
+			return m, cmd
 		}
 	case centerPane:
 		indices := m.filteredBuildIndices()
@@ -307,13 +314,15 @@ func (m Model) jumpTop() (tea.Model, tea.Cmd) {
 			indices := m.filteredPipelineIndices()
 			if len(indices) > 0 {
 				m.pipeIndex = indices[0]
-				return m, m.onPipelineChange()
+				cmd := m.onPipelineChange()
+				return m, cmd
 			}
 			return m, nil
 		}
 		m.orgIndex = 0
 		m.pipeIndex = 0
-		return m, m.onPipelineChange()
+		cmd := m.onPipelineChange()
+		return m, cmd
 	case centerPane:
 		indices := m.filteredBuildIndices()
 		if len(indices) > 0 {
@@ -334,7 +343,8 @@ func (m Model) jumpBottom() (tea.Model, tea.Cmd) {
 			indices := m.filteredPipelineIndices()
 			if len(indices) > 0 {
 				m.pipeIndex = indices[len(indices)-1]
-				return m, m.onPipelineChange()
+				cmd := m.onPipelineChange()
+				return m, cmd
 			}
 			return m, nil
 		}
@@ -342,7 +352,8 @@ func (m Model) jumpBottom() (tea.Model, tea.Cmd) {
 			m.orgIndex = len(m.orgs) - 1
 		}
 		m.pipeIndex = 0
-		return m, m.onOrgChange()
+		cmd := m.onOrgChange()
+		return m, cmd
 	case centerPane:
 		indices := m.filteredBuildIndices()
 		if len(indices) > 0 {
@@ -465,7 +476,8 @@ func (m Model) applyFilterSelection() (tea.Model, tea.Cmd) {
 		indices := m.filteredPipelineIndices()
 		if len(indices) > 0 && !containsIndex(indices, m.pipeIndex) {
 			m.pipeIndex = indices[0]
-			return m, m.onPipelineChange()
+			cmd := m.onPipelineChange()
+			return m, cmd
 		}
 	case centerPane:
 		indices := m.filteredBuildIndices()
