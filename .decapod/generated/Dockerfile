@@ -4,7 +4,7 @@
 # mutate project-specific packages and commands in workspace branches.
 ARG DECAPOD_IMAGE=ghcr.io/decapodlabs/decapod:v0.62.4
 FROM $DECAPOD_IMAGE
-ARG DECAPOD_VERSION=0.62.4
+ARG DECAPOD_VERSION=0.62.5
 ARG DECAPOD_USE_LOCAL_BINARY=0
 LABEL org.opencontainers.image.base.name="$DECAPOD_IMAGE"
 LABEL org.decapod.version="$DECAPOD_VERSION"
