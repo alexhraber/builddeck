@@ -29,6 +29,14 @@ func (m Model) View() string {
 		return m.logsView()
 	}
 
+	if m.showAgents {
+		return m.agentView()
+	}
+
+	if m.showPresetPicker {
+		return m.presetPickerView()
+	}
+
 	headerHeight := 1
 	statusHeight := 1
 	mainHeight := m.height - headerHeight - statusHeight
@@ -48,7 +56,14 @@ func (m Model) View() string {
 
 	panes := lipgloss.JoinHorizontal(lipgloss.Top, left, center, right)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, panes, status)
+	mainView := lipgloss.JoinVertical(lipgloss.Left, header, panes, status)
+
+	// Overlay global search results if present
+	if m.globalSearching || len(m.globalSearchResult) > 0 {
+		return m.globalSearchOverlay(mainView)
+	}
+
+	return mainView
 }
 
 func (m Model) compactView() string {
@@ -443,6 +458,9 @@ func (m Model) renderArtifacts(w int) string {
 	var b strings.Builder
 	b.WriteString("\n")
 	b.WriteString(titleStyle.Render("Artifacts"))
+	if len(m.artifacts) > 0 {
+		b.WriteString(dimStyle.Render("  d:download"))
+	}
 	b.WriteString("\n")
 
 	if m.loadingArtifacts {
@@ -502,7 +520,7 @@ func (m Model) statusBarView(w int) string {
 		parts = append(parts, rateLabel)
 	}
 
-	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x:actions  tab:pane  g/G:top/bot"))
+	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x/u:actions  o:browser  d:download  a:agents  ctrl+f:search  S/P:presets"))
 
 	return statusStyle.Width(w).Render(strings.Join(parts, "  │  "))
 }
@@ -527,19 +545,245 @@ func (m Model) helpView() string {
 	b.WriteString("  r           Retry selected/top job\n")
 	b.WriteString("  b           Rebuild selected/top build\n")
 	b.WriteString("  x           Cancel selected/top running build\n")
+	b.WriteString("  u           Unblock selected blocked job\n")
 	b.WriteString("  L           Tail selected/top job logs\n")
+	b.WriteString("  o           Open current resource in browser\n")
+	b.WriteString("  d           Download first artifact\n")
 	b.WriteString("  /           Filter active pane\n")
 	b.WriteString("  esc/enter   Close filter input\n")
 	b.WriteString("  ctrl+u      Clear filter input\n")
+	b.WriteString("\n")
+	b.WriteString("Views:\n")
+	b.WriteString("  a           Toggle agent/queue saturation view\n")
+	b.WriteString("  ctrl+f      Global search across all data\n")
+	b.WriteString("  S           Save current filter as preset\n")
+	b.WriteString("  P           Load a saved filter preset\n")
 	b.WriteString("  ?           Toggle this help\n")
 	b.WriteString("  q           Quit\n")
-	b.WriteString("\n")
-	b.WriteString("Planned (not yet implemented):\n")
-	b.WriteString("  u           Unblock job\n")
-	b.WriteString("  o           Open in browser\n")
-	b.WriteString("  d           Download artifact\n")
 	b.WriteString("\n\n")
 	b.WriteString(dimStyle.Render("Press ? or esc to close"))
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("69")).
+		Padding(1, 2).
+		Render(b.String())
+}
+
+func (m Model) agentView() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("Agent & Queue Saturation"))
+	org := m.selectedOrg()
+	if org != nil {
+		b.WriteString(subtitleStyle.Render(fmt.Sprintf(" — %s", org.Slug)))
+	}
+	b.WriteString("\n")
+
+	contentHeight := m.height - 3
+	if contentHeight < 5 {
+		contentHeight = 5
+	}
+
+	var content strings.Builder
+
+	if m.loadingAgents {
+		content.WriteString(loadingStyle.Render("Loading agents..."))
+		content.WriteString("\n")
+	} else if len(m.agents) == 0 {
+		content.WriteString(dimStyle.Render("No agents found"))
+		content.WriteString("\n")
+	} else {
+		// Queue summary
+		queueMap := make(map[string]int)
+		queueConnected := make(map[string]int)
+		for _, agent := range m.agents {
+			q := agent.Queue
+			queueMap[q]++
+			if agent.ConnectedState == "connected" {
+				queueConnected[q]++
+			}
+		}
+
+		content.WriteString(titleStyle.Render("Queue Summary"))
+		content.WriteString("\n")
+		content.WriteString(dimStyle.Render(fmt.Sprintf("%-20s %-10s %-10s %s", "QUEUE", "TOTAL", "ONLINE", "SATURATION")))
+		content.WriteString("\n")
+		for queue, total := range queueMap {
+			connected := queueConnected[queue]
+			saturation := 0
+			if total > 0 {
+				saturation = (connected * 100) / total
+			}
+			satStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+			if saturation < 50 {
+				satStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+			} else if saturation < 80 {
+				satStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+			}
+			content.WriteString(fmt.Sprintf("%-20s %-10d %-10d %s",
+				queue,
+				total,
+				connected,
+				satStyle.Render(fmt.Sprintf("%d%%", saturation)),
+			))
+			content.WriteString("\n")
+		}
+
+		content.WriteString("\n")
+		content.WriteString(titleStyle.Render(fmt.Sprintf("Agents (%d)", len(m.agents))))
+		content.WriteString("\n")
+		content.WriteString(dimStyle.Render(fmt.Sprintf("%-25s %-15s %-12s %-10s %-10s %s", "NAME", "HOSTNAME", "STATE", "VERSION", "OS", "QUEUE")))
+		content.WriteString("\n")
+
+		for i, agent := range m.agents {
+			name := agent.Name
+			if len(name) > 24 {
+				name = name[:24]
+			}
+			hostname := agent.Hostname
+			if len(hostname) > 14 {
+				hostname = hostname[:14]
+			}
+
+			stateStyle := dimStyle
+			stateStr := agent.ConnectedState
+			if agent.ConnectedState == "connected" {
+				stateStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+				stateStr = "● connected"
+			} else {
+				stateStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+				stateStr = "○ " + agent.ConnectedState
+			}
+			if len(stateStr) > 11 {
+				stateStr = stateStr[:11]
+			}
+
+			ver := agent.Version
+			if len(ver) > 9 {
+				ver = ver[:9]
+			}
+			agentOS := agent.OS
+			if len(agentOS) > 9 {
+				agentOS = agentOS[:9]
+			}
+
+			cursor := "  "
+			if i == m.rightScroll {
+				cursor = "▶ "
+			}
+
+			line := fmt.Sprintf("%s%-25s %-15s %s %-10s %-10s %s",
+				cursor,
+				name,
+				hostname,
+				stateStyle.Render(fmt.Sprintf("%-12s", stateStr)),
+				ver,
+				agentOS,
+				agent.Queue,
+			)
+
+			if i == m.rightScroll {
+				content.WriteString(selectedItemStyle.Render(line))
+			} else {
+				content.WriteString(normalItemStyle.Render(line))
+			}
+			content.WriteString("\n")
+		}
+	}
+
+	b.WriteString(activeBorderStyle.Width(m.width).Height(contentHeight).Render(content.String()))
+	b.WriteString("\n")
+
+	var statusParts []string
+	statusParts = append(statusParts, fmt.Sprintf("%d agents", len(m.agents)))
+	statusParts = append(statusParts, helpStyle.Render("a/esc:back  ↑/k:up  ↓/j:down  R:refresh  o:open  q:quit"))
+	b.WriteString(statusStyle.Width(m.width).Render(strings.Join(statusParts, "  │  ")))
+
+	return b.String()
+}
+
+func (m Model) globalSearchOverlay(base string) string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("Global Search"))
+	b.WriteString("\n")
+
+	if m.globalSearching {
+		b.WriteString(loadingStyle.Render(fmt.Sprintf("Search: %s▌", m.globalSearchQuery)))
+	} else {
+		b.WriteString(dimStyle.Render(fmt.Sprintf("Search: %s", m.globalSearchQuery)))
+	}
+	b.WriteString("\n\n")
+
+	if len(m.globalSearchResult) == 0 && m.globalSearchQuery != "" {
+		b.WriteString(dimStyle.Render("No results"))
+		b.WriteString("\n")
+	} else {
+		for i, r := range m.globalSearchResult {
+			if i >= 20 {
+				b.WriteString(dimStyle.Render(fmt.Sprintf("  ... and %d more", len(m.globalSearchResult)-20)))
+				b.WriteString("\n")
+				break
+			}
+			typeStyle := dimStyle
+			switch r.Type {
+			case "org":
+				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+			case "pipeline":
+				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+			case "build":
+				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+			case "job":
+				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("199"))
+			}
+			b.WriteString(fmt.Sprintf("  %s %s", typeStyle.Render(fmt.Sprintf("[%-8s]", r.Type)), r.Label))
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n")
+	b.WriteString(dimStyle.Render("esc:close  enter:search  ctrl+u:clear"))
+
+	overlay := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("69")).
+		Padding(1, 2).
+		Width(m.width - 10).
+		Render(b.String())
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
+}
+
+func (m Model) presetPickerView() string {
+	presets := m.activeFilterPresets()
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("Filter Presets"))
+	b.WriteString("\n\n")
+
+	if len(presets) == 0 {
+		b.WriteString(dimStyle.Render("No saved presets"))
+		b.WriteString("\n")
+	} else {
+		for i, p := range presets {
+			cursor := "  "
+			if i == m.presetPickerIndex {
+				cursor = "▶ "
+			}
+			paneLabel := dimStyle.Render(fmt.Sprintf("[%s]", p.Pane))
+			line := fmt.Sprintf("%s%s %s %s", cursor, p.Name, paneLabel, dimStyle.Render("→ /"+p.Query))
+			if i == m.presetPickerIndex {
+				b.WriteString(selectedItemStyle.Render(line))
+			} else {
+				b.WriteString(normalItemStyle.Render(line))
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n")
+	b.WriteString(dimStyle.Render("enter:select  esc:close  ↑/↓:navigate"))
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
+	"github.com/alexhraber/builddeck/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -26,6 +27,7 @@ func (p pane) prev() pane {
 
 type Model struct {
 	client *buildkite.Client
+	config *config.Config
 
 	activePane pane
 
@@ -39,6 +41,11 @@ type Model struct {
 
 	annotations []buildkite.Annotation
 	artifacts   []buildkite.Artifact
+
+	// Agent data for queue/agent saturation view
+	agents        []buildkite.Agent
+	loadingAgents bool
+	showAgents    bool
 
 	loadingOrgs        bool
 	loadingPipes       bool
@@ -77,12 +84,32 @@ type Model struct {
 	logJobID                  string
 	pendingLogsForLatestBuild bool
 
+	// Global search state
+	globalSearching    bool
+	globalSearchQuery  string
+	globalSearchResult []GlobalSearchResult
+
+	// Filter presets state
+	showPresetPicker  bool
+	presetPickerIndex int
+
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
 	buildAnnotations  map[string][]buildkite.Annotation
 	buildArtifacts    map[string][]buildkite.Artifact
 	jobLogs           map[string]string
 	buildSelectionSeq int
+}
+
+// GlobalSearchResult holds one match from global search.
+type GlobalSearchResult struct {
+	Type     string // "org", "pipeline", "build", "job"
+	Label    string
+	OrgSlug  string
+	PipeSlug string
+	BuildNum int
+	JobID    string
+	WebURL   string
 }
 
 func NewModel(client *buildkite.Client) Model {
@@ -95,6 +122,12 @@ func NewModel(client *buildkite.Client) Model {
 		buildArtifacts:   make(map[string][]buildkite.Artifact),
 		jobLogs:          make(map[string]string),
 	}
+}
+
+func NewModelWithConfig(client *buildkite.Client, cfg *config.Config) Model {
+	m := NewModel(client)
+	m.config = cfg
+	return m
 }
 
 type orgsLoadedMsg struct {
@@ -130,6 +163,16 @@ type artifactsLoadedMsg struct {
 	err       error
 }
 
+type agentsLoadedMsg struct {
+	agents []buildkite.Agent
+	err    error
+}
+
+type artifactDownloadMsg struct {
+	filename string
+	err      error
+}
+
 type buildSelectionDebounceMsg struct {
 	seq int
 }
@@ -142,6 +185,7 @@ const (
 	actionRetryJob buildAction = "retry job"
 	actionRebuild  buildAction = "rebuild"
 	actionCancel   buildAction = "cancel"
+	actionUnblock  buildAction = "unblock job"
 )
 
 func isTerminalState(state string) bool {
@@ -222,6 +266,18 @@ func loadArtifactsCmd(client *buildkite.Client, orgSlug, pipelineSlug string, bu
 	}
 }
 
+func loadAgentsCmd(client *buildkite.Client, orgSlug string) tea.Cmd {
+	return func() tea.Msg {
+		agents, err := client.ListAgents(context.Background(), orgSlug)
+		if err == nil {
+			for i := range agents {
+				agents[i].Queue = buildkite.ParseAgentQueue(agents[i])
+			}
+		}
+		return agentsLoadedMsg{agents: agents, err: err}
+	}
+}
+
 const (
 	pollIntervalActive = 2 * time.Second
 	pollIntervalIdle   = 10 * time.Second
@@ -278,4 +334,37 @@ func clampIndex(idx, length int) int {
 		return length - 1
 	}
 	return idx
+}
+
+// selectedArtifact returns the artifact at the current artifact scroll position, if any.
+func (m Model) selectedArtifact() *buildkite.Artifact {
+	if len(m.artifacts) == 0 {
+		return nil
+	}
+	// We reuse rightScroll relative to artifact section in agent view
+	// For the detail pane, artifacts don't have separate selection.
+	// In the primary layout, artifacts are rendered below jobs.
+	// We track artifact selection only when the right pane is active and there are artifacts.
+	return nil
+}
+
+// activeFilterPresets returns filter presets from config.
+func (m Model) activeFilterPresets() []config.FilterPreset {
+	if m.config == nil {
+		return nil
+	}
+	return m.config.FilterPresets
+}
+
+// paneName returns a display-friendly pane name.
+func paneName(p pane) string {
+	switch p {
+	case leftPane:
+		return "pipelines"
+	case centerPane:
+		return "builds"
+	case rightPane:
+		return "jobs"
+	}
+	return "unknown"
 }

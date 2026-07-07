@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1.0",
+  "topic": "TUI implementation",
+  "scope": "interfaces",
+  "task_id": "todo_01kwzc",
+  "workunit_id": null,
+  "sources": [
+    {
+      "path": "interfaces/ARCHITECTURE_FOUNDATIONS",
+      "section": "match"
+    },
+    {
+      "path": "interfaces/PROJECT_SPECS",
+      "section": "concepts"
+    }
+  ],
+  "snippets": [
+    {
+      "source_path": "interfaces/ARCHITECTURE_FOUNDATIONS",
+      "text": "## match\n\nUse when discussing high-level design patterns before selecting specific implementation-level nodes."
+    },
+    {
+      "source_path": "interfaces/PROJECT_SPECS",
+      "text": "## concepts\n\nAcceptance Criteria: Falsifiable, testable conditions that define the success of a feature or task.\nRequirement Boundaries: The specific code paths, files, and subsystems that the spec governs.\nProof Targets: The exact test or verification script required to prove the spec is satisfied.\nSpec Drift: Detecting DELTAs where implementation has diverged from the documented intent."
+    }
+  ],
+  "policy": {
+    "risk_tier": "medium",
+    "policy_hash": "01a9984c70ab7f37aa4b0b7eb401bec8d289a984f9f0809038e001e9ae51d818",
+    "policy_version": "jit-capsule-policy-v1",
+    "policy_path": ".decapod/generated/policy/context_capsule_policy.json",
+    "repo_revision": "79b65b5add6d14c3a00b3521f7a459f242b2c986"
+  },
+  "capsule_hash": "04ac4740c11065cf69a1bbbccdb621b8b0276b0682ab1b069c0e125bc41dc2c3"
+}

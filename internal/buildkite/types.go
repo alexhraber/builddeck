@@ -49,6 +49,8 @@ type Job struct {
 	StartedAt       string   `json:"started_at"`
 	FinishedAt      string   `json:"finished_at"`
 	Agent           *Agent   `json:"agent"`
+	WebURL          string   `json:"web_url"`
+	UnblockableID   string   `json:"unblockable_id,omitempty"`
 }
 
 type Agent struct {
@@ -61,6 +63,7 @@ type Agent struct {
 	IPAddress      string   `json:"ip_address"`
 	Metadata       []string `json:"meta_data"`
 	WebURL         string   `json:"web_url"`
+	Queue          string   `json:"-"` // derived from metadata "queue=xxx"
 }
 
 type Annotation struct {

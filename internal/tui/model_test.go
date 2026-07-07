@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
+	"github.com/alexhraber/builddeck/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -289,5 +290,111 @@ func TestLogsToggleLeftPane(t *testing.T) {
 	}
 	if model2.logJobID != "job-1" {
 		t.Errorf("Expected logJobID to be job-1, got %s", model2.logJobID)
+	}
+}
+
+func TestUnblockKeyBinding(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+	m.orgs = []buildkite.Organization{{Slug: "org"}}
+	m.pipelines = []buildkite.Pipeline{{Slug: "pipe"}}
+	m.builds = []buildkite.Build{{
+		ID:     "build-1",
+		Number: 10,
+		State:  "running",
+		Jobs:   []buildkite.Job{{ID: "job-1", Type: "script", State: "blocked"}},
+	}}
+	m.selectedBuild = &m.builds[0]
+	m.activePane = centerPane
+
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")})
+	model := next.(Model)
+	if cmd == nil {
+		t.Fatal("Expected action command for unblock key 'u'")
+	}
+	if !model.actionInFlight {
+		t.Fatal("Expected actionInFlight to be true")
+	}
+	if model.searchMsg != "Unblocking job..." {
+		t.Fatalf("searchMsg = %q, want %q", model.searchMsg, "Unblocking job...")
+	}
+}
+
+func TestOpenBrowserNoURL(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+	// Active pane has no build/pipeline -> searchMsg = "No URL available"
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	model := next.(Model)
+	if cmd != nil {
+		t.Error("Expected no command when opening browser with no URL")
+	}
+	if model.searchMsg != "No URL available" {
+		t.Errorf("expected searchMsg 'No URL available', got %q", model.searchMsg)
+	}
+}
+
+func TestAgentViewToggle(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+	m.orgs = []buildkite.Organization{{Slug: "org"}}
+
+	// Toggle agent view on
+	m1, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	model1 := m1.(Model)
+	if !model1.showAgents {
+		t.Error("Expected showAgents to be true after pressing 'a'")
+	}
+
+	// Toggle agent view off
+	m2, _ := model1.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	model2 := m2.(Model)
+	if model2.showAgents {
+		t.Error("Expected showAgents to be false after pressing 'a' again")
+	}
+}
+
+func TestGlobalSearchToggle(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+
+	// Press ctrl+f to open global search
+	m1, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlF})
+	model1 := m1.(Model)
+	if !model1.globalSearching {
+		t.Error("Expected globalSearching to be true after ctrl+f")
+	}
+
+	// Press esc to close global search
+	m2, _ := model1.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model2 := m2.(Model)
+	if model2.globalSearching {
+		t.Error("Expected globalSearching to be false after esc")
+	}
+}
+
+func TestSavePresetNoFilter(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	m := NewModel(client)
+	m.filterQuery = "" // empty filter
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("S")})
+	model := next.(Model)
+	if model.searchMsg != "No active filter to save" {
+		t.Errorf("expected 'No active filter to save', got %q", model.searchMsg)
+	}
+}
+
+func TestNewModelWithConfig(t *testing.T) {
+	client := buildkite.NewClient("dummy-token")
+	cfg := &config.Config{
+		DownloadDir: "/tmp",
+	}
+	m := NewModelWithConfig(client, cfg)
+	if m.config != cfg {
+		t.Error("Expected config to be set in Model")
+	}
+	if m.config.DownloadDir != "/tmp" {
+		t.Errorf("expected download dir /tmp, got %s", m.config.DownloadDir)
 	}
 }
