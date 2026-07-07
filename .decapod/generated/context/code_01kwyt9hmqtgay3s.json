@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1.0",
+  "topic": "Smart adaptive polling for builddeck TUI",
+  "scope": "interfaces",
+  "task_id": "code_01kwyt9hmqtgay3s",
+  "workunit_id": null,
+  "sources": [
+    {
+      "path": "interfaces/AGENT_CONTEXT_PACK",
+      "section": "standards"
+    },
+    {
+      "path": "interfaces/CLAIMS",
+      "section": "decisions"
+    }
+  ],
+  "snippets": [
+    {
+      "source_path": "interfaces/AGENT_CONTEXT_PACK",
+      "text": "## standards\n\nContext packs must explicitly label the provenance and authority level of the retrieved information.\nAgents must read and process the context pack *before* formulating an implementation plan."
+    },
+    {
+      "source_path": "interfaces/CLAIMS",
+      "text": "## decisions\n\nDecide whether a claim is 'enforced' (automated check), 'partially_enforced', or 'not_enforced' (human review).\nDetermine the specific test, script, or validation gate that serves as the evidence for a claim."
+    }
+  ],
+  "policy": {
+    "risk_tier": "medium",
+    "policy_hash": "01a9984c70ab7f37aa4b0b7eb401bec8d289a984f9f0809038e001e9ae51d818",
+    "policy_version": "jit-capsule-policy-v1",
+    "policy_path": ".decapod/generated/policy/context_capsule_policy.json",
+    "repo_revision": "cae3c7ae4a650ae557be75c057f8a61499ed3bcf"
+  },
+  "capsule_hash": "c64cd684204eef1afff52c48a03db9f9b0a22a93c6c31ea9a9de88ea7776ed0e"
+}
