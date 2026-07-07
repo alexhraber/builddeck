@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.1.0",
+  "topic": "tui layout",
+  "scope": "interfaces",
+  "task_id": "todo_01kwyz",
+  "workunit_id": null,
+  "sources": [
+    {
+      "path": "interfaces/AGENT_CONTEXT_PACK",
+      "section": "interfaces/AGENT_CONTEXT_PACK"
+    },
+    {
+      "path": "interfaces/ARCHITECTURE_FOUNDATIONS",
+      "section": "interfaces/ARCHITECTURE_FOUNDATIONS"
+    },
+    {
+      "path": "interfaces/CLAIMS",
+      "section": "interfaces/CLAIMS"
+    },
+    {
+      "path": "interfaces/CONTROL_PLANE",
+      "section": "interfaces/CONTROL_PLANE"
+    },
+    {
+      "path": "interfaces/DEMANDS_SCHEMA",
+      "section": "interfaces/DEMANDS_SCHEMA"
+    },
+    {
+      "path": "interfaces/DOC_RULES",
+      "section": "interfaces/DOC_RULES"
+    }
+  ],
+  "snippets": [
+    {
+      "source_path": "interfaces/AGENT_CONTEXT_PACK",
+      "text": "# interfaces/AGENT_CONTEXT_PACK\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes retrieved snippets, task scope, authority ordering, bounded context, and agent pre-inference consumption.\n\n## ambiguity\n\nStop inference if the retrieved context is contradictory or insufficient to safely execute the task."
+    },
+    {
+      "source_path": "interfaces/ARCHITECTURE_FOUNDATIONS",
+      "text": "# interfaces/ARCHITECTURE_FOUNDATIONS\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes foundational architecture vocabulary: boundary, state, interface, runtime, deployment, and data flow.\n\n## ambiguity\n\nStop inference if the basic relationship between state and interface is undefined for a new component."
+    },
+    {
+      "source_path": "interfaces/CLAIMS",
+      "text": "# interfaces/CLAIMS\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes claim type, evidence, verification status, stale claim risk, and mapping claims to proof.\n\n## ambiguity\n\nStop inference if a claim is made without a corresponding proof surface or verification artifact."
+    },
+    {
+      "source_path": "interfaces/CONTROL_PLANE",
+      "text": "# interfaces/CONTROL_PLANE\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes operation sequencing, receipts, allowed next operations, and mutation boundaries.\n\n## ambiguity\n\nStop inference if an RPC response indicates a 'blocked_by' state without a clear resolution hint."
+    },
+    {
+      "source_path": "interfaces/DEMANDS_SCHEMA",
+      "text": "# interfaces/DEMANDS_SCHEMA\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes how human constraints become structured demands: must, must-not, priority, and durability.\n\n## ambiguity\n\nStop inference if two 'Must' demands are mutually exclusive and no precedence rule applies."
+    },
+    {
+      "source_path": "interfaces/DOC_RULES",
+      "text": "# interfaces/DOC_RULES\n**Authority:** doctrine\n**Layer:** interfaces\n**Binding:** advisory\n\nDescribes machine-readable documentation rules: canonical vs generated, boundaries, and drift handling.\n\n## ambiguity\n\nStop inference if a file's status as 'canonical' or 'generated' is unclear."
+    }
+  ],
+  "policy": {
+    "risk_tier": "medium",
+    "policy_hash": "01a9984c70ab7f37aa4b0b7eb401bec8d289a984f9f0809038e001e9ae51d818",
+    "policy_version": "jit-capsule-policy-v1",
+    "policy_path": ".decapod/generated/policy/context_capsule_policy.json",
+    "repo_revision": "96db140de15b71cf4326c7e3937657d439d0a7a3"
+  },
+  "capsule_hash": "0d89b0dc2452823f557faad9427829b2362c7c8cd767ddbaef4f6904b94b5569"
+}

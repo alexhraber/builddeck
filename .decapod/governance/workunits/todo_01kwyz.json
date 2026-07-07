@@ -1,0 +1,19 @@
+{
+  "task_id": "todo_01kwyz",
+  "intent_ref": "fix top job indentation glitch in builds pane",
+  "spec_refs": [],
+  "state_refs": [
+    ".decapod/generated/context/todo_01kwyz.json"
+  ],
+  "proof_plan": [
+    "validation"
+  ],
+  "proof_results": [
+    {
+      "gate": "validation",
+      "status": "pass",
+      "artifact_ref": null
+    }
+  ],
+  "status": "VERIFIED"
+}
