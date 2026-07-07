@@ -228,7 +228,7 @@ func (m Model) centerPaneView(w, h int) string {
 		b.WriteString(dimStyle.Render("No matching builds"))
 		b.WriteString("\n")
 	} else {
-		b.WriteString(dimStyle.Render(fmt.Sprintf("%-8s %-10s %-9s %-9s %-12s %s\n", "BUILD", "BRANCH", "COMMIT", "STATE", "CREATOR", "DURATION")))
+		b.WriteString(dimStyle.Render(fmt.Sprintf("%-8s %-10s %-9s %-9s %-12s %s", "BUILD", "BRANCH", "COMMIT", "STATE", "CREATOR", "DURATION")) + "\n")
 		for _, i := range buildIndices {
 			build := m.builds[i]
 			b.WriteString(m.renderBuildRow(i, build))
