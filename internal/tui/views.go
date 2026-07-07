@@ -33,10 +33,6 @@ func (m Model) View() string {
 		return m.agentView()
 	}
 
-	if m.showPresetPicker {
-		return m.presetPickerView()
-	}
-
 	headerHeight := 1
 	statusHeight := 1
 	mainHeight := m.height - headerHeight - statusHeight
@@ -61,6 +57,16 @@ func (m Model) View() string {
 	// Overlay global search results if present
 	if m.globalSearching || len(m.globalSearchResult) > 0 {
 		return m.globalSearchOverlay(mainView)
+	}
+
+	// Overlay preset picker if present
+	if m.showPresetPicker {
+		return m.presetPickerOverlay(mainView)
+	}
+
+	// Overlay options if present
+	if m.showOptions {
+		return m.optionsOverlay(mainView)
 	}
 
 	return mainView
@@ -755,41 +761,123 @@ func (m Model) globalSearchOverlay(base string) string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 }
 
-func (m Model) presetPickerView() string {
+func (m Model) presetPickerOverlay(base string) string {
 	presets := m.activeFilterPresets()
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Filter Presets"))
+	b.WriteString(titleStyle.Render("  Filter Presets  "))
 	b.WriteString("\n\n")
 
 	if len(presets) == 0 {
-		b.WriteString(dimStyle.Render("No saved presets"))
+		b.WriteString(dimStyle.Render("  No saved presets"))
 		b.WriteString("\n")
 	} else {
+		usableWidth := 50
 		for i, p := range presets {
 			cursor := "  "
 			if i == m.presetPickerIndex {
-				cursor = "▶ "
+				cursor = "❯ "
 			}
 			paneLabel := dimStyle.Render(fmt.Sprintf("[%s]", p.Pane))
-			line := fmt.Sprintf("%s%s %s %s", cursor, p.Name, paneLabel, dimStyle.Render("→ /"+p.Query))
+			line := fmt.Sprintf("%s %s %s", p.Name, paneLabel, dimStyle.Render("→ /"+p.Query))
+			rawLine := cursor + line
+			visWidth := lipgloss.Width(rawLine)
+			if visWidth < usableWidth {
+				rawLine += strings.Repeat(" ", usableWidth-visWidth)
+			}
 			if i == m.presetPickerIndex {
-				b.WriteString(selectedItemStyle.Render(line))
+				b.WriteString(selectedItemStyle.Render(rawLine))
 			} else {
-				b.WriteString(normalItemStyle.Render(line))
+				b.WriteString(normalItemStyle.Render(rawLine))
 			}
 			b.WriteString("\n")
 		}
 	}
 
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("enter:select  esc:close  ↑/↓:navigate"))
+	b.WriteString(dimStyle.Render("  enter:select  │  esc:close  │  ↑/↓:navigate"))
 
-	return lipgloss.NewStyle().
+	overlay := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("69")).
+		BorderForeground(lipgloss.Color(activeTheme.BorderActive)).
 		Padding(1, 2).
+		Width(60).
 		Render(b.String())
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
+}
+
+func (m Model) optionsOverlay(base string) string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("  Builddeck Options  "))
+	b.WriteString("\n\n")
+
+	// Themes options
+	themeNames := make([]string, len(Themes))
+	for i, t := range Themes {
+		themeNames[i] = t.Name
+	}
+	themeVal := fmt.Sprintf("◀  %s  ▶", themeNames[m.themeIndex])
+
+	// Refresh Rate options
+	refreshNames := []string{"Dynamic", "2s (Live)", "5s", "10s (Idle)", "30s", "Disabled"}
+	refreshVal := fmt.Sprintf("◀  %s  ▶", refreshNames[m.refreshRateIndex])
+
+	// Layout Density
+	densityVal := "◀  Spacious  ▶"
+	if m.denseMode {
+		densityVal = "◀  Dense     ▶"
+	}
+
+	// Sorting
+	sortingVal := "◀  Newest First  ▶"
+	if m.sortAsc {
+		sortingVal = "◀  Oldest First  ▶"
+	}
+
+	options := []struct {
+		Label string
+		Value string
+	}{
+		{"Theme           ", themeVal},
+		{"Refresh Rate    ", refreshVal},
+		{"Layout Density  ", densityVal},
+		{"Build Sorting   ", sortingVal},
+	}
+
+	for i, opt := range options {
+		cursor := "  "
+		if i == m.optionsCursor {
+			cursor = "❯ "
+		}
+
+		line := fmt.Sprintf("%-16s  %s", opt.Label, opt.Value)
+		rawLine := cursor + line
+		usableWidth := 56
+		visWidth := lipgloss.Width(rawLine)
+		if visWidth < usableWidth {
+			rawLine += strings.Repeat(" ", usableWidth-visWidth)
+		}
+
+		if i == m.optionsCursor {
+			b.WriteString(selectedItemStyle.Render(rawLine) + "\n")
+		} else {
+			b.WriteString(normalItemStyle.Render(rawLine) + "\n")
+		}
+	}
+
+	b.WriteString("\n")
+	b.WriteString(dimStyle.Render("  esc:close  │  ↑/↓:navigate  │  ←/→:change value"))
+
+	overlay := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(activeTheme.BorderActive)).
+		Padding(1, 2).
+		Width(65).
+		Render(b.String())
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 }
 
 func stripHTMLTags(s string) string {

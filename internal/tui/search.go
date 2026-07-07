@@ -27,6 +27,11 @@ func (m Model) filteredBuildIndices() []int {
 			indices = append(indices, i)
 		}
 	}
+	if m.sortAsc {
+		for i, j := 0, len(indices)-1; i < j; i, j = i+1, j-1 {
+			indices[i], indices[j] = indices[j], indices[i]
+		}
+	}
 	return indices
 }
 
