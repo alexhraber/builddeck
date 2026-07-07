@@ -382,3 +382,63 @@ func TestCancelBuild(t *testing.T) {
 		t.Errorf("expected canceling state, got %s", got.State)
 	}
 }
+
+func TestUnblockJob(t *testing.T) {
+	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42/jobs/j1/unblock" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusAccepted)
+	})
+	defer srv.Close()
+
+	if err := testClient(srv).UnblockJob(context.Background(), "org", "pipe", 42, "j1"); err != nil {
+		t.Fatalf("UnblockJob: %v", err)
+	}
+}
+
+func TestDownloadArtifactURL(t *testing.T) {
+	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42/jobs/j1/artifacts/art1/download" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Location", "http://redirect-url-to-s3.com/file")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	})
+	defer srv.Close()
+
+	got, err := testClient(srv).DownloadArtifactURL(context.Background(), "org", "pipe", 42, "j1", "art1")
+	if err != nil {
+		t.Fatalf("DownloadArtifactURL: %v", err)
+	}
+	if got != "http://redirect-url-to-s3.com/file" {
+		t.Errorf("expected redirect url, got %s", got)
+	}
+}
+
+func TestParseAgentQueue(t *testing.T) {
+	tests := []struct {
+		name  string
+		agent Agent
+		want  string
+	}{
+		{"queue exists", Agent{Metadata: []string{"queue=deploy"}}, "deploy"},
+		{"no queue metadata", Agent{Metadata: []string{"other=val"}}, "default"},
+		{"empty metadata", Agent{Metadata: []string{}}, "default"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseAgentQueue(tt.agent)
+			if got != tt.want {
+				t.Errorf("ParseAgentQueue() = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}

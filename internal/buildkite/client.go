@@ -315,3 +315,56 @@ func (c *Client) RetryJob(ctx context.Context, orgSlug, pipelineSlug string, bui
 	}
 	return nil
 }
+
+func (c *Client) UnblockJob(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID string) error {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/unblock", orgSlug, pipelineSlug, buildNumber, jobID)
+	if _, err := c.put(ctx, path); err != nil {
+		return fmt.Errorf("unblocking job %s/%s#%d %s: %w", orgSlug, pipelineSlug, buildNumber, jobID, err)
+	}
+	return nil
+}
+
+// DownloadArtifactURL returns a redirect URL for artifact download.
+func (c *Client) DownloadArtifactURL(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID, artifactID string) (string, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/artifacts/%s/download", orgSlug, pipelineSlug, buildNumber, jobID, artifactID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+path, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating download request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+
+	// Don't follow redirects — we want the redirect URL
+	noRedirectClient := &http.Client{
+		Timeout: c.HTTPClient.Timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := noRedirectClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("artifact download request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusTemporaryRedirect {
+		return resp.Header.Get("Location"), nil
+	}
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("artifact download failed (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	return resp.Header.Get("Location"), nil
+}
+
+// ParseAgentQueue extracts the "queue" from agent metadata.
+func ParseAgentQueue(agent Agent) string {
+	for _, meta := range agent.Metadata {
+		if strings.HasPrefix(meta, "queue=") {
+			return strings.TrimPrefix(meta, "queue=")
+		}
+	}
+	return "default"
+}

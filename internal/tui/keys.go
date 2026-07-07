@@ -3,23 +3,30 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type keyMap struct {
-	Up       key.Binding
-	Down     key.Binding
-	Left     key.Binding
-	Right    key.Binding
-	Tab      key.Binding
-	ShiftTab key.Binding
-	Enter    key.Binding
-	Top      key.Binding
-	Bottom   key.Binding
-	Search   key.Binding
-	Refresh  key.Binding
-	Help     key.Binding
-	Logs     key.Binding
-	RetryJob key.Binding
-	Rebuild  key.Binding
-	Cancel   key.Binding
-	Quit     key.Binding
+	Up           key.Binding
+	Down         key.Binding
+	Left         key.Binding
+	Right        key.Binding
+	Tab          key.Binding
+	ShiftTab     key.Binding
+	Enter        key.Binding
+	Top          key.Binding
+	Bottom       key.Binding
+	Search       key.Binding
+	Refresh      key.Binding
+	Help         key.Binding
+	Logs         key.Binding
+	RetryJob     key.Binding
+	Rebuild      key.Binding
+	Cancel       key.Binding
+	Quit         key.Binding
+	Unblock      key.Binding
+	OpenBrowser  key.Binding
+	Download     key.Binding
+	Agents       key.Binding
+	GlobalSearch key.Binding
+	SavePreset   key.Binding
+	LoadPreset   key.Binding
 }
 
 var keys = keyMap{
@@ -91,12 +98,43 @@ var keys = keyMap{
 		key.WithKeys("q", "ctrl+c"),
 		key.WithHelp("q", "quit"),
 	),
+	Unblock: key.NewBinding(
+		key.WithKeys("u"),
+		key.WithHelp("u", "unblock job"),
+	),
+	OpenBrowser: key.NewBinding(
+		key.WithKeys("o"),
+		key.WithHelp("o", "open in browser"),
+	),
+	Download: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "download artifact"),
+	),
+	Agents: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "agents view"),
+	),
+	GlobalSearch: key.NewBinding(
+		key.WithKeys("ctrl+f"),
+		key.WithHelp("ctrl+f", "global search"),
+	),
+	SavePreset: key.NewBinding(
+		key.WithKeys("S"),
+		key.WithHelp("S", "save filter preset"),
+	),
+	LoadPreset: key.NewBinding(
+		key.WithKeys("P"),
+		key.WithHelp("P", "load filter preset"),
+	),
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
 	return []key.Binding{
 		k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab,
-		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh, k.Logs, k.RetryJob, k.Rebuild, k.Cancel, k.Help, k.Quit,
+		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh, k.Logs,
+		k.RetryJob, k.Rebuild, k.Cancel, k.Unblock,
+		k.OpenBrowser, k.Download, k.Agents, k.GlobalSearch,
+		k.SavePreset, k.LoadPreset, k.Help, k.Quit,
 	}
 }
 
@@ -104,8 +142,10 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.Tab, k.ShiftTab, k.Enter},
-		{k.Top, k.Bottom, k.Search, k.Refresh, k.Logs},
-		{k.RetryJob, k.Rebuild, k.Cancel},
+		{k.Top, k.Bottom, k.Search, k.GlobalSearch, k.Refresh, k.Logs},
+		{k.RetryJob, k.Rebuild, k.Cancel, k.Unblock},
+		{k.OpenBrowser, k.Download, k.Agents},
+		{k.SavePreset, k.LoadPreset},
 		{k.Help, k.Quit},
 	}
 }

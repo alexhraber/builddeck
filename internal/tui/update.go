@@ -3,11 +3,19 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
+	"github.com/alexhraber/builddeck/internal/config"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -207,6 +215,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case agentsLoadedMsg:
+		m.loadingAgents = false
+		if msg.err != nil {
+			m.err = msg.err
+			m.errMsg = "failed to load agents"
+			return m, nil
+		}
+		m.agents = msg.agents
+		return m, nil
+
 	case buildSelectionDebounceMsg:
 		if msg.seq == m.buildSelectionSeq {
 			cmd := m.loadSelectedBuildDetailsForce()
@@ -245,8 +263,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.searchMsg = "Rebuild queued"
 		case actionCancel:
 			m.searchMsg = "Cancel requested"
+		case actionUnblock:
+			m.searchMsg = "Job unblocked"
 		}
 		return m, m.refreshBuilds()
+
+	case artifactDownloadMsg:
+		m.actionInFlight = false
+		if msg.err != nil {
+			m.err = msg.err
+			m.errMsg = "failed to download artifact"
+			return m, nil
+		}
+		m.searchMsg = fmt.Sprintf("Downloaded: %s", msg.filename)
+		return m, nil
 
 	case tickMsg:
 		cmds := []tea.Cmd{tickCmdWithInterval(m.currentPollInterval())}
@@ -267,8 +297,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.globalSearching {
+		return m.handleGlobalSearchKey(msg)
+	}
+
 	if m.searching {
 		return m.handleSearchKey(msg)
+	}
+
+	if m.showPresetPicker {
+		return m.handlePresetPickerKey(msg)
 	}
 
 	if m.showHelp {
@@ -277,6 +315,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, nil
+	}
+
+	if m.showAgents {
+		return m.handleAgentViewKey(msg)
 	}
 
 	if key.Matches(msg, keys.Logs) {
@@ -442,6 +484,33 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		cmd := m.cancelSelectedBuild()
 		return m, cmd
 
+	case key.Matches(msg, keys.Unblock):
+		cmd := m.unblockSelectedJob()
+		return m, cmd
+
+	case key.Matches(msg, keys.OpenBrowser):
+		m.openInBrowser()
+		return m, nil
+
+	case key.Matches(msg, keys.Download):
+		cmd := m.downloadSelectedArtifact()
+		return m, cmd
+
+	case key.Matches(msg, keys.Agents):
+		return m.toggleAgentView()
+
+	case key.Matches(msg, keys.GlobalSearch):
+		m.globalSearching = true
+		m.globalSearchQuery = ""
+		m.globalSearchResult = nil
+		return m, nil
+
+	case key.Matches(msg, keys.SavePreset):
+		return m.saveCurrentFilterAsPreset()
+
+	case key.Matches(msg, keys.LoadPreset):
+		return m.showPresetPickerView()
+
 	case key.Matches(msg, keys.Tab), key.Matches(msg, keys.Right):
 		m.activePane = m.activePane.next()
 		return m, nil
@@ -502,6 +571,126 @@ func (m Model) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.applyFilterSelection()
 	}
 
+	return m, nil
+}
+
+func (m Model) handleGlobalSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.globalSearching = false
+		m.globalSearchQuery = ""
+		m.globalSearchResult = nil
+		return m, nil
+	case "ctrl+c":
+		return m, tea.Quit
+	case "enter":
+		m.globalSearching = false
+		m.globalSearchResult = m.performGlobalSearch(m.globalSearchQuery)
+		return m, nil
+	case "backspace", "ctrl+h":
+		if m.globalSearchQuery != "" {
+			_, size := utf8.DecodeLastRuneInString(m.globalSearchQuery)
+			m.globalSearchQuery = m.globalSearchQuery[:len(m.globalSearchQuery)-size]
+			m.globalSearchResult = m.performGlobalSearch(m.globalSearchQuery)
+		}
+		return m, nil
+	case "ctrl+u":
+		m.globalSearchQuery = ""
+		m.globalSearchResult = nil
+		return m, nil
+	}
+
+	if msg.Type == tea.KeyRunes {
+		m.globalSearchQuery += string(msg.Runes)
+		m.globalSearchQuery = strings.TrimLeft(m.globalSearchQuery, " ")
+		m.globalSearchResult = m.performGlobalSearch(m.globalSearchQuery)
+	}
+
+	return m, nil
+}
+
+func (m Model) handlePresetPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	presets := m.activeFilterPresets()
+
+	switch {
+	case msg.String() == "esc", key.Matches(msg, keys.Quit):
+		m.showPresetPicker = false
+		return m, nil
+	case key.Matches(msg, keys.Up):
+		if m.presetPickerIndex > 0 {
+			m.presetPickerIndex--
+		}
+		return m, nil
+	case key.Matches(msg, keys.Down):
+		if m.presetPickerIndex < len(presets)-1 {
+			m.presetPickerIndex++
+		}
+		return m, nil
+	case key.Matches(msg, keys.Enter):
+		if m.presetPickerIndex >= 0 && m.presetPickerIndex < len(presets) {
+			p := presets[m.presetPickerIndex]
+			m.filterQuery = p.Query
+			switch p.Pane {
+			case "pipelines":
+				m.filterPane = leftPane
+			case "builds":
+				m.filterPane = centerPane
+			case "jobs":
+				m.filterPane = rightPane
+			}
+			m.showPresetPicker = false
+			m.searchMsg = fmt.Sprintf("Preset loaded: %s", p.Name)
+			return m.applyFilterSelection()
+		}
+		m.showPresetPicker = false
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleAgentViewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case msg.String() == "esc", key.Matches(msg, keys.Agents):
+		m.showAgents = false
+		return m, nil
+	case key.Matches(msg, keys.Quit):
+		return m, tea.Quit
+	case key.Matches(msg, keys.Refresh):
+		org := m.selectedOrg()
+		if org != nil {
+			m.loadingAgents = true
+			return m, loadAgentsCmd(m.client, org.Slug)
+		}
+		return m, nil
+	case key.Matches(msg, keys.Up):
+		if m.rightScroll > 0 {
+			m.rightScroll--
+		}
+		return m, nil
+	case key.Matches(msg, keys.Down):
+		if m.rightScroll < len(m.agents)-1 {
+			m.rightScroll++
+		}
+		return m, nil
+	case key.Matches(msg, keys.Top):
+		m.rightScroll = 0
+		return m, nil
+	case key.Matches(msg, keys.Bottom):
+		if len(m.agents) > 0 {
+			m.rightScroll = len(m.agents) - 1
+		}
+		return m, nil
+	case key.Matches(msg, keys.OpenBrowser):
+		if m.rightScroll >= 0 && m.rightScroll < len(m.agents) {
+			agent := m.agents[m.rightScroll]
+			if agent.WebURL != "" {
+				openURL(agent.WebURL)
+				m.searchMsg = "Opened agent in browser"
+			}
+		}
+		return m, nil
+	}
 	return m, nil
 }
 
@@ -844,6 +1033,163 @@ func (m *Model) cancelSelectedBuild() tea.Cmd {
 	return cancelBuildCmd(m.client, org.Slug, pipe.Slug, build.Number)
 }
 
+func (m *Model) unblockSelectedJob() tea.Cmd {
+	if m.actionInFlight {
+		m.searchMsg = "Action already in flight"
+		return nil
+	}
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	build := m.actionBuild()
+	if org == nil || pipe == nil || build == nil {
+		m.searchMsg = "No build selected"
+		return nil
+	}
+
+	// Find blocked job
+	var blockedJob *buildkite.Job
+	if m.activePane == rightPane {
+		job := m.selectedRightPaneJob()
+		if job != nil && job.State == "blocked" {
+			blockedJob = job
+		}
+	}
+
+	if blockedJob == nil {
+		// Try to find first blocked job in build
+		for i := range build.Jobs {
+			if build.Jobs[i].State == "blocked" {
+				blockedJob = &build.Jobs[i]
+				break
+			}
+		}
+	}
+
+	if blockedJob == nil {
+		m.searchMsg = "No blocked job found"
+		return nil
+	}
+
+	m.actionInFlight = true
+	m.searchMsg = "Unblocking job..."
+	return unblockJobCmd(m.client, org.Slug, pipe.Slug, build.Number, blockedJob.ID)
+}
+
+func (m *Model) openInBrowser() {
+	var url string
+
+	switch m.activePane {
+	case leftPane:
+		pipe := m.selectedPipeline()
+		if pipe != nil && pipe.WebURL != "" {
+			url = pipe.WebURL
+		} else if org := m.selectedOrg(); org != nil && org.WebURL != "" {
+			url = org.WebURL
+		}
+	case centerPane:
+		if b := m.selectedBuildEntry(); b != nil && b.WebURL != "" {
+			url = b.WebURL
+		}
+	case rightPane:
+		if m.selectedBuild != nil && m.selectedBuild.WebURL != "" {
+			url = m.selectedBuild.WebURL
+		}
+	}
+
+	if url == "" {
+		m.searchMsg = "No URL available"
+		return
+	}
+
+	openURL(url)
+	m.searchMsg = "Opened in browser"
+}
+
+func (m *Model) downloadSelectedArtifact() tea.Cmd {
+	if m.actionInFlight {
+		m.searchMsg = "Action already in flight"
+		return nil
+	}
+	if m.selectedBuild == nil || len(m.artifacts) == 0 {
+		m.searchMsg = "No artifacts available"
+		return nil
+	}
+
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	if org == nil || pipe == nil {
+		m.searchMsg = "No pipeline selected"
+		return nil
+	}
+
+	// Pick first artifact (or could enhance with artifact selection)
+	art := m.artifacts[0]
+	downloadDir := "."
+	if m.config != nil && m.config.DownloadDir != "" {
+		downloadDir = m.config.DownloadDir
+	}
+
+	m.actionInFlight = true
+	m.searchMsg = fmt.Sprintf("Downloading %s...", art.Filename)
+	return downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.JobID, art.ID, art.Filename, downloadDir)
+}
+
+func (m Model) toggleAgentView() (tea.Model, tea.Cmd) {
+	if m.showAgents {
+		m.showAgents = false
+		return m, nil
+	}
+
+	org := m.selectedOrg()
+	if org == nil {
+		m.searchMsg = "No organization selected"
+		return m, nil
+	}
+
+	m.showAgents = true
+	m.rightScroll = 0
+	if len(m.agents) == 0 {
+		m.loadingAgents = true
+		return m, loadAgentsCmd(m.client, org.Slug)
+	}
+	return m, nil
+}
+
+func (m Model) saveCurrentFilterAsPreset() (tea.Model, tea.Cmd) {
+	if m.filterQuery == "" {
+		m.searchMsg = "No active filter to save"
+		return m, nil
+	}
+	if m.config == nil {
+		m.searchMsg = "No config loaded"
+		return m, nil
+	}
+
+	preset := config.FilterPreset{
+		Name:  m.filterQuery,
+		Query: m.filterQuery,
+		Pane:  paneName(m.filterPane),
+	}
+	m.config.FilterPresets = append(m.config.FilterPresets, preset)
+	if err := m.config.Save(); err != nil {
+		m.searchMsg = fmt.Sprintf("Save failed: %v", err)
+	} else {
+		m.searchMsg = fmt.Sprintf("Preset saved: %s", preset.Name)
+	}
+	return m, nil
+}
+
+func (m Model) showPresetPickerView() (tea.Model, tea.Cmd) {
+	presets := m.activeFilterPresets()
+	if len(presets) == 0 {
+		m.searchMsg = "No saved presets (use S to save current filter)"
+		return m, nil
+	}
+	m.showPresetPicker = true
+	m.presetPickerIndex = 0
+	return m, nil
+}
+
 func (m Model) actionBuild() *buildkite.Build {
 	if m.activePane == leftPane {
 		if len(m.builds) == 0 {
@@ -1025,4 +1371,161 @@ func cancelBuildCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buil
 		_, err := client.CancelBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
 		return buildActionMsg{action: actionCancel, buildNumber: buildNumber, err: err}
 	}
+}
+
+func unblockJobCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+	return func() tea.Msg {
+		err := client.UnblockJob(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
+		return buildActionMsg{action: actionUnblock, buildNumber: buildNumber, jobID: jobID, err: err}
+	}
+}
+
+func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID, artifactID, filename, downloadDir string) tea.Cmd {
+	return func() tea.Msg {
+		downloadURL, err := client.DownloadArtifactURL(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID, artifactID)
+		if err != nil {
+			return artifactDownloadMsg{filename: filename, err: err}
+		}
+
+		if downloadURL == "" {
+			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("no download URL returned")}
+		}
+
+		// Download the file
+		resp, err := http.Get(downloadURL) //nolint:gosec
+		if err != nil {
+			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("downloading: %w", err)}
+		}
+		defer resp.Body.Close()
+
+		outPath := filepath.Join(downloadDir, filename)
+		// Create parent dirs if needed
+		if dir := filepath.Dir(outPath); dir != "." {
+			os.MkdirAll(dir, 0o755)
+		}
+
+		f, err := os.Create(outPath)
+		if err != nil {
+			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("creating file: %w", err)}
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(f, resp.Body); err != nil {
+			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("writing file: %w", err)}
+		}
+
+		return artifactDownloadMsg{filename: filename, err: nil}
+	}
+}
+
+// openURL opens a URL in the user's default browser.
+func openURL(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	cmd.Start() //nolint:errcheck
+}
+
+// performGlobalSearch searches across all loaded orgs, pipelines, builds, and jobs.
+func (m Model) performGlobalSearch(query string) []GlobalSearchResult {
+	if query == "" {
+		return nil
+	}
+	q := normalizeSearch(query)
+	var results []GlobalSearchResult
+
+	for _, org := range m.orgs {
+		if containsQuery(q, org.Name, org.Slug) {
+			results = append(results, GlobalSearchResult{
+				Type:    "org",
+				Label:   org.Name,
+				OrgSlug: org.Slug,
+				WebURL:  org.WebURL,
+			})
+		}
+	}
+
+	for _, pipe := range m.pipelines {
+		if containsQuery(q, pipe.Name, pipe.Slug, pipe.Repository) {
+			org := m.selectedOrg()
+			orgSlug := ""
+			if org != nil {
+				orgSlug = org.Slug
+			}
+			results = append(results, GlobalSearchResult{
+				Type:     "pipeline",
+				Label:    pipe.Name,
+				OrgSlug:  orgSlug,
+				PipeSlug: pipe.Slug,
+				WebURL:   pipe.WebURL,
+			})
+		}
+	}
+
+	for _, build := range m.builds {
+		if buildMatches(build, q) {
+			org := m.selectedOrg()
+			pipe := m.selectedPipeline()
+			orgSlug, pipeSlug := "", ""
+			if org != nil {
+				orgSlug = org.Slug
+			}
+			if pipe != nil {
+				pipeSlug = pipe.Slug
+			}
+			results = append(results, GlobalSearchResult{
+				Type:     "build",
+				Label:    fmt.Sprintf("#%d %s %s", build.Number, build.Branch, build.State),
+				OrgSlug:  orgSlug,
+				PipeSlug: pipeSlug,
+				BuildNum: build.Number,
+				WebURL:   build.WebURL,
+			})
+		}
+	}
+
+	if m.selectedBuild != nil {
+		for _, job := range m.selectedBuild.Jobs {
+			if job.Type == "waiter" {
+				continue
+			}
+			if jobMatches(job, q) {
+				org := m.selectedOrg()
+				pipe := m.selectedPipeline()
+				orgSlug, pipeSlug := "", ""
+				if org != nil {
+					orgSlug = org.Slug
+				}
+				if pipe != nil {
+					pipeSlug = pipe.Slug
+				}
+				label := job.Label
+				if label == "" {
+					label = job.Command
+				}
+				results = append(results, GlobalSearchResult{
+					Type:     "job",
+					Label:    fmt.Sprintf("%s [%s]", label, job.State),
+					OrgSlug:  orgSlug,
+					PipeSlug: pipeSlug,
+					BuildNum: m.selectedBuild.Number,
+					JobID:    job.ID,
+					WebURL:   job.WebURL,
+				})
+			}
+		}
+	}
+
+	// Cap results
+	if len(results) > 50 {
+		results = results[:50]
+	}
+
+	return results
 }

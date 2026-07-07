@@ -55,8 +55,13 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Logs** — tail the selected/top job log in a dedicated log pane
 - **Annotations** — build annotations (info, warning, error, success styles)
 - **Artifacts** — build artifacts with filename and size
-- **Agents** — organization agent listing (available in API client)
-- **Buildkite actions** — retry jobs, rebuild builds, and cancel running builds from the TUI
+- **Agents** — organization agent listing with queue saturation view (`a`)
+- **Buildkite actions** — retry jobs, rebuild builds, cancel running builds, and unblock blocked jobs from the TUI
+- **Open in browser** — `o` opens the current org/pipeline/build in the Buildkite web UI
+- **Artifact download** — `d` downloads the first artifact for the selected build
+- **Global search** — `ctrl+f` fuzzy search across all loaded organizations, pipelines, builds, and jobs
+- **Config file** — token and preferences in `~/.config/builddeck/config.toml`
+- **Saved filter presets** — `S` saves current filter, `P` loads a saved preset
 
 ### TUI
 - **Three-pane layout** — orgs/pipelines | builds | detail+jobs+annotations+artifacts
@@ -68,6 +73,8 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Live updates** — smart adaptive polling (2s when active builds are running, 10s when idle) with in-flight request guards
 - **Graceful degradation** — compact fallback for small terminals
 - **Loading/error states** — visible without crashing
+- **Agent saturation view** — dedicated view showing queue depth and agent utilization per queue
+- **Filter presets** — save and load reusable filter patterns from config
 
 ### Navigation
 
@@ -87,7 +94,14 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `r` | Retry selected/top job |
 | `b` | Rebuild selected/top build |
 | `x` | Cancel selected/top running build |
+| `u` | Unblock selected blocked job |
+| `o` | Open current resource in browser |
+| `d` | Download first artifact |
+| `a` | Toggle agent/queue saturation view |
 | `/` | Filter active pane |
+| `ctrl+f` | Global search across all data |
+| `S` | Save current filter as preset |
+| `P` | Load a saved filter preset |
 | `esc` / `enter` | Close filter input |
 | `ctrl+u` | Clear filter input |
 | `?` | Toggle help |
@@ -104,10 +118,12 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - Falls back gracefully if selected items disappear
 
 ### Action Targeting
-- On the org/pipeline pane, `L`, `r`, `b`, and `x` target the top/latest build for the selected pipeline
+- On the org/pipeline pane, `L`, `r`, `b`, `x`, and `u` target the top/latest build for the selected pipeline
 - On the builds pane, actions target the highlighted build
-- On the detail pane, `r` targets the highlighted job, while `b` and `x` target the selected build
+- On the detail pane, `r` and `u` target the highlighted job, while `b` and `x` target the selected build
 - `x` only sends a cancel request for builds currently reported as running
+- `u` only unblocks jobs with state `blocked`
+- `o` opens the current context: pipeline on left pane, build on center pane, build on detail pane
 
 ### Data Flow
 - Changing organization resets pipelines, builds, jobs, annotations, artifacts
@@ -145,24 +161,15 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 ## Known Limitations
 
 - **REST API only** — GraphQL support planned for more efficient nested queries
-- **No artifact download** — only listing; download is not yet implemented
-- **No config file** — authentication is via environment variable only
 - **Limited pagination** — builds show first 25; pipelines and agents paginate up to 500
-- **Pane-local filtering only** — `/` filters the active pane; there is no cross-organization global search yet
 - **Annotations are HTML-stripped** — rich content is flattened to text
-- **Agent view not yet in TUI** — agent data is in the API client only
+- **Artifact download** — downloads the first artifact; per-artifact selection not yet implemented
+- **Global search** — searches only currently-loaded data, not all pipelines across orgs
 
 ## Planned Next Features
 
-- **Unblock jobs** — `u` to unblock a blocked job
-- **Open in browser** — `o` to open the current resource in the Buildkite web UI
-- **Artifact download** — `d` to download an artifact
-- **Queue/agent saturation views** — dedicated pane for agent utilization and queue depth
-- **Global search** — fuzzy search across organizations, pipelines, builds, and jobs
 - **GraphQL dashboard snapshots** — efficient nested queries for dashboard views
 - **Incident command mode** — focused view for diagnosing and resolving build failures
-- **Config file** — token and preferences in `~/.config/builddeck/config.toml`
-- **Saved filter presets** — quick recall for common branch, state, queue, and owner filters
 
 ## Development
 
