@@ -6,7 +6,7 @@
       "status": "pass"
     }
   ],
-  "intent": "Implement smart adaptive polling for builddeck TUI",
+  "intent": "Conform .decapod directory to decapod v0.62.3",
   "kind": "intent_convergence_checklist",
   "policy_lineage": {
     "capsule_hash": "0ae7f04c9ce6fcd6d47b25b3fcd397cafbca0e936ea85dbc8255c2f2c84210c3",
@@ -17,7 +17,7 @@
   },
   "pr": {
     "base": "master",
-    "scope": "adaptive-polling"
+    "scope": "decapod-conformance"
   },
   "schema_version": "1.0.0",
   "scope": "release"
