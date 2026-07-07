@@ -222,10 +222,28 @@ func loadArtifactsCmd(client *buildkite.Client, orgSlug, pipelineSlug string, bu
 	}
 }
 
+const (
+	pollIntervalActive = 2 * time.Second
+	pollIntervalIdle   = 10 * time.Second
+)
+
 func tickCmd() tea.Cmd {
-	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+	return tickCmdWithInterval(pollIntervalIdle)
+}
+
+func tickCmdWithInterval(d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
+}
+
+func (m Model) currentPollInterval() time.Duration {
+	for i := range m.builds {
+		if !isTerminalState(m.builds[i].State) {
+			return pollIntervalActive
+		}
+	}
+	return pollIntervalIdle
 }
 
 func (m Model) selectedOrg() *buildkite.Organization {

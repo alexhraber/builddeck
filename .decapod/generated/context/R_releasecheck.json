@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.1.0",
+  "topic": "release provenance",
+  "scope": "interfaces",
+  "task_id": "R_releasecheck",
+  "workunit_id": null,
+  "sources": [
+    {
+      "path": "interfaces/INTERNALIZATION_SCHEMA",
+      "section": "concepts"
+    },
+    {
+      "path": "interfaces/KNOWLEDGE_SCHEMA",
+      "section": "ambiguity"
+    },
+    {
+      "path": "interfaces/MEMORY_SCHEMA",
+      "section": "ambiguity"
+    },
+    {
+      "path": "interfaces/AGENT_CONTEXT_PACK",
+      "section": "standards"
+    },
+    {
+      "path": "interfaces/KNOWLEDGE_STORE",
+      "section": "concepts"
+    }
+  ],
+  "snippets": [
+    {
+      "source_path": "interfaces/INTERNALIZATION_SCHEMA",
+      "text": "## concepts\n\nAttachment: Creating a Decapod-governed link and provenance record for external information.\nInspection and Validation: Verifying that internalized payloads match strict schema and authority rules.\nLifecycle Management: Handling the detachment and cleanup of knowledge that is no longer valid.\nScope and Authority: Assigning the correct layer and provenance to the internalized knowledge."
+    },
+    {
+      "source_path": "interfaces/KNOWLEDGE_SCHEMA",
+      "text": "## ambiguity\n\nStop inference if a knowledge object lacks sufficient provenance to establish its authority level."
+    },
+    {
+      "source_path": "interfaces/MEMORY_SCHEMA",
+      "text": "## ambiguity\n\nStop inference if a memory claim lacks a timestamp, scope, or verifiable provenance."
+    },
+    {
+      "source_path": "interfaces/AGENT_CONTEXT_PACK",
+      "text": "## standards\n\nContext packs must explicitly label the provenance and authority level of the retrieved information.\nAgents must read and process the context pack *before* formulating an implementation plan."
+    },
+    {
+      "source_path": "interfaces/KNOWLEDGE_STORE",
+      "text": "## concepts\n\nIndexing and Addressing: Mapping semantic queries to stored records via unique hashes or ULIDs.\nAtomic Updates: Ensuring that changes to knowledge records maintain consistent provenance and tags.\nRetrieval Safety: Bounding search results to prevent ingestion of contradictory or stale knowledge.\nAuditability: Maintaining an immutable log of all insertions, deletions, and metadata mutations."
+    }
+  ],
+  "policy": {
+    "risk_tier": "",
+    "policy_hash": "",
+    "policy_version": "",
+    "policy_path": "",
+    "repo_revision": ""
+  },
+  "capsule_hash": "0ae7f04c9ce6fcd6d47b25b3fcd397cafbca0e936ea85dbc8255c2f2c84210c3"
+}

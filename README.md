@@ -65,7 +65,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **State badges** — compact, color-coded state labels (PASS/FAIL/RUN/BLCK/etc.)
 - **Active pane highlighting** — clear border on the focused pane
 - **Read-only filtering** — `/` filters the active pane across pipelines, builds, or build jobs
-- **Live updates** — 5-second polling with in-flight request guards
+- **Live updates** — smart adaptive polling (2s when active builds are running, 10s when idle) with in-flight request guards
 - **Graceful degradation** — compact fallback for small terminals
 - **Loading/error states** — visible without crashing
 
@@ -94,9 +94,12 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `q` | Quit |
 
 ### Refresh Behavior
-- Polls selected pipeline builds every 5 seconds
+- **Smart Adaptive Polling**: Dynamically adjusts polling interval:
+  - **2 seconds** when any build is in a non-terminal state (running, scheduled, etc.) to show live progress.
+  - **10 seconds** when all builds are finished (idle state) to conserve Buildkite API rate limit budget.
+- Status bar displays current refresh rate and a green `⚡LIVE` badge during active updates
 - In-flight guards prevent duplicate concurrent requests
-- Manual refresh (`R`) is always responsive
+- Manual refresh (`R`) is always responsive and clears all caches
 - Current selection preserved across refreshes when possible
 - Falls back gracefully if selected items disappear
 

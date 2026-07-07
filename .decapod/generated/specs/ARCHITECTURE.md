@@ -4,8 +4,8 @@
 cli
 
 ## What This Project Is
-builddeck is a Go CLI/TUI for read-only Buildkite operations visibility.
-A typed internal Buildkite API client feeds a Bubble Tea/Lip Gloss terminal interface with organizations, pipelines, builds, jobs, annotations, artifacts, queues, agents, logs, and health-oriented status views.
+builddeck is a cli project built using Go.
+cli
 
 Architectural principles:
 - **Simplicity**: Keep components focused and reusable.
@@ -14,29 +14,26 @@ Architectural principles:
 
 ## Current Facts
 - Runtime/languages: Go
-- Detected surfaces/framework hints: Go CLI, Bubble Tea TUI
+- Detected surfaces/framework hints: Go CLI
 - Product type: cli
 
 ## Architecture Map
 This project's architecture consists of the following key layers/directories:
-- `cmd/builddeck/`: CLI entrypoint.
-- `internal/buildkite/`: typed Buildkite API client and data models.
-- `internal/tui/`: Bubble Tea model, update loop, views, filtering, and key handling.
-- `README.md`: operator-facing installation, token, scope, and keybinding documentation.
+- `src/`: Main source directory containing primary logic.
+- `tests/`: Integration and unit test suite.
 
 ## Data Flows
-- `cmd/builddeck` starts the TUI and reads configuration from the environment.
-- `internal/buildkite` authenticates with `BUILDKITE_API_TOKEN` and loads read-only Buildkite API data.
-- `internal/tui` stores the loaded snapshot in the Bubble Tea model, renders panes, handles selection/search/navigation, and refreshes without blocking the UI.
+- Inbound request/command parses and validates at the entrypoint.
+- Core runtime handles business logic and initiates queries or state changes.
+- Storage adapter reads or writes data to the underlying persistence layers.
 
 ## Strongest Existing Primitives
-- Typed Buildkite client boundaries keep external API behavior separate from TUI state.
-- Bubble Tea update/model separation keeps input handling, refresh messages, loading states, and rendering testable.
-- Search/filter helpers are isolated under `internal/tui` and covered by package tests.
+- Define the strongest existing primitives in the codebase (e.g., helper utilities, base controllers, data access layers).
 
 ## Topology
 ```text
-Terminal User -> cmd/builddeck -> TUI Model -> Buildkite Client -> Buildkite API
+User -> CLI Entrypoint -> Command Router -> Core Engine -> Local Store
+                                      \-> External API / Filesystem
 ```
 
 ## Store Boundaries
@@ -49,7 +46,7 @@ flowchart LR
 
 ## Happy Path Sequence
 ```text
-Client request -> API validation -> domain execution -> persistence -> response with trace id
+User invokes command -> CLI parses args -> Core executes action -> state persists -> result printed
 ```
 
 ## Error Path
