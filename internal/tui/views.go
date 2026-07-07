@@ -494,7 +494,12 @@ func (m Model) statusBarView(w int) string {
 	parts = append(parts, fmt.Sprintf("Pane: %s", paneName))
 
 	if !m.lastRefresh.IsZero() {
-		parts = append(parts, fmt.Sprintf("Updated: %s", m.lastRefresh.Format("15:04:05")))
+		rate := m.currentPollInterval()
+		rateLabel := fmt.Sprintf("Updated: %s (%s)", m.lastRefresh.Format("15:04:05"), rate)
+		if rate == pollIntervalActive {
+			rateLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#22c55e")).Bold(true).Render("⚡LIVE") + "  " + rateLabel
+		}
+		parts = append(parts, rateLabel)
 	}
 
 	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x:actions  tab:pane  g/G:top/bot"))

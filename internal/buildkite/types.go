@@ -52,13 +52,13 @@ type Job struct {
 }
 
 type Agent struct {
-	ID             string          `json:"id"`
-	Name           string          `json:"name"`
-	Hostname       string          `json:"hostname"`
-	Version        string          `json:"version"`
-	ConnectedState string          `json:"connected_state"`
-	OS             string          `json:"os"`
-	IPAddress      string          `json:"ip_address"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Hostname       string   `json:"hostname"`
+	Version        string   `json:"version"`
+	ConnectedState string   `json:"connected_state"`
+	OS             string   `json:"os"`
+	IPAddress      string   `json:"ip_address"`
 	Metadata       []string `json:"meta_data"`
 	WebURL         string   `json:"web_url"`
 }

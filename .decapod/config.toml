@@ -20,5 +20,5 @@ done_criteria = "Done means `builddeck` is a compiling Go application with a cle
 primary_languages = ["Go"]
 detected_surfaces = ["Go CLI"]
 external_tracker = false
-container_workspaces = true
+container_workspaces = false
 mode = "local"

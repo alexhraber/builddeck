@@ -4,8 +4,8 @@
 - A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
 
 ## What This Project Is
-builddeck is a CLI project built using Go.
-builddeck is a Buildkite terminal flight deck for platform engineers and release captains who need dense, live-updating read-only visibility into organizations, pipelines, builds, jobs, annotations, artifacts, agents, queues, logs, and build health.
+builddeck is a cli project built using Go.
+A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
 
 Key operating facts:
 - **Primary languages**: Go
@@ -46,10 +46,7 @@ flowchart LR
 - Security/compliance: sensitive data handling and authz are mandatory.
 
 ## Acceptance Criteria (must be objectively testable)
-- [ ] `builddeck` compiles with `go build ./cmd/builddeck`.
-- [ ] The TUI loads real read-only Buildkite data using `BUILDKITE_API_TOKEN`.
-- [ ] The TUI supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop.
-- [ ] The README explains install/run steps, token setup, MVP scope, keybindings, and planned next features.
+- [ ] Done means `builddeck` is a compiling Go application with a clean repository structure, a typed internal Buildkite API client, authentication through `BUILDKITE_API_TOKEN`, real read-only Buildkite data loading for organizations, pipelines, recent builds, and build jobs, and a Bubble Tea/Lip Gloss TUI that supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop; the README clearly explains what `builddeck` is, how to install and run it, required token setup, current MVP scope, keybindings, and planned next features, and the codebase passes `go fmt ./...`, `go test ./...`, and `go build ./cmd/builddeck` without failures.
 - [ ] Non-functional targets are met (latency, reliability, cost, etc.).
 - [ ] Validation gates pass and artifacts are attached.
 - [ ] `go test ./...` passes for all packages

@@ -249,7 +249,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.refreshBuilds()
 
 	case tickMsg:
-		cmds := []tea.Cmd{tickCmd()}
+		cmds := []tea.Cmd{tickCmdWithInterval(m.currentPollInterval())}
 		org := m.selectedOrg()
 		pipe := m.selectedPipeline()
 		if org != nil && pipe != nil && !m.buildsInFlight {
