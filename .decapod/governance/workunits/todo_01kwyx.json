@@ -1,0 +1,23 @@
+{
+  "task_id": "todo_01kwyx",
+  "intent_ref": ".decapod/generated/specs/INTENT.md",
+  "spec_refs": [
+    ".decapod/generated/specs/ARCHITECTURE.md"
+  ],
+  "state_refs": [
+    ".decapod/generated/context/todo_01kwyx.json",
+    ".decapod/generated/specs/.manifest.json",
+    ".decapod/generated/validation-epoch.json"
+  ],
+  "proof_plan": [
+    "decapod_validate"
+  ],
+  "proof_results": [
+    {
+      "gate": "decapod_validate",
+      "status": "pass",
+      "artifact_ref": null
+    }
+  ],
+  "status": "VERIFIED"
+}

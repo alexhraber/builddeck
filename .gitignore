@@ -1,10 +1,50 @@
+# --- Build Artifacts ---
+builddeck
+builddeck.exe
+builddeck.test
+*.o
+*.so
+*.a
+*.dll
+*.exe
+*.dylib
+
+# --- IDEs / Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.helix/
+
+# --- Environment & Secrets ---
+.env
+.env.*
+!.env.example
+*.pat
+*.token
+*.key
+
+# --- Temp / Debug ---
+*.log
+*.tmp
+debug/
+out.log
+err.log
+
+# --- Decapod Sidecar (State) ---
+# Keep runtime state ignored by default, then allowlist deterministic artifacts.
 .decapod/data
 .decapod/data/*
-.decapod/.stfolder
-.decapod/workspaces
-.decapod/generated/*
 !.decapod/data/
 !.decapod/data/knowledge.promotions.jsonl
+.decapod/.stfolder
+.decapod/workspaces
+# Generated runtime outputs are non-canonical; allowlist only governed artifacts.
+.decapod/generated/*
+# Allowlist deterministic generated artifact used as container build baseline.
+!.decapod/generated/validation-epoch.json
 !.decapod/generated/Dockerfile
 !.decapod/generated/context/
 !.decapod/generated/context/*.json
@@ -19,3 +59,5 @@
 !.decapod/generated/specs/
 !.decapod/generated/specs/*.md
 !.decapod/generated/specs/.manifest.json
+# Allowlist skills - imported skill cards for reproducibility
+!.decapod/skills/
