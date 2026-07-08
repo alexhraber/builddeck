@@ -168,7 +168,9 @@ func (m Model) leftPaneView(w, h int) string {
 		}
 	}
 
-	b.WriteString("\n")
+	if !m.denseMode {
+		b.WriteString("\n")
+	}
 	b.WriteString(titleStyle.Render("Pipelines"))
 	if query := normalizedQueryForPane(m, leftPane); query != "" {
 		b.WriteString(subtitleStyle.Render(fmt.Sprintf(" /%s", query)))
@@ -233,7 +235,9 @@ func (m Model) centerPaneView(w, h int) string {
 	if len(buildIndices) > 0 {
 		summary := SummarizeBuilds(buildsByIndex(m.builds, buildIndices))
 		b.WriteString(m.renderBuildSummary(summary))
-		b.WriteString("\n")
+		if !m.denseMode {
+			b.WriteString("\n")
+		}
 	}
 
 	if m.loadingBuilds {
@@ -353,7 +357,9 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(fmt.Sprintf("Finished:%s\n", FormatTime(bd.FinishedAt)))
 		b.WriteString(fmt.Sprintf("Duration:%s\n", FormatDuration(bd.StartedAt, bd.FinishedAt)))
 
-		b.WriteString("\n")
+		if !m.denseMode {
+			b.WriteString("\n")
+		}
 		b.WriteString(titleStyle.Render("Jobs"))
 		if query := normalizedQueryForPane(m, rightPane); query != "" {
 			b.WriteString(subtitleStyle.Render(fmt.Sprintf(" /%s", query)))
