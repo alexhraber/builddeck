@@ -40,8 +40,8 @@ func (m Model) View() string {
 		mainHeight = 5
 	}
 
-	leftW := m.width / 4
-	centerW := m.width / 3
+	leftW := m.width / 4 - 8
+	centerW := m.width / 3 + 14
 	rightW := m.width - leftW - centerW
 
 	header := m.headerView(m.width)
