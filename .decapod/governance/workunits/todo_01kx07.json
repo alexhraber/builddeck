@@ -1,0 +1,17 @@
+{
+  "task_id": "todo_01kx07",
+  "intent_ref": ".decapod/generated/specs/INTENT.md",
+  "spec_refs": [],
+  "state_refs": [],
+  "proof_plan": [
+    "test"
+  ],
+  "proof_results": [
+    {
+      "gate": "test",
+      "status": "pass",
+      "artifact_ref": null
+    }
+  ],
+  "status": "VERIFIED"
+}
