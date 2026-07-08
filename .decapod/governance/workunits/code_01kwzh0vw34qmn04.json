@@ -1,0 +1,23 @@
+{
+  "task_id": "code_01kwzh0vw34qmn04",
+  "intent_ref": ".decapod/generated/specs/INTENT.md",
+  "spec_refs": [
+    ".decapod/generated/specs/ARCHITECTURE.md"
+  ],
+  "state_refs": [
+    ".decapod/generated/context/code_01kwzh0vw34qmn04.json",
+    ".decapod/generated/specs/.manifest.json",
+    ".decapod/generated/validation-epoch.json"
+  ],
+  "proof_plan": [
+    "validate_passes"
+  ],
+  "proof_results": [
+    {
+      "gate": "validate_passes",
+      "status": "pass",
+      "artifact_ref": null
+    }
+  ],
+  "status": "VERIFIED"
+}
