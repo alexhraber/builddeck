@@ -44,7 +44,6 @@ err.log
 # Generated runtime outputs are non-canonical; allowlist only governed artifacts.
 .decapod/generated/*
 # Allowlist deterministic generated artifact used as container build baseline.
-!.decapod/generated/validation-epoch.json
 !.decapod/generated/Dockerfile
 !.decapod/generated/context/
 !.decapod/generated/context/*.json
