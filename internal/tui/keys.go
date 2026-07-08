@@ -27,6 +27,7 @@ type keyMap struct {
 	GlobalSearch key.Binding
 	SavePreset   key.Binding
 	LoadPreset   key.Binding
+	Options      key.Binding
 }
 
 var keys = keyMap{
@@ -126,6 +127,10 @@ var keys = keyMap{
 		key.WithKeys("P"),
 		key.WithHelp("P", "load filter preset"),
 	),
+	Options: key.NewBinding(
+		key.WithKeys("O"),
+		key.WithHelp("Shift+O", "options"),
+	),
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -134,7 +139,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh, k.Logs,
 		k.RetryJob, k.Rebuild, k.Cancel, k.Unblock,
 		k.OpenBrowser, k.Download, k.Agents, k.GlobalSearch,
-		k.SavePreset, k.LoadPreset, k.Help, k.Quit,
+		k.SavePreset, k.LoadPreset, k.Options, k.Help, k.Quit,
 	}
 }
 
@@ -144,7 +149,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Tab, k.ShiftTab, k.Enter},
 		{k.Top, k.Bottom, k.Search, k.GlobalSearch, k.Refresh, k.Logs},
 		{k.RetryJob, k.Rebuild, k.Cancel, k.Unblock},
-		{k.OpenBrowser, k.Download, k.Agents},
+		{k.OpenBrowser, k.Download, k.Agents, k.Options},
 		{k.SavePreset, k.LoadPreset},
 		{k.Help, k.Quit},
 	}

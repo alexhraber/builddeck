@@ -93,6 +93,14 @@ type Model struct {
 	showPresetPicker  bool
 	presetPickerIndex int
 
+	// Options state
+	showOptions      bool
+	optionsCursor    int
+	themeIndex       int
+	refreshRateIndex int
+	denseMode        bool
+	sortAsc          bool
+
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
 	buildAnnotations  map[string][]buildkite.Annotation
@@ -121,6 +129,10 @@ func NewModel(client *buildkite.Client) Model {
 		buildAnnotations: make(map[string][]buildkite.Annotation),
 		buildArtifacts:   make(map[string][]buildkite.Artifact),
 		jobLogs:          make(map[string]string),
+		themeIndex:       0,
+		refreshRateIndex: 0,
+		denseMode:        false,
+		sortAsc:          false,
 	}
 }
 
@@ -294,12 +306,27 @@ func tickCmdWithInterval(d time.Duration) tea.Cmd {
 }
 
 func (m Model) currentPollInterval() time.Duration {
-	for i := range m.builds {
-		if !isTerminalState(m.builds[i].State) {
-			return pollIntervalActive
+	switch m.refreshRateIndex {
+	case 0: // Dynamic (default)
+		for i := range m.builds {
+			if !isTerminalState(m.builds[i].State) {
+				return pollIntervalActive
+			}
 		}
+		return pollIntervalIdle
+	case 1: // 2s
+		return 2 * time.Second
+	case 2: // 5s
+		return 5 * time.Second
+	case 3: // 10s
+		return 10 * time.Second
+	case 4: // 30s
+		return 30 * time.Second
+	case 5: // Disabled
+		return 24 * time.Hour
+	default:
+		return pollIntervalIdle
 	}
-	return pollIntervalIdle
 }
 
 func (m Model) selectedOrg() *buildkite.Organization {
