@@ -1,0 +1,19 @@
+{
+  "task_id": "fend_01kx07ffts114fvm",
+  "intent_ref": ".decapod/generated/specs/INTENT.md",
+  "spec_refs": [],
+  "state_refs": [
+    ".decapod/generated/context/fend_01kx07ffts114fvm.json"
+  ],
+  "proof_plan": [
+    "test"
+  ],
+  "proof_results": [
+    {
+      "gate": "test",
+      "status": "pass",
+      "artifact_ref": null
+    }
+  ],
+  "status": "VERIFIED"
+}

@@ -253,7 +253,7 @@ func (m Model) centerPaneView(w, h int) string {
 		b.WriteString(dimStyle.Render("No matching builds"))
 		b.WriteString("\n")
 	} else {
-		b.WriteString(dimStyle.Render(fmt.Sprintf("%-8s %-10s %-9s %-9s %-12s %s", "BUILD", "BRANCH", "COMMIT", "STATE", "CREATOR", "DURATION")) + "\n")
+		b.WriteString(dimStyle.Render(fmt.Sprintf("%-8s %-16s %-9s %-9s %-15s %s", "BUILD", "BRANCH", "COMMIT", "STATE", "CREATOR", "DURATION")) + "\n")
 		for _, i := range buildIndices {
 			build := m.builds[i]
 			b.WriteString(m.renderBuildRow(i, build))
@@ -288,17 +288,17 @@ func (m Model) renderBuildRow(i int, build buildkite.Build) string {
 	creator := "—"
 	if build.Creator != nil && build.Creator.Name != "" {
 		creator = build.Creator.Name
-		if len(creator) > 10 {
-			creator = creator[:10]
+		if len(creator) > 13 {
+			creator = creator[:13]
 		}
 	}
 	branch := build.Branch
-	if len(branch) > 10 {
-		branch = branch[:10]
+	if len(branch) > 16 {
+		branch = branch[:16]
 	}
 	duration := FormatDuration(build.StartedAt, build.FinishedAt)
 
-	line := fmt.Sprintf("%-8d %-10s %-9s %-9s %-12s %s",
+	line := fmt.Sprintf("%-8d %-16s %-9s %-9s %-15s %s",
 		build.Number,
 		branch,
 		shortSHA(build.Commit),

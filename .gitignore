@@ -19,4 +19,3 @@
 !.decapod/generated/specs/
 !.decapod/generated/specs/*.md
 !.decapod/generated/specs/.manifest.json
-!.decapod/generated/validation-epoch.json
