@@ -321,6 +321,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleAgentViewKey(msg)
 	}
 
+	if m.showOptions {
+		return m.handleOptionsKey(msg)
+	}
+
 	if key.Matches(msg, keys.Logs) {
 		if m.showLogs {
 			m.showLogs = false
@@ -511,6 +515,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, keys.LoadPreset):
 		return m.showPresetPickerView()
 
+	case key.Matches(msg, keys.Options):
+		m.showOptions = true
+		m.optionsCursor = 0
+		return m, nil
+
 	case key.Matches(msg, keys.Tab), key.Matches(msg, keys.Right):
 		m.activePane = m.activePane.next()
 		return m, nil
@@ -691,6 +700,67 @@ func (m Model) handleAgentViewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	return m, nil
+}
+
+func (m Model) handleOptionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	oldRefreshIndex := m.refreshRateIndex
+
+	switch msg.String() {
+	case "esc", "O":
+		m.showOptions = false
+		return m, nil
+	case "ctrl+c":
+		return m, tea.Quit
+	case "up", "k":
+		if m.optionsCursor > 0 {
+			m.optionsCursor--
+		}
+		return m, nil
+	case "down", "j":
+		if m.optionsCursor < 3 {
+			m.optionsCursor++
+		}
+		return m, nil
+	case "left", "h":
+		switch m.optionsCursor {
+		case 0:
+			m.themeIndex = (m.themeIndex - 1 + len(Themes)) % len(Themes)
+			initStyles(Themes[m.themeIndex])
+		case 1:
+			m.refreshRateIndex = (m.refreshRateIndex - 1 + 6) % 6
+		case 2:
+			m.denseMode = !m.denseMode
+		case 3:
+			m.sortAsc = !m.sortAsc
+		}
+
+		var cmd tea.Cmd
+		if oldRefreshIndex == 5 && m.refreshRateIndex != 5 {
+			cmd = tickCmdWithInterval(m.currentPollInterval())
+		}
+		return m, cmd
+
+	case "right", "l":
+		switch m.optionsCursor {
+		case 0:
+			m.themeIndex = (m.themeIndex + 1) % len(Themes)
+			initStyles(Themes[m.themeIndex])
+		case 1:
+			m.refreshRateIndex = (m.refreshRateIndex + 1) % 6
+		case 2:
+			m.denseMode = !m.denseMode
+		case 3:
+			m.sortAsc = !m.sortAsc
+		}
+
+		var cmd tea.Cmd
+		if oldRefreshIndex == 5 && m.refreshRateIndex != 5 {
+			cmd = tickCmdWithInterval(m.currentPollInterval())
+		}
+		return m, cmd
+	}
+
 	return m, nil
 }
 
