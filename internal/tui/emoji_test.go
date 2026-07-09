@@ -4,43 +4,43 @@ import (
 	"testing"
 )
 
-func TestInitEmojiMap(t *testing.T) {
+func TestInitEmojiBank(t *testing.T) {
 	emojiMu.RLock()
-	glyph, ok := emojiMap[":go:"]
+	entry, ok := emojiBank[":go:"]
 	emojiMu.RUnlock()
 	if !ok {
-		t.Fatal("expected :go: to be in emojiMap after init")
+		t.Fatal("expected :go: to be in emojiBank after init")
 	}
-	if glyph != "\ue627" {
-		t.Fatalf("expected :go: glyph to be \\ue627, got %q", glyph)
+	if entry.glyph != "\ue627 " {
+		t.Fatalf("expected :go: glyph to be \\ue627 (space), got %q", entry.glyph)
 	}
 }
 
-func TestInitEmojiMapDocker(t *testing.T) {
+func TestInitEmojiBankDocker(t *testing.T) {
 	emojiMu.RLock()
-	glyph, ok := emojiMap[":docker:"]
+	entry, ok := emojiBank[":docker:"]
 	emojiMu.RUnlock()
 	if !ok {
-		t.Fatal("expected :docker: to be in emojiMap after init")
+		t.Fatal("expected :docker: to be in emojiBank after init")
 	}
-	if glyph != "\uf21b" {
-		t.Fatalf("expected :docker: glyph to be \\uf21b, got %q", glyph)
+	if entry.glyph != "\uf21b " {
+		t.Fatalf("expected :docker: glyph to be \\uf21b (space), got %q", entry.glyph)
 	}
 }
 
-func TestInitEmojiMapBuildkite(t *testing.T) {
+func TestInitEmojiBankBuildkite(t *testing.T) {
 	emojiMu.RLock()
-	_, ok := emojiMap[":buildkite:"]
+	_, ok := emojiBank[":buildkite:"]
 	emojiMu.RUnlock()
 	if !ok {
-		t.Fatal("expected :buildkite: to be in emojiMap after init")
+		t.Fatal("expected :buildkite: to be in emojiBank after init")
 	}
 }
 
 func TestRenderEmojiKnown(t *testing.T) {
 	result := renderEmoji(":go:")
-	if result != "\ue627" {
-		t.Fatalf("renderEmoji(:go:) = %q, want \\ue627", result)
+	if result != "\ue627 " {
+		t.Fatalf("renderEmoji(:go:) = %q, want \\ue627 followed by space", result)
 	}
 }
 
@@ -76,36 +76,33 @@ func TestRenderEmojiInContext(t *testing.T) {
 
 func TestRenderEmojiMultiple(t *testing.T) {
 	result := renderEmoji(":docker: Build :go:")
-	expected := "\uf21b Build \ue627"
+	expected := "\uf21b Build \ue627 "
 	if result != expected {
 		t.Fatalf("renderEmoji(\":docker: Build :go:\") = %q, want %q", result, expected)
 	}
 }
 
 func TestRenderEmojiPartialColon(t *testing.T) {
-	// ":go:" is found as a valid shortcode, then "without closing" has
-	// no more colons and passes through as-is.
 	result := renderEmoji(":go:without closing")
-	want := "\ue627without closing"
+	want := "\ue627 without closing"
 	if result != want {
 		t.Fatalf("renderEmoji(\":go:without closing\") = %q, want %q", result, want)
 	}
 }
 
 func TestRenderEmojiStrayColon(t *testing.T) {
-	// A single colon that is not part of a :shortcode: passes through.
 	result := renderEmoji("text: not emoji")
 	if result != "text: not emoji" {
 		t.Fatalf("renderEmoji(\"text: not emoji\") = %q, want raw", result)
 	}
 }
 
-func TestRenderEmojiMapNotNil(t *testing.T) {
+func TestRenderEmojiBankNotNil(t *testing.T) {
 	emojiMu.RLock()
-	l := len(emojiMap)
+	l := len(emojiBank)
 	emojiMu.RUnlock()
 	if l < 30 {
-		t.Fatalf("emojiMap has %d entries, expected at least 30", l)
+		t.Fatalf("emojiBank has %d entries, expected at least 30", l)
 	}
 }
 
@@ -117,22 +114,9 @@ func TestRenderEmojiBroom(t *testing.T) {
 }
 
 func TestRenderEmojiDetective(t *testing.T) {
-	// female-detective should resolve via the "female_detective" entry
 	result := renderEmoji(":female_detective: Lint")
 	if result == ":female_detective: Lint" {
 		t.Fatal("expected :female_detective: to be rendered, got raw")
-	}
-}
-
-func TestRenderEmojiPipelineBadge(t *testing.T) {
-	// Pipeline emoji from the API may come without colons, e.g. "buildkite"
-	// The views.go code normalizes by adding colons before calling renderEmoji.
-	// Verify the underlying glyph exists.
-	emojiMu.RLock()
-	_, ok := emojiMap[":buildkite:"]
-	emojiMu.RUnlock()
-	if !ok {
-		t.Fatal("expected :buildkite: to be in emojiMap")
 	}
 }
 
@@ -147,5 +131,34 @@ func TestRenderEmojiTestTube(t *testing.T) {
 	result := renderEmoji(":test_tube: Tests")
 	if result == ":test_tube: Tests" {
 		t.Fatal("expected :test_tube: to be rendered, got raw")
+	}
+}
+
+func TestPipelineEmojiBank(t *testing.T) {
+	emojiMu.RLock()
+	entry, ok := emojiBank[":buildkite:"]
+	emojiMu.RUnlock()
+	if !ok {
+		t.Fatal("expected :buildkite: to be in emojiBank")
+	}
+	if entry.glyph == "" && entry.assetGlyph == "" {
+		t.Fatal("expected :buildkite: to have a glyph or assetGlyph")
+	}
+}
+
+func TestLoadPipelineEmoji(t *testing.T) {
+	result := loadPipelineEmoji("buildkite")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji(\"buildkite\") returned empty")
+	}
+	if result == ":buildkite:" {
+		t.Fatal("loadPipelineEmoji returned raw fallback, expected rendered glyph")
+	}
+}
+
+func TestLoadPipelineEmojiMissing(t *testing.T) {
+	result := loadPipelineEmoji("clearly-nonexistent-emoji-name")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji missing should fall back, not be empty")
 	}
 }
