@@ -202,17 +202,14 @@ func (m Model) leftPaneView(w, h int) string {
 			if i == m.pipeIndex {
 				cursor = "▶ "
 			}
-			label := pipe.Name
-			if pipe.Emoji != "" {
-				label = pipe.Emoji + " " + label
-			}
-			if len(label) > w-6 {
-				label = label[:w-6]
+			name := pipe.Name
+			if len(name) > w-6 {
+				name = name[:w-6]
 			}
 			if i == m.pipeIndex {
-				b.WriteString(selectedItemStyle.Render(cursor + label))
+				b.WriteString(selectedItemStyle.Render(cursor + name))
 			} else {
-				b.WriteString(normalItemStyle.Render(cursor + label))
+				b.WriteString(normalItemStyle.Render(cursor + name))
 			}
 			b.WriteString("\n")
 		}
