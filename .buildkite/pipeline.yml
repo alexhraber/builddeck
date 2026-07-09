@@ -52,9 +52,4 @@ steps:
       ls -lh builddeck
       buildkite-agent artifact upload builddeck
 
-  - label: ":github: Release"
-    key: release
-    depends_on: build
-    if: build.tag != null || (build.branch == "main" && build.message =~ /^release:/)
-    command: .buildkite/release.sh
 
