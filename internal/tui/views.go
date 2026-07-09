@@ -160,7 +160,7 @@ func (m Model) leftPaneView(w, h int) string {
 			if i == m.orgIndex {
 				cursor = "▶ "
 			}
-			name := org.Name
+			name := renderEmoji(org.Name)
 			if len(name) > w-6 {
 				name = name[:w-6]
 			}
@@ -357,11 +357,12 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(fmt.Sprintf("State:   %s\n", stateBadge(bd.State)))
 		b.WriteString(fmt.Sprintf("Branch:  %s\n", bd.Branch))
 		b.WriteString(fmt.Sprintf("Commit:  %s\n", shortSHA(bd.Commit)))
-		msg := bd.Message
+		msg := renderEmoji(bd.Message)
 		if len(msg) > w-12 {
 			msg = msg[:w-12] + "…"
 		}
 		b.WriteString(fmt.Sprintf("Message: %s\n", msg))
+		creator = renderEmoji(creator)
 		b.WriteString(fmt.Sprintf("Creator: %s\n", creator))
 		b.WriteString(fmt.Sprintf("Created: %s\n", FormatTime(bd.CreatedAt)))
 		b.WriteString(fmt.Sprintf("Started: %s\n", FormatTime(bd.StartedAt)))
@@ -768,7 +769,7 @@ func (m Model) globalSearchOverlay(base string) string {
 			case "job":
 				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("199"))
 			}
-			b.WriteString(fmt.Sprintf("  %s %s", typeStyle.Render(fmt.Sprintf("[%-8s]", r.Type)), r.Label))
+			b.WriteString(fmt.Sprintf("  %s %s", typeStyle.Render(fmt.Sprintf("[%-8s]", r.Type)), renderEmoji(r.Label)))
 			b.WriteString("\n")
 		}
 	}
@@ -938,7 +939,7 @@ func (m Model) statsOverlay(base string) string {
 				if len(ag.Metadata) > 0 {
 					b.WriteString("    Metadata:\n")
 					for _, meta := range ag.Metadata {
-						b.WriteString(fmt.Sprintf("      • %s\n", meta))
+						b.WriteString(fmt.Sprintf("      • %s\n", renderEmoji(meta)))
 					}
 				}
 			} else {
@@ -963,10 +964,10 @@ func (m Model) statsOverlay(base string) string {
 			b.WriteString(fmt.Sprintf("  State:    %s\n", bd.State))
 			b.WriteString(fmt.Sprintf("  Branch:   %s\n", bd.Branch))
 			b.WriteString(fmt.Sprintf("  Commit:   %s\n", shortSHA(bd.Commit)))
-			msg := strings.SplitN(bd.Message, "\n", 2)[0]
+			msg := renderEmoji(strings.SplitN(bd.Message, "\n", 2)[0])
 			b.WriteString(fmt.Sprintf("  Message:  %s\n", msg))
 			if bd.Creator != nil {
-				b.WriteString(fmt.Sprintf("  Creator:  %s\n", bd.Creator.Name))
+				b.WriteString(fmt.Sprintf("  Creator:  %s\n", renderEmoji(bd.Creator.Name)))
 			}
 			b.WriteString(fmt.Sprintf("  Created:  %s\n", FormatTime(bd.CreatedAt)))
 			b.WriteString(fmt.Sprintf("  Started:  %s\n", FormatTime(bd.StartedAt)))
