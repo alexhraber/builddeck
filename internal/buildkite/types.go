@@ -13,6 +13,7 @@ type Pipeline struct {
 	Name       string `json:"name"`
 	Repository string `json:"repository"`
 	WebURL     string `json:"web_url"`
+	Emoji      string `json:"emoji"`
 }
 
 type Build struct {
