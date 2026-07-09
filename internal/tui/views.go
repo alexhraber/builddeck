@@ -64,6 +64,11 @@ func (m Model) View() string {
 		return m.presetPickerOverlay(mainView)
 	}
 
+	// Overlay agent metrics if present
+	if m.showMetrics {
+		return m.metricsOverlay(mainView)
+	}
+
 	// Overlay options if present
 	if m.showOptions {
 		return m.optionsOverlay(mainView)
@@ -884,6 +889,58 @@ func (m Model) optionsOverlay(base string) string {
 		BorderForeground(lipgloss.Color(activeTheme.BorderActive)).
 		Padding(1, 2).
 		Width(65).
+		Render(b.String())
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
+}
+
+func (m Model) metricsOverlay(base string) string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("  Agent Metrics  "))
+	b.WriteString("\n\n")
+
+	if m.selectedBuild == nil || len(m.selectedBuild.Jobs) == 0 {
+		b.WriteString(dimStyle.Render("  No job data available"))
+	} else {
+		for _, job := range m.selectedBuild.Jobs {
+			if job.Type == "waiter" {
+				continue
+			}
+			label := job.Label
+			if label == "" {
+				label = job.Command
+			}
+			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
+			if job.Agent != nil {
+				ag := job.Agent
+				b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
+				b.WriteString(fmt.Sprintf("    Hostname: %s\n", ag.Hostname))
+				b.WriteString(fmt.Sprintf("    OS:       %s\n", ag.OS))
+				b.WriteString(fmt.Sprintf("    Version:  %s\n", ag.Version))
+				if ag.IPAddress != "" {
+					b.WriteString(fmt.Sprintf("    IP:       %s\n", ag.IPAddress))
+				}
+				b.WriteString(fmt.Sprintf("    Queue:    %s\n", ag.Queue))
+				if len(ag.Metadata) > 0 {
+					b.WriteString("    Metadata:\n")
+					for _, meta := range ag.Metadata {
+						b.WriteString(fmt.Sprintf("      • %s\n", meta))
+					}
+				}
+			} else {
+				b.WriteString(dimStyle.Render("    No agent assigned\n"))
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString(dimStyle.Render("  esc/m:close  q:quit"))
+
+	overlay := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(activeTheme.BorderActive)).
+		Padding(1, 2).
 		Render(b.String())
 
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
