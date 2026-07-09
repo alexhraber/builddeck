@@ -101,6 +101,8 @@ type Model struct {
 	denseMode        bool
 	sortAsc          bool
 
+	liveMode bool
+
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
 	buildAnnotations  map[string][]buildkite.Annotation
@@ -292,7 +294,7 @@ func loadAgentsCmd(client *buildkite.Client, orgSlug string) tea.Cmd {
 
 const (
 	pollIntervalActive = 2 * time.Second
-	pollIntervalIdle   = 10 * time.Second
+	pollIntervalIdle   = 15 * time.Second
 )
 
 func tickCmd() tea.Cmd {
@@ -308,6 +310,9 @@ func tickCmdWithInterval(d time.Duration) tea.Cmd {
 func (m Model) currentPollInterval() time.Duration {
 	switch m.refreshRateIndex {
 	case 0: // Dynamic (default)
+		if m.liveMode {
+			return pollIntervalActive
+		}
 		for i := range m.builds {
 			if !isTerminalState(m.builds[i].State) {
 				return pollIntervalActive
