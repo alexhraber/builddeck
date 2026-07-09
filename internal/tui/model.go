@@ -102,7 +102,7 @@ type Model struct {
 	sortAsc          bool
 
 	liveMode    bool
-	showAgentStats bool
+	showStatsOverlay string // "" = none, "agent" = agent stats, "build" = build stats
 
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build

@@ -325,8 +325,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleOptionsKey(msg)
 	}
 
-	if m.showAgentStats {
-		return m.handleAgentStatsKey(msg)
+	if m.showStatsOverlay != "" {
+		return m.handleStatsOverlayKey(msg)
 	}
 
 	if key.Matches(msg, keys.Logs) {
@@ -514,16 +514,25 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, keys.AgentStats):
-		if m.activePane != rightPane {
-			m.searchMsg = "Select a job on the detail pane"
+		switch m.activePane {
+		case centerPane:
+			if m.selectedBuild == nil {
+				m.searchMsg = "No build selected"
+				return m, nil
+			}
+			m.showStatsOverlay = "build"
+			return m, nil
+		case rightPane:
+			if m.selectedRightPaneJob() == nil {
+				m.searchMsg = "No job selected"
+				return m, nil
+			}
+			m.showStatsOverlay = "agent"
+			return m, nil
+		default:
+			m.searchMsg = "Select a build or job first"
 			return m, nil
 		}
-		if m.selectedRightPaneJob() == nil {
-			m.searchMsg = "No job selected"
-			return m, nil
-		}
-		m.showAgentStats = true
-		return m, nil
 
 	case key.Matches(msg, keys.LiveMode):
 		m.liveMode = !m.liveMode
@@ -728,10 +737,10 @@ func (m Model) handleAgentViewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleAgentStatsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleStatsOverlayKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case msg.String() == "esc", key.Matches(msg, keys.AgentStats), key.Matches(msg, keys.Quit):
-		m.showAgentStats = false
+		m.showStatsOverlay = ""
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}

@@ -64,9 +64,9 @@ func (m Model) View() string {
 		return m.presetPickerOverlay(mainView)
 	}
 
-	// Overlay agent stats if present
-	if m.showAgentStats {
-		return m.agentStatsOverlay(mainView)
+	// Overlay agent/build stats if present
+	if m.showStatsOverlay != "" {
+		return m.statsOverlay(mainView)
 	}
 
 	// Overlay options if present
@@ -573,7 +573,7 @@ func (m Model) helpView() string {
 	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("\n")
 	b.WriteString("Views:\n")
-	b.WriteString("  s           Agent stats for highlighted job\n")
+	b.WriteString("  s           Stats for selected build/job\n")
 	b.WriteString("  ctrl+l      Toggle live mode (force 2s refresh)\n")
 	b.WriteString("  a           Toggle agent/queue saturation view\n")
 	b.WriteString("  ctrl+f      Global search across all data\n")
@@ -895,39 +895,69 @@ func (m Model) optionsOverlay(base string) string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 }
 
-func (m Model) agentStatsOverlay(base string) string {
+func (m Model) statsOverlay(base string) string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("  Agent Stats  "))
-	b.WriteString("\n\n")
-
-	job := m.selectedRightPaneJob()
-	if job == nil {
-		b.WriteString(dimStyle.Render("  No job selected"))
-	} else {
-		label := job.Label
-		if label == "" {
-			label = job.Command
-		}
-		b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
-		if job.Agent != nil {
-			ag := job.Agent
-			b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
-			b.WriteString(fmt.Sprintf("    Hostname: %s\n", ag.Hostname))
-			b.WriteString(fmt.Sprintf("    OS:       %s\n", ag.OS))
-			b.WriteString(fmt.Sprintf("    Version:  %s\n", ag.Version))
-			if ag.IPAddress != "" {
-				b.WriteString(fmt.Sprintf("    IP:       %s\n", ag.IPAddress))
-			}
-			b.WriteString(fmt.Sprintf("    Queue:    %s\n", ag.Queue))
-			if len(ag.Metadata) > 0 {
-				b.WriteString("    Metadata:\n")
-				for _, meta := range ag.Metadata {
-					b.WriteString(fmt.Sprintf("      • %s\n", meta))
-				}
-			}
+	switch m.showStatsOverlay {
+	case "agent":
+		b.WriteString(titleStyle.Render("  Agent Stats  "))
+		b.WriteString("\n\n")
+		job := m.selectedRightPaneJob()
+		if job == nil {
+			b.WriteString(dimStyle.Render("  No job selected"))
 		} else {
-			b.WriteString(dimStyle.Render("    No agent assigned\n"))
+			label := job.Label
+			if label == "" {
+				label = job.Command
+			}
+			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
+			if job.Agent != nil {
+				ag := job.Agent
+				b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
+				b.WriteString(fmt.Sprintf("    Hostname: %s\n", ag.Hostname))
+				b.WriteString(fmt.Sprintf("    OS:       %s\n", ag.OS))
+				b.WriteString(fmt.Sprintf("    Version:  %s\n", ag.Version))
+				if ag.IPAddress != "" {
+					b.WriteString(fmt.Sprintf("    IP:       %s\n", ag.IPAddress))
+				}
+				b.WriteString(fmt.Sprintf("    Queue:    %s\n", ag.Queue))
+				if len(ag.Metadata) > 0 {
+					b.WriteString("    Metadata:\n")
+					for _, meta := range ag.Metadata {
+						b.WriteString(fmt.Sprintf("      • %s\n", meta))
+					}
+				}
+			} else {
+				b.WriteString(dimStyle.Render("    No agent assigned\n"))
+			}
+		}
+
+	case "build":
+		b.WriteString(titleStyle.Render("  Build Stats  "))
+		b.WriteString("\n\n")
+		bd := m.selectedBuild
+		if bd == nil {
+			b.WriteString(dimStyle.Render("  No build selected"))
+		} else {
+			pipe := m.selectedPipeline()
+			pipeName := ""
+			if pipe != nil {
+				pipeName = pipe.Slug
+			}
+			b.WriteString(fmt.Sprintf("  Pipeline: %s\n", pipeName))
+			b.WriteString(fmt.Sprintf("  Build:    #%d\n", bd.Number))
+			b.WriteString(fmt.Sprintf("  State:    %s\n", bd.State))
+			b.WriteString(fmt.Sprintf("  Branch:   %s\n", bd.Branch))
+			b.WriteString(fmt.Sprintf("  Commit:   %s\n", shortSHA(bd.Commit)))
+			msg := strings.SplitN(bd.Message, "\n", 2)[0]
+			b.WriteString(fmt.Sprintf("  Message:  %s\n", msg))
+			if bd.Creator != nil {
+				b.WriteString(fmt.Sprintf("  Creator:  %s\n", bd.Creator.Name))
+			}
+			b.WriteString(fmt.Sprintf("  Created:  %s\n", FormatTime(bd.CreatedAt)))
+			b.WriteString(fmt.Sprintf("  Started:  %s\n", FormatTime(bd.StartedAt)))
+			b.WriteString(fmt.Sprintf("  Finished: %s\n", FormatTime(bd.FinishedAt)))
+			b.WriteString(fmt.Sprintf("  Duration: %s\n", FormatDuration(bd.StartedAt, bd.FinishedAt)))
 		}
 	}
 
