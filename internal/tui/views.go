@@ -203,15 +203,15 @@ func (m Model) leftPaneView(w, h int) string {
 				cursor = "▶ "
 			}
 			name := renderEmoji(pipe.Name)
-			if pipe.Emoji != "" {
-				emojiCode := pipe.Emoji
-				if !strings.HasPrefix(emojiCode, ":") {
-					emojiCode = ":" + emojiCode + ":"
-				}
-				emoji := renderEmoji(emojiCode)
-				if emoji != emojiCode {
-					name = emoji + " " + name
-				}
+			emojiCode := pipe.Emoji
+			if emojiCode == "" {
+				emojiCode = ":buildkite:"
+			} else if !strings.HasPrefix(emojiCode, ":") {
+				emojiCode = ":" + emojiCode + ":"
+			}
+			emoji := renderEmoji(emojiCode)
+			if emoji != emojiCode {
+				name = emoji + " " + name
 			}
 			if len(name) > w-6 {
 				name = name[:w-6]
@@ -365,7 +365,7 @@ func (m Model) rightPaneView(w, h int) string {
 		if len(msg) > w-12 {
 			msg = msg[:w-12]
 		}
-		b.WriteString(fmt.Sprintf("Message: %-*s\n", w-12, msg))
+		b.WriteString(fmt.Sprintf("Message:  %-*s\n", w-13, msg))
 		creator = renderEmoji(creator)
 		b.WriteString(fmt.Sprintf("Creator: %s\n", creator))
 		b.WriteString(fmt.Sprintf("Created: %s\n", FormatTime(bd.CreatedAt)))

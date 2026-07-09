@@ -54,7 +54,7 @@ var nerdFontIcons = map[string]string{
 	"book":            "\uf02d",  //  fa-book
 	"hammer":          "\uf0e7",  //  fa-bolt
 	"fast_forward":    "\u23e9",  // ⏩
-	"buildkite":       "\ue72d",  //  dev-b Buildkite-style rounded B
+	"buildkite":       "\uf135",  //  fa-rocket (no native buildkite icon in Nerd Fonts)
 	"sparkles":        "\uf00a",  //  md-sparkles
 	"merge":           "\uf157",  //  fa-code-fork
 	"fork":            "\uf126",  //  fa-code-fork alt
