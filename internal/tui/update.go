@@ -325,8 +325,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleOptionsKey(msg)
 	}
 
-	if m.showMetrics {
-		return m.handleMetricsKey(msg)
+	if m.showAgentStats {
+		return m.handleAgentStatsKey(msg)
 	}
 
 	if key.Matches(msg, keys.Logs) {
@@ -513,7 +513,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.globalSearchResult = nil
 		return m, nil
 
-	case key.Matches(msg, keys.Metrics):
+	case key.Matches(msg, keys.AgentStats):
 		if m.activePane != rightPane {
 			m.searchMsg = "Select a job on the detail pane"
 			return m, nil
@@ -522,7 +522,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.searchMsg = "No job selected"
 			return m, nil
 		}
-		m.showMetrics = true
+		m.showAgentStats = true
 		return m, nil
 
 	case key.Matches(msg, keys.LiveMode):
@@ -728,10 +728,10 @@ func (m Model) handleAgentViewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleMetricsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleAgentStatsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	case msg.String() == "esc", key.Matches(msg, keys.Metrics), key.Matches(msg, keys.Quit):
-		m.showMetrics = false
+	case msg.String() == "esc", key.Matches(msg, keys.AgentStats), key.Matches(msg, keys.Quit):
+		m.showAgentStats = false
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}

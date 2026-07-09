@@ -64,9 +64,9 @@ func (m Model) View() string {
 		return m.presetPickerOverlay(mainView)
 	}
 
-	// Overlay agent metrics if present
-	if m.showMetrics {
-		return m.metricsOverlay(mainView)
+	// Overlay agent stats if present
+	if m.showAgentStats {
+		return m.agentStatsOverlay(mainView)
 	}
 
 	// Overlay options if present
@@ -573,7 +573,7 @@ func (m Model) helpView() string {
 	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("\n")
 	b.WriteString("Views:\n")
-	b.WriteString("  m           Agent metrics for highlighted job\n")
+	b.WriteString("  s           Agent stats for highlighted job\n")
 	b.WriteString("  ctrl+l      Toggle live mode (force 2s refresh)\n")
 	b.WriteString("  a           Toggle agent/queue saturation view\n")
 	b.WriteString("  ctrl+f      Global search across all data\n")
@@ -895,10 +895,10 @@ func (m Model) optionsOverlay(base string) string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 }
 
-func (m Model) metricsOverlay(base string) string {
+func (m Model) agentStatsOverlay(base string) string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("  Agent Metrics  "))
+	b.WriteString(titleStyle.Render("  Agent Stats  "))
 	b.WriteString("\n\n")
 
 	job := m.selectedRightPaneJob()
@@ -931,7 +931,7 @@ func (m Model) metricsOverlay(base string) string {
 		}
 	}
 
-	b.WriteString(dimStyle.Render("  esc/m:close  q:quit"))
+	b.WriteString(dimStyle.Render("  esc/s:close  q:quit"))
 
 	overlay := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
