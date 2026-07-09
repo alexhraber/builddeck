@@ -22,52 +22,163 @@ var (
 // nerdFontIcons maps Buildkite emoji names to Nerd Font codepoints.
 // Users with Nerd Fonts installed will see crisp icons instead of block art.
 var nerdFontIcons = map[string]string{
-	"docker":       "\uf21b", //  fa-docker
-	"go":           "\ue627", //  dev-go
-	"golang":       "\ue627", //  dev-go
-	"python":       "\ue73c", //  dev-python
-	"rust":         "\ue7a8", // 
-	"ruby":         "\ue791", // 
-	"node":         "\ue718", //  dev-nodejs_small
-	"npm":          "\ue71e", //  dev-npm
-	"github":       "\uf09b", //  fa-github
-	"git":          "\uf1d3", //  fa-git-alt
-	"aws":          "\uf0c2", //  fa-cloud
-	"gcp":          "\uf0c2", //  fa-cloud
-	"azure":        "\uf0c2", //  fa-cloud
-	"linux":        "\uf17c", //  fa-linux
-	"apple":        "\uf179", //  fa-apple
-	"windows":      "\uf17a", //  fa-windows
-	"test":         "\uf478", //  oct-check
-	"check":        "\uf00c", //  fa-check
-	"star":         "\uf005", //  fa-star
-	"heart":        "\uf004", //  fa-heart
-	"bug":          "\uf188", //  fa-bug
-	"rocket":       "\uf135", //  fa-rocket
-	"shipit":       "\uf135", //  fa-rocket
-	"warning":      "\uf071", //  fa-warning
-	"lock":         "\uf023", //  fa-lock
-	"fire":         "\uf06d", //  fa-fire
-	"tada":         "\uf0e7", //  fa-bolt (zap)
-	"package":      "\uf187", //  fa-archive
-	"art":          "\uf1fc", //  fa-paint-brush
-	"book":         "\uf02d", //  fa-book
-	"hammer":       "\uf0e7", //  fa-bolt
-	"fast_forward": "\u23e9", // ⏩
+	"docker":          "\uf21b",  //  fa-docker
+	"go":              "\ue627",  //  dev-go
+	"golang":          "\ue627",  //  dev-go
+	"python":          "\ue73c",  //  dev-python
+	"rust":            "\ue7a8",  // 
+	"ruby":            "\ue791",  // 
+	"node":            "\ue718",  //  dev-nodejs_small
+	"npm":             "\ue71e",  //  dev-npm
+	"github":          "\uf09b",  //  fa-github
+	"git":             "\uf1d3",  //  fa-git-alt
+	"aws":             "\uf0c2",  //  fa-cloud
+	"gcp":             "\uf0c2",  //  fa-cloud
+	"azure":           "\uf0c2",  //  fa-cloud
+	"linux":           "\uf17c",  //  fa-linux
+	"apple":           "\uf179",  //  fa-apple
+	"windows":         "\uf17a",  //  fa-windows
+	"test":            "\uf478",  //  oct-check
+	"check":           "\uf00c",  //  fa-check
+	"star":            "\uf005",  //  fa-star
+	"heart":           "\uf004",  //  fa-heart
+	"bug":             "\uf188",  //  fa-bug
+	"rocket":          "\uf135",  //  fa-rocket
+	"shipit":          "\uf135",  //  fa-rocket
+	"warning":         "\uf071",  //  fa-warning
+	"lock":            "\uf023",  //  fa-lock
+	"fire":            "\uf06d",  //  fa-fire
+	"tada":            "\uf0e7",  //  fa-bolt (zap)
+	"package":         "\uf187",  //  fa-archive
+	"art":             "\uf1fc",  //  fa-paint-brush
+	"book":            "\uf02d",  //  fa-book
+	"hammer":          "\uf0e7",  //  fa-bolt
+	"fast_forward":    "\u23e9",  // ⏩
+	"buildkite":       "\ue72d",  //  dev-b Buildkite-style rounded B
+	"sparkles":        "\uf00a",  //  md-sparkles
+	"merge":           "\uf157",  //  fa-code-fork
+	"fork":            "\uf126",  //  fa-code-fork alt
+	"terminal":        "\uf120",  //  fa-terminal
+	"zap":             "\uf0e7",  //  fa-bolt
+	"lightning":       "\uf0e7",  //  fa-bolt
+	"gear":            "\uf013",  //  fa-gear
+	"cog":             "\uf013",  //  fa-cog
+	"wrench":          "\uf0ad",  //  fa-wrench
+	"tools":           "\uf0ad",  //  fa-wrench
+	"building":        "\uf1ad",  //  fa-building
+	"office":          "\uf1ad",  //  fa-building
+	"home":            "\uf015",  //  fa-home
+	"seedling":        "\uf4d8",  //  oct-seedling
+	"play":            "\uf04b",  //  fa-play
+	"stop":            "\uf04d",  //  fa-stop
+	"pause":           "\uf04c",  //  fa-pause
+	"sync":            "\uf021",  //  fa-sync
+	"refresh":         "\uf021",  //  fa-sync
+	"search":          "\uf002",  //  fa-search
+	"plus":            "\uf067",  //  fa-plus
+	"pipeline":        "\uf0c5",  //  fa-files-o
+	"tag":             "\uf02b",  //  fa-tag
+	"branch":          "\uf126",  //  fa-code-fork
+	"commit":          "\uf01c",  //  fa-asterisk (or md-source-commit)
+	"pr":              "\uf09b",  //  md-source-pull-request
+	"pull_request":    "\uf09b",  //  md-source-pull-request
+	"docker_compose":  "\uf21b",  //  fa-docker
+	"database":        "\uf1c0",  //  fa-database
+	"redis":           "\ue76d",  //  dev-redis
+	"postgres":        "\ue76e",  //  dev-postgres
+	"postgresql":      "\ue76e",  //  dev-postgres
+	"mysql":           "\ue704",  //  dev-mysql
+	"mongo":           "\ue7a4",  //  dev-mongodb
+	"mongodb":         "\ue7a4",  //  dev-mongodb
+	"nginx":           "\ue776",  //  dev-nginx
+	"nodejs":          "\ue718",  //  dev-nodejs_small
+	"typescript":      "\ue628",  //  dev-typescript
+	"ts":              "\ue628",  //  dev-typescript
+	"javascript":      "\ue781",  //  dev-javascript
+	"js":              "\ue781",  //  dev-javascript
+	"java":            "\ue738",  //  dev-java
+	"kotlin":          "\ue789",  //  dev-kotlin
+	"swift":           "\ue755",  //  dev-swift
+	"elixir":          "\ue62d",  //  dev-elixir
+	"haskell":         "\ue61f",  //  dev-haskell
+	"c":               "\ue61e",  //  dev-c
+	"cplusplus":       "\ue61d",  //  dev-cpp
+	"cpp":             "\ue61d",  //  dev-cpp
+	"csharp":          "\ue648",  //  dev-csharp
+	"dotnet":          "\ue648",  //  dev-csharp
+	"kubernetes":      "\uf10b",  //  md-kubernetes (or \u2388)
+	"k8s":             "\uf10b",  //  md-kubernetes
+	"terraform":       "\ue60b",  //  dev-terraform
+	"tf":              "\ue60b",  //  dev-terraform
+	"ansible":         "\ue769",  //  dev-ansible
+	"circleci":        "\ue78c",  //  dev-circleci
+	"travis":          "\ue77e",  //  dev-travis
+	"gitlab":          "\ue796",  //  dev-gitlab
+	"bitbucket":       "\ue703",  //  dev-bitbucket
+	"slack":           "\ue76a",  //  dev-slack
+	"discord":         "\ue76f",  //  dev-discord
+	"email":           "\uf0e0",  //  fa-envelope
+	"mail":            "\uf0e0",  //  fa-envelope
+	"chat":            "\uf075",  //  fa-comment
+	"phone":           "\uf095",  //  fa-phone
+	"camera":          "\uf030",  //  fa-camera
+	"video":           "\uf03d",  //  fa-video-camera
+	"youtube":         "\uf167",  //  fa-youtube
+	"twitter":         "\uf099",  //  fa-twitter
+	"linkedin":        "\uf0e1",  //  fa-linkedin
+	"clock":           "\uf017",  //  fa-clock-o
+	"time":            "\uf017",  //  fa-clock-o
+	"calendar":        "\uf073",  //  fa-calendar
+	"date":            "\uf073",  //  fa-calendar
+	"eye":             "\uf06e",  //  fa-eye
+	"graph":           "\uf080",  //  fa-bar-chart
+	"chart":           "\uf080",  //  fa-bar-chart
+	"download":        "\uf019",  //  fa-download
+	"upload":          "\uf093",  //  fa-upload
+	"link":            "\uf0c1",  //  fa-link
+	"url":             "\uf0c1",  //  fa-link
+	"globe":           "\uf0ac",  //  fa-globe
+	"world":           "\uf0ac",  //  fa-globe
+	"flag":            "\uf024",  //  fa-flag
+	"trophy":          "\uf091",  //  fa-trophy
+	"medal":           "\uf0a3",  //  fa-medal
+	"award":           "\uf0a3",  //  fa-medal
+	"thumbsup":        "\uf164",  //  fa-thumbs-up
+	"thumbsdown":      "\uf165",  //  fa-thumbs-down
+	"handshake":       "\uf2b5",  //  fa-handshake-o
+	"users":           "\uf0c0",  //  fa-users
+	"person":          "\uf007",  //  fa-user
+	"document":        "\uf016",  //  fa-file-o
+	"file":            "\uf016",  //  fa-file-o
+	"folder":          "\uf07b",  //  fa-folder
+	"archive":         "\uf187",  //  fa-archive
+	"zip":             "\uf187",  //  fa-archive
+	"key":             "\uf084",  //  fa-key
+	"secret":          "\uf084",  //  fa-key
+	"shirt":           "\uf553",  //  fa-tshirt
+	"ladybug":         "\uf188",  //  fa-bug
+	"beetle":          "\uf188",  //  fa-bug
+	"ant":             "\uf188",  //  fa-bug
+	"snail":           "\uf188",  //  fa-bug
+	"turtle":          "\uf188",  //  fa-bug
+	"dog":             "\uf6d3",  //  fa-dog
+	"cat":             "\uf6be",  //  fa-cat
+	"whale":           "\uf72c",  //  fa-whale (Docker!)
+	"unicorn":         "\uf15b",  //  fa-html5 (no unicorn in FA)
+	"robot":           "\uf544",  //  fa-robot
+	"alien":           "\uf8df",  //  fa-alien
 }
 
 func init() {
-	emojiMap = make(map[string]string)
+	emojiMap = make(map[string]string, len(nerdFontIcons))
+	for name, glyph := range nerdFontIcons {
+		emojiMap[":"+name+":"] = glyph
+	}
 }
 
 func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 	emojiMu.Lock()
 	defer emojiMu.Unlock()
-
-	// seed with nerd font icons
-	for name, glyph := range nerdFontIcons {
-		emojiMap[":"+name+":"] = glyph
-	}
 
 	for _, e := range apiEmojis {
 		key := ":" + e.Name + ":"
