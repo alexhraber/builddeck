@@ -31,6 +31,7 @@ type keyMap struct {
 	LoadPreset   key.Binding
 	Options      key.Binding
 	OpenRepo     key.Binding
+	OpenCommit   key.Binding
 }
 
 var keys = keyMap{
@@ -146,6 +147,10 @@ var keys = keyMap{
 		key.WithKeys("ctrl+o"),
 		key.WithHelp("ctrl+o", "open repo"),
 	),
+	OpenCommit: key.NewBinding(
+		key.WithKeys("ctrl+d"),
+		key.WithHelp("ctrl+d", "open commit"),
+	),
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -154,7 +159,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh,
 		k.LiveMode, k.Logs, k.AgentStats, k.RetryJob, k.Rebuild, k.Cancel, k.Unblock,
 		k.OpenBrowser, k.Download, k.Agents, k.GlobalSearch,
-		k.OpenRepo, k.SavePreset, k.LoadPreset, k.Options, k.Help, k.Quit,
+		k.OpenCommit, k.OpenRepo, k.SavePreset, k.LoadPreset, k.Options, k.Help, k.Quit,
 	}
 }
 
@@ -164,7 +169,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Tab, k.ShiftTab, k.Enter},
 		{k.Top, k.Bottom, k.Search, k.GlobalSearch, k.Refresh, k.LiveMode, k.Logs, k.AgentStats},
 		{k.RetryJob, k.Rebuild, k.Cancel, k.Unblock},
-		{k.OpenBrowser, k.Download, k.Agents, k.Options, k.OpenRepo},
+		{k.OpenBrowser, k.Download, k.Agents, k.Options, k.OpenRepo, k.OpenCommit},
 		{k.SavePreset, k.LoadPreset},
 		{k.Help, k.Quit},
 	}

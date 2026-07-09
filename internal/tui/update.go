@@ -504,6 +504,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.openInBrowser()
 		return m, nil
 
+	case key.Matches(msg, keys.OpenCommit):
+		m.openCommitInBrowser()
+		return m, nil
+
 	case key.Matches(msg, keys.Download):
 		cmd := m.downloadSelectedArtifact()
 		return m, cmd
@@ -1238,6 +1242,27 @@ func (m *Model) openRepoInBrowser() {
 	}
 	openURL(url)
 	m.searchMsg = "Opened repo in browser"
+}
+
+func (m *Model) openCommitInBrowser() {
+	pipe := m.selectedPipeline()
+	if pipe == nil || pipe.Repository == "" {
+		m.searchMsg = "No repo URL available"
+		return
+	}
+	bd := m.selectedBuildEntry()
+	if bd == nil || bd.Commit == "" {
+		m.searchMsg = "No commit SHA available"
+		return
+	}
+	base := gitToHTTPS(pipe.Repository)
+	if base == "" {
+		m.searchMsg = "Could not parse repo URL"
+		return
+	}
+	url := base + "/commit/" + shortSHA(bd.Commit)
+	openURL(url)
+	m.searchMsg = "Opened commit in browser"
 }
 
 func (m *Model) downloadSelectedArtifact() tea.Cmd {

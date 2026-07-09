@@ -568,6 +568,7 @@ func (m Model) helpView() string {
 	b.WriteString("  L           Tail selected/top job logs\n")
 	b.WriteString("  o           Open current resource in browser\n")
 	b.WriteString("  ctrl+o      Open pipeline's git repo in browser\n")
+	b.WriteString("  ctrl+d      Open commit diff in browser\n")
 	b.WriteString("  d           Download first artifact\n")
 	b.WriteString("  /           Filter active pane\n")
 	b.WriteString("  esc/enter   Close filter input\n")
