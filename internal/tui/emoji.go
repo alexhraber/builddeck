@@ -22,37 +22,37 @@ var (
 // nerdFontIcons maps Buildkite emoji names to Nerd Font codepoints.
 // Users with Nerd Fonts installed will see crisp icons instead of block art.
 var nerdFontIcons = map[string]string{
-	"docker":   "\uf21b",  //  fa-docker
-	"go":       "\ue627", //  dev-go
-	"golang":   "\ue627", //  dev-go
-	"python":   "\ue73c", //  dev-python
-	"rust":     "\ue7a8", // 
-	"ruby":     "\ue791", // 
-	"node":     "\ue718", //  dev-nodejs_small
-	"npm":      "\ue71e", //  dev-npm
-	"github":   "\uf09b", //  fa-github
-	"git":      "\uf1d3", //  fa-git-alt
-	"aws":      "\uf0c2", //  fa-cloud
-	"gcp":      "\uf0c2", //  fa-cloud
-	"azure":    "\uf0c2", //  fa-cloud
-	"linux":    "\uf17c", //  fa-linux
-	"apple":    "\uf179", //  fa-apple
-	"windows":  "\uf17a", //  fa-windows
-	"test":     "\uf478", //  oct-check
-	"check":    "\uf00c", //  fa-check
-	"star":     "\uf005", //  fa-star
-	"heart":    "\uf004", //  fa-heart
-	"bug":      "\uf188", //  fa-bug
-	"rocket":   "\uf135", //  fa-rocket
-	"shipit":   "\uf135", //  fa-rocket
-	"warning":  "\uf071", //  fa-warning
-	"lock":     "\uf023", //  fa-lock
-	"fire":     "\uf06d", //  fa-fire
-	"tada":     "\uf0e7", //  fa-bolt (zap)
-	"package":  "\uf187", //  fa-archive
-	"art":      "\uf1fc", //  fa-paint-brush
-	"book":     "\uf02d", //  fa-book
-	"hammer":   "\uf0e7", //  fa-bolt
+	"docker":       "\uf21b", //  fa-docker
+	"go":           "\ue627", //  dev-go
+	"golang":       "\ue627", //  dev-go
+	"python":       "\ue73c", //  dev-python
+	"rust":         "\ue7a8", // 
+	"ruby":         "\ue791", // 
+	"node":         "\ue718", //  dev-nodejs_small
+	"npm":          "\ue71e", //  dev-npm
+	"github":       "\uf09b", //  fa-github
+	"git":          "\uf1d3", //  fa-git-alt
+	"aws":          "\uf0c2", //  fa-cloud
+	"gcp":          "\uf0c2", //  fa-cloud
+	"azure":        "\uf0c2", //  fa-cloud
+	"linux":        "\uf17c", //  fa-linux
+	"apple":        "\uf179", //  fa-apple
+	"windows":      "\uf17a", //  fa-windows
+	"test":         "\uf478", //  oct-check
+	"check":        "\uf00c", //  fa-check
+	"star":         "\uf005", //  fa-star
+	"heart":        "\uf004", //  fa-heart
+	"bug":          "\uf188", //  fa-bug
+	"rocket":       "\uf135", //  fa-rocket
+	"shipit":       "\uf135", //  fa-rocket
+	"warning":      "\uf071", //  fa-warning
+	"lock":         "\uf023", //  fa-lock
+	"fire":         "\uf06d", //  fa-fire
+	"tada":         "\uf0e7", //  fa-bolt (zap)
+	"package":      "\uf187", //  fa-archive
+	"art":          "\uf1fc", //  fa-paint-brush
+	"book":         "\uf02d", //  fa-book
+	"hammer":       "\uf0e7", //  fa-bolt
 	"fast_forward": "\u23e9", // ⏩
 }
 

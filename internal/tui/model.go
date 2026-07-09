@@ -101,7 +101,7 @@ type Model struct {
 	denseMode        bool
 	sortAsc          bool
 
-	liveMode    bool
+	liveMode         bool
 	showStatsOverlay string // "" = none, "agent" = agent stats, "build" = build stats
 
 	// Cache maps to prevent duplicate, rate-limiting API requests

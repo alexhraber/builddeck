@@ -5,21 +5,21 @@ import (
 )
 
 type Theme struct {
-	Name             string
-	BorderActive     string
-	BorderInactive   string
-	Title            string
-	Subtitle         string
-	Dim              string
-	SelectedBg       string
-	SelectedFg       string
-	NormalFg         string
-	Accent           string
-	Success          string
-	Warning          string
-	Failure          string
-	Info             string
-	Blocked          string
+	Name           string
+	BorderActive   string
+	BorderInactive string
+	Title          string
+	Subtitle       string
+	Dim            string
+	SelectedBg     string
+	SelectedFg     string
+	NormalFg       string
+	Accent         string
+	Success        string
+	Warning        string
+	Failure        string
+	Info           string
+	Blocked        string
 }
 
 var Themes = []Theme{
