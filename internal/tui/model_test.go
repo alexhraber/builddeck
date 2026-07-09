@@ -193,11 +193,11 @@ func TestLogsEscapeClosesPane(t *testing.T) {
 
 func TestBuildActionKeyBindings(t *testing.T) {
 	tests := []struct {
-		name      string
-		key       string
-		pane      pane
-		msg       string
-		wantCmd   bool
+		name    string
+		key     string
+		pane    pane
+		msg     string
+		wantCmd bool
 	}{
 		{"r on builds pane rebuilds", "r", centerPane, "Rebuilding build...", true},
 		{"r on detail pane retries job", "r", rightPane, "Retrying job...", true},
