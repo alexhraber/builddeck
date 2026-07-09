@@ -325,6 +325,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleOptionsKey(msg)
 	}
 
+	if m.showMetrics {
+		return m.handleMetricsKey(msg)
+	}
+
 	if key.Matches(msg, keys.Logs) {
 		if m.showLogs {
 			m.showLogs = false
@@ -507,6 +511,18 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.globalSearching = true
 		m.globalSearchQuery = ""
 		m.globalSearchResult = nil
+		return m, nil
+
+	case key.Matches(msg, keys.Metrics):
+		if m.selectedBuild == nil || m.activePane != rightPane {
+			m.searchMsg = "Select a build on the detail pane"
+			return m, nil
+		}
+		if len(m.selectedBuild.Jobs) == 0 {
+			m.searchMsg = "No jobs loaded for this build"
+			return m, nil
+		}
+		m.showMetrics = true
 		return m, nil
 
 	case key.Matches(msg, keys.LiveMode):
@@ -706,6 +722,18 @@ func (m Model) handleAgentViewKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				openURL(agent.WebURL)
 				m.searchMsg = "Opened agent in browser"
 			}
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m Model) handleMetricsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case msg.String() == "esc", key.Matches(msg, keys.Metrics), key.Matches(msg, keys.Quit):
+		m.showMetrics = false
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
 		}
 		return m, nil
 	}
