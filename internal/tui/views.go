@@ -539,7 +539,7 @@ func (m Model) statusBarView(w int) string {
 		parts = append(parts, rateLabel)
 	}
 
-	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x/u:actions  L:logs  ctrl+l:live  o:browser  d:download  a:agents  ctrl+f:search  S/P:presets"))
+	parts = append(parts, helpStyle.Render("↑/k ↓/j ←/h →/l  ?:help  q:quit  R:refresh"))
 
 	return statusStyle.Width(w).Render(strings.Join(parts, "  │  "))
 }
