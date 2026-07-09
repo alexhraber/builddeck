@@ -567,6 +567,7 @@ func (m Model) helpView() string {
 	b.WriteString("  u           Unblock selected blocked job\n")
 	b.WriteString("  L           Tail selected/top job logs\n")
 	b.WriteString("  o           Open current resource in browser\n")
+	b.WriteString("  ctrl+o      Open pipeline's git repo in browser\n")
 	b.WriteString("  d           Download first artifact\n")
 	b.WriteString("  /           Filter active pane\n")
 	b.WriteString("  esc/enter   Close filter input\n")
@@ -911,6 +912,7 @@ func (m Model) statsOverlay(base string) string {
 				label = job.Command
 			}
 			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
+			b.WriteString(fmt.Sprintf("    Duration: %s\n", FormatDuration(job.StartedAt, job.FinishedAt)))
 			if job.Agent != nil {
 				ag := job.Agent
 				b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))

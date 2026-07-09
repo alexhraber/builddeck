@@ -496,6 +496,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		cmd := m.unblockSelectedJob()
 		return m, cmd
 
+	case key.Matches(msg, keys.OpenRepo):
+		m.openRepoInBrowser()
+		return m, nil
+
 	case key.Matches(msg, keys.OpenBrowser):
 		m.openInBrowser()
 		return m, nil
@@ -1221,6 +1225,21 @@ func (m *Model) openInBrowser() {
 	m.searchMsg = "Opened in browser"
 }
 
+func (m *Model) openRepoInBrowser() {
+	pipe := m.selectedPipeline()
+	if pipe == nil || pipe.Repository == "" {
+		m.searchMsg = "No repo URL available"
+		return
+	}
+	url := gitToHTTPS(pipe.Repository)
+	if url == "" {
+		m.searchMsg = "No repo URL available"
+		return
+	}
+	openURL(url)
+	m.searchMsg = "Opened repo in browser"
+}
+
 func (m *Model) downloadSelectedArtifact() tea.Cmd {
 	if m.actionInFlight {
 		m.searchMsg = "Action already in flight"
@@ -1532,6 +1551,27 @@ func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string,
 
 		return artifactDownloadMsg{filename: filename, err: nil}
 	}
+}
+
+// gitToHTTPS converts common git remote URLs to HTTPS browser URLs.
+func gitToHTTPS(repo string) string {
+	switch {
+	case strings.HasPrefix(repo, "https://"):
+		return strings.TrimSuffix(repo, ".git")
+	case strings.HasPrefix(repo, "git@"):
+		repo = strings.TrimPrefix(repo, "git@")
+		repo = strings.Replace(repo, ":", "/", 1)
+		repo = "https://" + repo
+		return strings.TrimSuffix(repo, ".git")
+	case strings.HasPrefix(repo, "ssh://"):
+		repo = strings.TrimPrefix(repo, "ssh://")
+		if i := strings.IndexByte(repo, '/'); i >= 0 {
+			repo = repo[i+1:]
+		}
+		repo = "https://" + repo
+		return strings.TrimSuffix(repo, ".git")
+	}
+	return ""
 }
 
 // openURL opens a URL in the user's default browser.
