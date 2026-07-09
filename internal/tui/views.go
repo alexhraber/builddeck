@@ -64,9 +64,9 @@ func (m Model) View() string {
 		return m.presetPickerOverlay(mainView)
 	}
 
-	// Overlay agent metrics if present
-	if m.showMetrics {
-		return m.metricsOverlay(mainView)
+	// Overlay agent stats if present
+	if m.showAgentStats {
+		return m.agentStatsOverlay(mainView)
 	}
 
 	// Overlay options if present
@@ -573,7 +573,7 @@ func (m Model) helpView() string {
 	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("\n")
 	b.WriteString("Views:\n")
-	b.WriteString("  m           Show agent metrics for selected job\n")
+	b.WriteString("  s           Agent stats for highlighted job\n")
 	b.WriteString("  ctrl+l      Toggle live mode (force 2s refresh)\n")
 	b.WriteString("  a           Toggle agent/queue saturation view\n")
 	b.WriteString("  ctrl+f      Global search across all data\n")
@@ -895,48 +895,43 @@ func (m Model) optionsOverlay(base string) string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 }
 
-func (m Model) metricsOverlay(base string) string {
+func (m Model) agentStatsOverlay(base string) string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("  Agent Metrics  "))
+	b.WriteString(titleStyle.Render("  Agent Stats  "))
 	b.WriteString("\n\n")
 
-	if m.selectedBuild == nil || len(m.selectedBuild.Jobs) == 0 {
-		b.WriteString(dimStyle.Render("  No job data available"))
+	job := m.selectedRightPaneJob()
+	if job == nil {
+		b.WriteString(dimStyle.Render("  No job selected"))
 	} else {
-		for _, job := range m.selectedBuild.Jobs {
-			if job.Type == "waiter" {
-				continue
+		label := job.Label
+		if label == "" {
+			label = job.Command
+		}
+		b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
+		if job.Agent != nil {
+			ag := job.Agent
+			b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
+			b.WriteString(fmt.Sprintf("    Hostname: %s\n", ag.Hostname))
+			b.WriteString(fmt.Sprintf("    OS:       %s\n", ag.OS))
+			b.WriteString(fmt.Sprintf("    Version:  %s\n", ag.Version))
+			if ag.IPAddress != "" {
+				b.WriteString(fmt.Sprintf("    IP:       %s\n", ag.IPAddress))
 			}
-			label := job.Label
-			if label == "" {
-				label = job.Command
-			}
-			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
-			if job.Agent != nil {
-				ag := job.Agent
-				b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
-				b.WriteString(fmt.Sprintf("    Hostname: %s\n", ag.Hostname))
-				b.WriteString(fmt.Sprintf("    OS:       %s\n", ag.OS))
-				b.WriteString(fmt.Sprintf("    Version:  %s\n", ag.Version))
-				if ag.IPAddress != "" {
-					b.WriteString(fmt.Sprintf("    IP:       %s\n", ag.IPAddress))
+			b.WriteString(fmt.Sprintf("    Queue:    %s\n", ag.Queue))
+			if len(ag.Metadata) > 0 {
+				b.WriteString("    Metadata:\n")
+				for _, meta := range ag.Metadata {
+					b.WriteString(fmt.Sprintf("      • %s\n", meta))
 				}
-				b.WriteString(fmt.Sprintf("    Queue:    %s\n", ag.Queue))
-				if len(ag.Metadata) > 0 {
-					b.WriteString("    Metadata:\n")
-					for _, meta := range ag.Metadata {
-						b.WriteString(fmt.Sprintf("      • %s\n", meta))
-					}
-				}
-			} else {
-				b.WriteString(dimStyle.Render("    No agent assigned\n"))
 			}
-			b.WriteString("\n")
+		} else {
+			b.WriteString(dimStyle.Render("    No agent assigned\n"))
 		}
 	}
 
-	b.WriteString(dimStyle.Render("  esc/m:close  q:quit"))
+	b.WriteString(dimStyle.Render("  esc/s:close  q:quit"))
 
 	overlay := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).

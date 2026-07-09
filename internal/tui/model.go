@@ -102,7 +102,7 @@ type Model struct {
 	sortAsc          bool
 
 	liveMode    bool
-	showMetrics bool
+	showAgentStats bool
 
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
