@@ -1,6 +1,18 @@
 steps:
+  - label: ":broom: Tidy"
+    key: tidy
+    command: |
+      .buildkite/setup-go.sh go mod tidy
+      if ! git diff --exit-code -- go.mod go.sum; then
+        echo "^^^ +++"
+        echo "go.mod or go.sum is dirty — run 'go mod tidy' and commit the changes."
+        exit 1
+      fi
+      echo "go.mod and go.sum are clean"
+
   - label: ":go: Format"
     key: fmt
+    depends_on: tidy
     command: .buildkite/setup-go.sh go fmt ./...
 
   - label: ":go: Vet"
@@ -8,20 +20,44 @@ steps:
     depends_on: fmt
     command: .buildkite/setup-go.sh go vet ./...
 
+  - label: ":female-detective: Lint"
+    key: lint
+    depends_on: fmt
+    command: .buildkite/setup-go.sh go vet -v ./...
+
   - label: ":go: Test"
     key: test
     depends_on: fmt
-    command: .buildkite/setup-go.sh go test ./... -count=1
+    command: |
+      echo "--- Running tests"
+      .buildkite/setup-go.sh go test ./... -count=1 -v 2>&1
+      echo "All tests passed"
 
-  - label: ":go: Build"
-    key: build
+  - label: ":go: Build all packages"
+    key: build-all
     depends_on:
       - vet
+      - lint
+      - tidy
+    command: .buildkite/setup-go.sh go build ./...
+
+  - label: ":go: Build binary"
+    key: build
+    depends_on:
       - test
-    command: .buildkite/setup-go.sh go build -ldflags="-s -w" ./cmd/builddeck
+      - build-all
+    command: |
+      echo "--- Building builddeck binary"
+      .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
+      ls -lh builddeck
+      echo "Binary built successfully"
 
   - label: ":rocket: Release"
     key: release
     depends_on: build
     if: build.branch == "main" && build.message =~ /^release:/
-    command: .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${BUILDKITE_TAG:-dev}" ./cmd/builddeck
+    command: |
+      echo "--- Building release binary"
+      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${BUILDKITE_TAG:-dev}" -o builddeck ./cmd/builddeck
+      ls -lh builddeck
+      echo "Release binary ready"
