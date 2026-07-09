@@ -387,7 +387,10 @@ func (m Model) rightPaneView(w, h int) string {
 				if job.Type == "waiter" {
 					continue
 				}
-				label := job.Label
+				label := job.Name
+				if label == "" {
+					label = job.Label
+				}
 				if label == "" {
 					label = job.Command
 				}
@@ -907,7 +910,10 @@ func (m Model) statsOverlay(base string) string {
 		if job == nil {
 			b.WriteString(dimStyle.Render("  No job selected"))
 		} else {
-			label := job.Label
+			label := job.Name
+			if label == "" {
+				label = job.Label
+			}
 			if label == "" {
 				label = job.Command
 			}
@@ -1013,7 +1019,10 @@ func (m Model) logsView() string {
 	if bd != nil {
 		for _, job := range bd.Jobs {
 			if job.ID == m.logJobID {
-				jobName = job.Label
+				jobName = job.Name
+				if jobName == "" {
+					jobName = job.Label
+				}
 				if jobName == "" {
 					jobName = job.Command
 				}
