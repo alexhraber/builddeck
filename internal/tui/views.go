@@ -204,8 +204,12 @@ func (m Model) leftPaneView(w, h int) string {
 			}
 			name := renderEmoji(pipe.Name)
 			if pipe.Emoji != "" {
-				emoji := renderEmoji(pipe.Emoji)
-				if emoji != pipe.Emoji {
+				emojiCode := pipe.Emoji
+				if !strings.HasPrefix(emojiCode, ":") {
+					emojiCode = ":" + emojiCode + ":"
+				}
+				emoji := renderEmoji(emojiCode)
+				if emoji != emojiCode {
 					name = emoji + " " + name
 				}
 			}

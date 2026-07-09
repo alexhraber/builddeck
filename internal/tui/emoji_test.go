@@ -108,3 +108,44 @@ func TestRenderEmojiMapNotNil(t *testing.T) {
 		t.Fatalf("emojiMap has %d entries, expected at least 30", l)
 	}
 }
+
+func TestRenderEmojiBroom(t *testing.T) {
+	result := renderEmoji(":broom: Tidy")
+	if result == ":broom: Tidy" {
+		t.Fatal("expected :broom: to be rendered, got raw")
+	}
+}
+
+func TestRenderEmojiDetective(t *testing.T) {
+	// female-detective should resolve via the "female_detective" entry
+	result := renderEmoji(":female_detective: Lint")
+	if result == ":female_detective: Lint" {
+		t.Fatal("expected :female_detective: to be rendered, got raw")
+	}
+}
+
+func TestRenderEmojiPipelineBadge(t *testing.T) {
+	// Pipeline emoji from the API may come without colons, e.g. "buildkite"
+	// The views.go code normalizes by adding colons before calling renderEmoji.
+	// Verify the underlying glyph exists.
+	emojiMu.RLock()
+	_, ok := emojiMap[":buildkite:"]
+	emojiMu.RUnlock()
+	if !ok {
+		t.Fatal("expected :buildkite: to be in emojiMap")
+	}
+}
+
+func TestRenderEmojiConstruction(t *testing.T) {
+	result := renderEmoji(":construction: WIP")
+	if result == ":construction: WIP" {
+		t.Fatal("expected :construction: to be rendered, got raw")
+	}
+}
+
+func TestRenderEmojiTestTube(t *testing.T) {
+	result := renderEmoji(":test_tube: Tests")
+	if result == ":test_tube: Tests" {
+		t.Fatal("expected :test_tube: to be rendered, got raw")
+	}
+}
