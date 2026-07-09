@@ -529,7 +529,7 @@ func (m Model) statusBarView(w int) string {
 		if m.liveMode {
 			rateLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#22c55e")).Bold(true).Render("⚡LIVE") + "  " + rateLabel
 		} else if rate == pollIntervalActive {
-			rateLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#22c55e")).Render("live") + "  " + rateLabel
+			rateLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Render("live") + "  " + rateLabel
 		}
 		parts = append(parts, rateLabel)
 	}
