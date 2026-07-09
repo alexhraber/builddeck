@@ -41,7 +41,7 @@ steps:
       - tidy
     command: .buildkite/setup-go.sh go build ./...
 
-  - label: ":go: Build binary"
+  - label: ":go: Build"
     key: build
     depends_on:
       - test
@@ -50,14 +50,11 @@ steps:
       echo "--- Building builddeck binary"
       .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
       ls -lh builddeck
-      echo "Binary built successfully"
+      buildkite-agent artifact upload builddeck
 
-  - label: ":rocket: Release"
+  - label: ":github: Release"
     key: release
     depends_on: build
-    if: build.branch == "main" && build.message =~ /^release:/
-    command: |
-      echo "--- Building release binary"
-      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${BUILDKITE_TAG:-dev}" -o builddeck ./cmd/builddeck
-      ls -lh builddeck
-      echo "Release binary ready"
+    if: build.tag != null || (build.branch == "main" && build.message =~ /^release:/)
+    command: .buildkite/release.sh
+
