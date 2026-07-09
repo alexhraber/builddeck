@@ -1,98 +1,98 @@
 # Intent
 
 ## Product Outcome
-- A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
+`builddeck` is a production-quality Buildkite terminal flight deck: a live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
 
-## What This Project Is
-builddeck is a cli project built using Go.
-A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
+## Primary Users
+- Platform engineers monitoring CI health across Buildkite organizations and pipelines.
+- Release captains diagnosing failed, blocked, or running builds without leaving the terminal.
+- Developers who need fast keyboard access to recent builds, job logs, artifacts, and safe Buildkite actions.
 
-Key operating facts:
-- **Primary languages**: Go
-- **Detected surfaces**: Go CLI
+## Current Product Scope
+## Scope
+In scope:
+- Authenticate with a Buildkite token from `BUILDKITE_API_TOKEN` or `~/.config/builddeck/config.toml`.
+- List organizations, pipelines, recent builds, build detail, jobs, annotations, artifacts, and agents through Buildkite REST API v2.
+- Navigate a three-pane terminal UI with keyboard bindings, loading states, error states, and compact fallbacks.
+- Refresh manually with `R` and automatically with adaptive polling.
+- Filter active panes with `/`, search globally with `ctrl+f`, and save/load filter presets.
+- Tail selected/top job logs with `L`.
+- Retry jobs, rebuild builds, cancel running builds, unblock blocked jobs, open Buildkite URLs, and download the first artifact.
+
+Out of scope for the current contract:
+- Hosted service, daemon, webhooks, server-side datastore, or multi-user coordination.
+- Buildkite GraphQL dashboard snapshots.
+- Per-artifact selection.
+- Searching Buildkite resources that have not been loaded into the current TUI session.
+- Rich annotation rendering; annotation HTML is flattened to terminal text.
 
 ## Product View
 ```mermaid
 flowchart LR
-  U[Primary User] --> P[builddeck]
-  P --> O[User-visible Outcome]
-  P --> G[Proof Gates]
-  G --> E[Evidence Artifacts]
+  User[Terminal user] --> CLI[cmd/builddeck]
+  CLI --> TUI[Bubble Tea model]
+  TUI --> Client[internal/buildkite Client]
+  Client --> BK[Buildkite REST API v2]
+  TUI --> Config[local config + presets]
+  TUI --> Browser[optional browser open]
+  TUI --> Files[optional artifact download]
 ```
 
-## Inferred Baseline
-- Repository: builddeck
-- Product type: cli
-- Primary languages: Go
-- Detected surfaces: Go CLI
-
-## Scope
-| Area | In Scope | Proof Surface |
-|---|---|---|
-| Core workflow | Define a concrete user-visible workflow | Acceptance criteria + tests |
-| Data contracts | Document canonical inputs/outputs | [INTERFACES.md](./INTERFACES.md) and schema checks |
-| Delivery quality | Block promotion on broken proof surfaces | [VALIDATION.md](./VALIDATION.md) blocking gates |
-
-## Non-Goals (Falsifiable)
-| Non-goal | How to falsify |
-|---|---|
-| Feature creep beyond the primary outcome | Any PR adds capability not tied to outcome criteria |
-| Shipping without evidence | Missing validation artifacts for promoted changes |
-| Ambiguous ownership boundaries | Missing owner/system-of-record in interfaces |
+## Acceptance Criteria
+- `builddeck` starts a Bubble Tea alternate-screen TUI when a token is available.
+- Missing token exits before the TUI with a clear message and token-scope guidance.
+- README, in-app help, and specs agree on keybindings and feature scope.
+- Read-only Buildkite data loading covers organizations, pipelines, builds, build detail, jobs, annotations, artifacts, and agents.
+- Mutating Buildkite actions are explicitly keyed, pane-aware, and constrained by current selection/state.
+- Local config is stored under XDG config or `~/.config/builddeck/config.toml`; saved config does not write the token.
+- Filtering never mutates Buildkite data; it only narrows already-loaded in-memory lists.
+- Go proof passes: `gofmt`, `go test`, `go vet`, and `go build`.
+- Decapod validation is run from a claimed isolated worktree; ambient Decapod state blockers are reported separately from code/spec proof.
 
 ## Constraints
-- Technical: runtime, dependency, and topology boundaries are explicit.
-- Operational: deployment, rollback, and incident ownership are defined.
-- Security/compliance: sensitive data handling and authz are mandatory.
+- Runtime: local Go CLI, not a hosted service.
+- API dependency: Buildkite REST API v2, bearer-token authentication, 30-second HTTP client timeout.
+- Local state: config and user-selected downloaded artifacts only.
+- Network dependency: live Buildkite requests fail visibly and do not crash the UI.
+- Token handling: environment token takes priority over config; persisted config intentionally omits token on save.
 
-## Acceptance Criteria (must be objectively testable)
-- [ ] Done means `builddeck` is a compiling Go application with a clean repository structure, a typed internal Buildkite API client, authentication through `BUILDKITE_API_TOKEN`, real read-only Buildkite data loading for organizations, pipelines, recent builds, and build jobs, and a Bubble Tea/Lip Gloss TUI that supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop; the README clearly explains what `builddeck` is, how to install and run it, required token setup, current MVP scope, keybindings, and planned next features, and the codebase passes `go fmt ./...`, `go test ./...`, and `go build ./cmd/builddeck` without failures.
-- [ ] Non-functional targets are met (latency, reliability, cost, etc.).
-- [ ] Validation gates pass and artifacts are attached.
-- [ ] `go test ./...` passes for all packages
-- [ ] `go vet ./...` passes with no diagnostics
-- [ ] `gofmt -l .` returns no files
+## Active Assumptions
+- Buildkite REST API v2 remains the authoritative external contract until GraphQL support is intentionally added.
+- Current mutation actions are acceptable because they require explicit keypresses and operate only on visible, selected/top resources.
+- Saved presets and downloaded artifacts are user-local preferences/artifacts, not shared project state.
+- Adaptive polling is bounded by in-flight guards to avoid duplicate concurrent requests.
 
-## Epistemic Custody Fields
+## Confidence & Risk Level
+- Confidence: High. The contract is grounded in README and the current Go code.
+- Risk: Medium. Buildkite API behavior and token scopes are external dependencies; failures must remain explicit and recoverable.
 
-### Active Assumptions
-- [ ] List any assumptions made to proceed.
-- [ ] Flag assumptions that require future verification.
-
-### Confidence & Risk Level
-- **Confidence**: Low/Medium/High (Rationale: )
-- **Risk**: Low/Medium/High (Impact of wrong assumptions: )
-
-### Measured vs Inferred Facts
-| Fact | Source (Provenance) | Type (Measured/Inferred) |
+## Measured vs Inferred Facts
+| Fact | Source | Type |
 |---|---|---|
-| | | |
+| CLI starts from `cmd/builddeck/main.go` | code | Measured |
+| Token source is env var over config file | `cmd/builddeck/main.go`, `internal/config/config.go` | Measured |
+| Buildkite client uses REST API v2 and bearer auth | `internal/buildkite/client.go` | Measured |
+| UI is Bubble Tea / Lip Gloss | imports and README | Measured |
+| Current roadmap excludes GraphQL and incident command mode | README | Measured |
 
-### Unresolved Contradictions
-- [ ] List any evidence that conflicts with current assumptions or intent.
+## Stop Conditions
+- A requested feature would require storing Buildkite tokens in committed files.
+- A mutation would need hidden or ambiguous target selection.
+- A spec update would claim support not present in code or README.
+- Decapod emits a decision gate or blocks the workspace.
 
-### Deferred Questions
-- [ ] Questions to be answered later.
-
-### Stop Conditions
-- [ ] Explicit conditions under which the agent should stop and ask for help.
-
-### Proof Required Before Completion
-- [ ] Specific evidence needed to prove the outcome is met.
+## Proof Required Before Completion
+- Scaffold scan over `.decapod/generated/specs` has no generic template markers.
+- `gofmt -l .` returns no files.
+- `go test ./...` passes.
+- `go vet ./...` passes.
+- `go build -o /tmp/builddeck-proof ./cmd/builddeck` succeeds.
+- `decapod validate --format json` is run and blockers are classified.
 
 ## Tradeoffs Register
 | Decision | Benefit | Cost | Review Trigger |
 |---|---|---|---|
-| Simplicity vs extensibility | Faster iteration | Potential rework | Feature set expands |
-| Strict gates vs dev speed | Higher confidence | More upfront discipline | Lead time regressions |
-
-## First Implementation Slice
-- [ ] Define the smallest user-visible workflow to ship first.
-- [ ] Define required data/contracts for that workflow.
-- [ ] Define what is intentionally postponed until v2.
-
-## Open Questions (with decision deadlines)
-| Question | Owner | Deadline | Decision |
-|---|---|---|---|
-| Which interfaces are versioned at launch? | TBD | YYYY-MM-DD | |
-| Which non-functional target is hardest to hit? | TBD | YYYY-MM-DD | |
+| REST API first | Simple implementation and broad endpoint coverage | More requests for nested views | GraphQL snapshot work starts |
+| Local config, no token save | Reduces secret persistence risk | Requires env var or manual config token input | Secure keychain support is added |
+| Adaptive polling | Fresh running-build state with lower idle API pressure | More complex refresh state | Rate limit or stale-data issues appear |
+| Pane-aware actions | Prevents broad hidden mutation scope | Requires clear selection semantics | New panes or action types are added |
