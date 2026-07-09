@@ -225,6 +225,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.agents = msg.agents
 		return m, nil
 
+	case emojisLoadedMsg:
+		if msg.err == nil {
+			initEmojiMap(msg.emojis)
+		}
+		return m, nil
+
 	case buildSelectionDebounceMsg:
 		if msg.seq == m.buildSelectionSeq {
 			cmd := m.loadSelectedBuildDetailsForce()
@@ -975,7 +981,10 @@ func (m *Model) onOrgChange() tea.Cmd {
 	m.loadingArtifacts = false
 	org := m.selectedOrg()
 	if org != nil {
-		return loadPipelinesCmd(m.client, org.Slug)
+		return tea.Batch(
+			loadPipelinesCmd(m.client, org.Slug),
+			loadEmojisCmd(m.client, org.Slug),
+		)
 	}
 	return nil
 }

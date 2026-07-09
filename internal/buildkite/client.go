@@ -359,6 +359,32 @@ func (c *Client) DownloadArtifactURL(ctx context.Context, orgSlug, pipelineSlug 
 	return resp.Header.Get("Location"), nil
 }
 
+func (c *Client) ListEmojis(ctx context.Context, orgSlug string) ([]EmojiEntry, error) {
+	path := fmt.Sprintf("/organizations/%s/emojis", orgSlug)
+	resp, err := c.get(ctx, path, map[string]string{"per_page": "100"})
+	if err != nil {
+		return nil, fmt.Errorf("listing emojis for %s: %w", orgSlug, err)
+	}
+	emojis, err := decode[EmojiEntry](resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	page := resp.NextPage
+	for page > 0 {
+		resp, err = c.get(ctx, path, map[string]string{"per_page": "100", "page": strconv.Itoa(page)})
+		if err != nil {
+			break
+		}
+		more, err := decode[EmojiEntry](resp.Body)
+		if err != nil {
+			break
+		}
+		emojis = append(emojis, more...)
+		page = resp.NextPage
+	}
+	return emojis, nil
+}
+
 // ParseAgentQueue extracts the "queue" from agent metadata.
 func ParseAgentQueue(agent Agent) string {
 	for _, meta := range agent.Metadata {
