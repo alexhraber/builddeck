@@ -361,8 +361,11 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(fmt.Sprintf("State:   %s\n", stateBadge(bd.State)))
 		b.WriteString(fmt.Sprintf("Branch:  %s\n", bd.Branch))
 		b.WriteString(fmt.Sprintf("Commit:  %s\n", shortSHA(bd.Commit)))
-		msg := renderEmoji(formatBuildMessage(bd.Message))
-		b.WriteString(fmt.Sprintf("Message: %s\n", msg))
+		msg := formatBuildMessage(bd.Message)
+		if len(msg) > w-12 {
+			msg = msg[:w-12]
+		}
+		b.WriteString(fmt.Sprintf("Message: %-*s\n", w-12, msg))
 		creator = renderEmoji(creator)
 		b.WriteString(fmt.Sprintf("Creator: %s\n", creator))
 		b.WriteString(fmt.Sprintf("Created: %s\n", FormatTime(bd.CreatedAt)))
