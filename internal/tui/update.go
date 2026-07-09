@@ -514,12 +514,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, keys.Metrics):
-		if m.selectedBuild == nil {
-			m.searchMsg = "Select a build first"
+		if m.activePane != rightPane {
+			m.searchMsg = "Select a job on the detail pane"
 			return m, nil
 		}
-		if len(m.selectedBuild.Jobs) == 0 {
-			m.searchMsg = "No jobs loaded for this build"
+		if m.selectedRightPaneJob() == nil {
+			m.searchMsg = "No job selected"
 			return m, nil
 		}
 		m.showMetrics = true
