@@ -171,37 +171,52 @@ var nerdFontIcons = map[string]string{
 	// Standard Unicode emoji commonly used in Buildkite pipeline labels.
 	// These are NOT custom org emoji — they're built into Buildkite's web UI,
 	// so the API never returns them. We seed them as real Unicode emoji.
-	"broom":                "\U0001F9F9", // 🧹
-	"detective":            "\U0001F575", // 🕵
-	"male_detective":       "\U0001F575", // 🕵
-	"female_detective":     "\U0001F575", // 🕵
+	// Both underscore and hyphen variants are provided since Buildkite shortcodes
+	// use hyphens (e.g. :female-detective:), while our internal naming uses underscores.
+	"broom":                 "\U0001F9F9", // 🧹
+	"detective":             "\U0001F575", // 🕵
+	"male_detective":        "\U0001F575", // 🕵
+	"male-detective":        "\U0001F575", // 🕵
+	"female_detective":      "\U0001F575", // 🕵
+	"female-detective":      "\U0001F575", // 🕵
 	"building_construction": "\U0001F3D7", // 🏗
-	"construction":         "\U0001F6A7", // 🚧
-	"test_tube":            "\U0001F9EA", // 🧪
-	"white_check_mark":     "\u2705",     // ✅
-	"x":                    "\u274C",     // ❌
-	"cross_mark":           "\u274C",     // ❌
-	"green_heart":          "\U0001F49A", // 💚
-	"boom":                 "\U0001F4A5", // 💥
-	"collision":            "\U0001F4A5", // 💥
-	"recycle":              "\u267B",     // ♻
-	"pencil":               "\u270F",     // ✏
-	"memo":                 "\U0001F4DD", // 📝
-	"books":                "\U0001F4DA", // 📚
-	"arrow_up":             "\u2B06",     // ⬆
-	"arrow_down":           "\u2B07",     // ⬇
-	"arrow_up_down":        "\u2195",     // ↕
-	"heavy_plus_sign":      "\u2795",     // ➕
-	"heavy_minus_sign":     "\u2796",     // ➖
-	"heavy_check_mark":     "\u2714",     // ✔
-	"wave":                 "\U0001F44B", // 👋
-	"beers":                "\U0001F37B", // 🍻
-	"sweat_smile":          "\U0001F605", // 😅
-	"smile":                "\U0001F604", // 😄
-	"sob":                  "\U0001F62D", // 😭
-	"scream":               "\U0001F631", // 😱
-	"partying_face":        "\U0001F973", // 🥳
-	"facepalm":             "\U0001F926", // 🤦
+	"building-construction": "\U0001F3D7", // 🏗
+	"construction":          "\U0001F6A7", // 🚧
+	"test_tube":             "\U0001F9EA", // 🧪
+	"test-tube":             "\U0001F9EA", // 🧪
+	"white_check_mark":      "\u2705",     // ✅
+	"white-check-mark":      "\u2705",     // ✅
+	"x":                     "\u274C",     // ❌
+	"cross_mark":            "\u274C",     // ❌
+	"green_heart":           "\U0001F49A", // 💚
+	"green-heart":           "\U0001F49A", // 💚
+	"boom":                  "\U0001F4A5", // 💥
+	"collision":             "\U0001F4A5", // 💥
+	"recycle":               "\uf1b8",     //  fa-recycle
+	"pencil":                "\uf303",     //  fa-pencil-alt
+	"memo":                  "\U0001F4DD", // 📝
+	"books":                 "\U0001F4DA", // 📚
+	"arrow_up":              "\u2B06",     // ⬆
+	"arrow-up":              "\u2B06",     // ⬆
+	"arrow_down":            "\u2B07",     // ⬇
+	"arrow-down":            "\u2B07",     // ⬇
+	"arrow_up_down":         "\u2195",     // ↕
+	"heavy_plus_sign":       "\u2795",     // ➕
+	"heavy-plus-sign":       "\u2795",     // ➕
+	"heavy_minus_sign":      "\u2796",     // ➖
+	"heavy-minus-sign":      "\u2796",     // ➖
+	"heavy_check_mark":      "\u2714",     // ✔
+	"heavy-check-mark":      "\u2714",     // ✔
+	"wave":                  "\U0001F44B", // 👋
+	"beers":                 "\U0001F37B", // 🍻
+	"sweat_smile":           "\U0001F605", // 😅
+	"sweat-smile":           "\U0001F605", // 😅
+	"smile":                 "\U0001F604", // 😄
+	"sob":                   "\U0001F62D", // 😭
+	"scream":                "\U0001F631", // 😱
+	"partying_face":         "\U0001F973", // 🥳
+	"partying-face":         "\U0001F973", // 🥳
+	"facepalm":              "\U0001F926", // 🤦
 }
 
 func init() {
