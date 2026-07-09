@@ -509,6 +509,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.globalSearchResult = nil
 		return m, nil
 
+	case key.Matches(msg, keys.LiveMode):
+		m.liveMode = !m.liveMode
+		if m.liveMode {
+			m.searchMsg = "Live mode ON"
+		} else {
+			m.searchMsg = "Live mode OFF"
+		}
+		return m, tickCmdWithInterval(m.currentPollInterval())
+
 	case key.Matches(msg, keys.SavePreset):
 		return m.saveCurrentFilterAsPreset()
 

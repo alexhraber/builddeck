@@ -526,13 +526,15 @@ func (m Model) statusBarView(w int) string {
 	if !m.lastRefresh.IsZero() {
 		rate := m.currentPollInterval()
 		rateLabel := fmt.Sprintf("Updated: %s (%s)", m.lastRefresh.Format("15:04:05"), rate)
-		if rate == pollIntervalActive {
+		if m.liveMode {
 			rateLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#22c55e")).Bold(true).Render("⚡LIVE") + "  " + rateLabel
+		} else if rate == pollIntervalActive {
+			rateLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#22c55e")).Render("live") + "  " + rateLabel
 		}
 		parts = append(parts, rateLabel)
 	}
 
-	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x/u:actions  o:browser  d:download  a:agents  ctrl+f:search  S/P:presets"))
+	parts = append(parts, helpStyle.Render("?:help  q:quit  R:refresh  r/b/x/u:actions  L:logs  ctrl+l:live  o:browser  d:download  a:agents  ctrl+f:search  S/P:presets"))
 
 	return statusStyle.Width(w).Render(strings.Join(parts, "  │  "))
 }
@@ -566,6 +568,7 @@ func (m Model) helpView() string {
 	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("\n")
 	b.WriteString("Views:\n")
+	b.WriteString("  ctrl+l      Toggle live mode (force 2s refresh)\n")
 	b.WriteString("  a           Toggle agent/queue saturation view\n")
 	b.WriteString("  ctrl+f      Global search across all data\n")
 	b.WriteString("  S           Save current filter as preset\n")
