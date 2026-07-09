@@ -193,13 +193,15 @@ func TestLogsEscapeClosesPane(t *testing.T) {
 
 func TestBuildActionKeyBindings(t *testing.T) {
 	tests := []struct {
-		name string
-		key  string
-		msg  string
+		name      string
+		key       string
+		pane      pane
+		msg       string
+		wantCmd   bool
 	}{
-		{"retry job", "r", "Retrying job..."},
-		{"rebuild build", "b", "Rebuilding build..."},
-		{"cancel build", "x", "Canceling build..."},
+		{"r on builds pane rebuilds", "r", centerPane, "Rebuilding build...", true},
+		{"r on detail pane retries job", "r", rightPane, "Retrying job...", true},
+		{"cancel build", "x", centerPane, "Canceling build...", true},
 	}
 
 	for _, tt := range tests {
@@ -215,15 +217,15 @@ func TestBuildActionKeyBindings(t *testing.T) {
 				Jobs:   []buildkite.Job{{ID: "job-1", Type: "script"}},
 			}}
 			m.selectedBuild = &m.builds[0]
-			m.activePane = centerPane
+			m.activePane = tt.pane
 
 			next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)})
 			model := next.(Model)
-			if cmd == nil {
+			if tt.wantCmd && cmd == nil {
 				t.Fatal("Expected action command")
 			}
-			if !model.actionInFlight {
-				t.Fatal("Expected actionInFlight to be true")
+			if !tt.wantCmd && cmd != nil {
+				t.Fatal("Expected no command")
 			}
 			if model.searchMsg != tt.msg {
 				t.Fatalf("searchMsg = %q, want %q", model.searchMsg, tt.msg)
