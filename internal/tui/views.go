@@ -202,7 +202,13 @@ func (m Model) leftPaneView(w, h int) string {
 			if i == m.pipeIndex {
 				cursor = "▶ "
 			}
-			name := pipe.Name
+			name := renderEmoji(pipe.Name)
+			if pipe.Emoji != "" {
+				emoji := renderEmoji(pipe.Emoji)
+				if emoji != pipe.Emoji {
+					name = emoji + " " + name
+				}
+			}
 			if len(name) > w-6 {
 				name = name[:w-6]
 			}
@@ -401,7 +407,7 @@ func (m Model) rightPaneView(w, h int) string {
 				if m.activePane == rightPane && jobIndex == m.rightScroll {
 					cursor = "▶ "
 				}
-				line := fmt.Sprintf("%s%s %s", cursor, stateBadge(job.State), label)
+				line := fmt.Sprintf("%s%s %s", cursor, stateBadge(job.State), renderEmoji(label))
 
 				if job.Agent != nil {
 					line += dimStyle.Render(fmt.Sprintf(" [%s]", job.Agent.Name))
@@ -917,7 +923,7 @@ func (m Model) statsOverlay(base string) string {
 			if label == "" {
 				label = job.Command
 			}
-			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
+			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), renderEmoji(label)))
 			b.WriteString(fmt.Sprintf("    Duration: %s\n", FormatDuration(job.StartedAt, job.FinishedAt)))
 			if job.Agent != nil {
 				ag := job.Agent
@@ -1031,7 +1037,7 @@ func (m Model) logsView() string {
 		}
 	}
 
-	title := titleStyle.Render(fmt.Sprintf("Logs — %s", jobName))
+	title := titleStyle.Render(fmt.Sprintf("Logs — %s", renderEmoji(jobName)))
 	if bd != nil {
 		title += " " + subtitleStyle.Render(fmt.Sprintf("#%d", bd.Number))
 	}

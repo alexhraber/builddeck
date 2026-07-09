@@ -101,3 +101,8 @@ type JobLog struct {
 	Size        int    `json:"size"`
 	HeaderTimes []int  `json:"header_times"`
 }
+
+type EmojiEntry struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}

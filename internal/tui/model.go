@@ -183,6 +183,11 @@ type agentsLoadedMsg struct {
 	err    error
 }
 
+type emojisLoadedMsg struct {
+	emojis []buildkite.EmojiEntry
+	err    error
+}
+
 type artifactDownloadMsg struct {
 	filename string
 	err      error
@@ -290,6 +295,13 @@ func loadAgentsCmd(client *buildkite.Client, orgSlug string) tea.Cmd {
 			}
 		}
 		return agentsLoadedMsg{agents: agents, err: err}
+	}
+}
+
+func loadEmojisCmd(client *buildkite.Client, orgSlug string) tea.Cmd {
+	return func() tea.Msg {
+		emojis, err := client.ListEmojis(context.Background(), orgSlug)
+		return emojisLoadedMsg{emojis: emojis, err: err}
 	}
 }
 
