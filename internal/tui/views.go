@@ -361,10 +361,7 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(fmt.Sprintf("State:   %s\n", stateBadge(bd.State)))
 		b.WriteString(fmt.Sprintf("Branch:  %s\n", bd.Branch))
 		b.WriteString(fmt.Sprintf("Commit:  %s\n", shortSHA(bd.Commit)))
-		msg := renderEmoji(bd.Message)
-		if len(msg) > w-12 {
-			msg = msg[:w-12] + "…"
-		}
+		msg := renderEmoji(formatBuildMessage(bd.Message))
 		b.WriteString(fmt.Sprintf("Message: %s\n", msg))
 		creator = renderEmoji(creator)
 		b.WriteString(fmt.Sprintf("Creator: %s\n", creator))
@@ -1111,4 +1108,52 @@ func (m Model) logsView() string {
 	b.WriteString(statusStyle.Width(m.width).Render(strings.Join(statusParts, "  │  ")))
 
 	return b.String()
+}
+
+const maxMsgLen = 20
+
+// formatBuildMessage truncates a build message to maxMsgLen characters and
+// appends a PR reference if one is found in the original message.
+// PR references are detected as "(#digits)" at the end of the first line.
+func formatBuildMessage(msg string) string {
+	firstLine := msg
+	if idx := strings.IndexByte(msg, '\n'); idx >= 0 {
+		firstLine = msg[:idx]
+	}
+	firstLine = strings.TrimSpace(firstLine)
+
+	prRef := ""
+	body := firstLine
+	if end := strings.LastIndex(firstLine, ")"); end >= 0 && end == len(firstLine)-1 {
+		start := strings.LastIndex(firstLine[:end], "(")
+		if start >= 0 {
+			candidate := firstLine[start : end+1]
+			if len(candidate) > 3 && candidate[0] == '(' && candidate[1] == '#' {
+				digits := candidate[2 : len(candidate)-1]
+				allDigits := len(digits) > 0
+				for _, c := range digits {
+					if c < '0' || c > '9' {
+						allDigits = false
+						break
+					}
+				}
+				if allDigits {
+					prRef = candidate
+					body = strings.TrimSpace(firstLine[:start])
+				}
+			}
+		}
+	}
+
+	if prRef != "" {
+		if len(body) > maxMsgLen {
+			body = body[:maxMsgLen] + "…"
+		}
+		return renderEmoji(body + " " + prRef)
+	}
+
+	if len(body) > maxMsgLen {
+		body = body[:maxMsgLen] + "…"
+	}
+	return renderEmoji(body)
 }
