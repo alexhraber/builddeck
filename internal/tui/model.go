@@ -293,8 +293,9 @@ func loadAgentsCmd(client *buildkite.Client, orgSlug string) tea.Cmd {
 }
 
 const (
-	pollIntervalActive = 2 * time.Second
-	pollIntervalIdle   = 15 * time.Second
+	pollIntervalActive = 15 * time.Second
+	pollIntervalIdle   = 60 * time.Second
+	pollIntervalLive   = 2 * time.Second
 )
 
 func tickCmd() tea.Cmd {
@@ -311,7 +312,7 @@ func (m Model) currentPollInterval() time.Duration {
 	switch m.refreshRateIndex {
 	case 0: // Dynamic (default)
 		if m.liveMode {
-			return pollIntervalActive
+			return pollIntervalLive
 		}
 		for i := range m.builds {
 			if !isTerminalState(m.builds[i].State) {
