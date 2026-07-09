@@ -1,0 +1,71 @@
+env:
+  GO_VERSION: "1.25"
+
+steps:
+  - label: ":go: Format"
+    key: fmt
+    command:
+      - go mod download
+      - go fmt ./...
+    plugins:
+      - docker#v5.12.0:
+          image: "golang:$${GO_VERSION}"
+          workdir: /go/src/github.com/alexhraber/builddeck
+    agents:
+      queue: default
+
+  - label: ":go: Vet"
+    key: vet
+    depends_on: fmt
+    command:
+      - go mod download
+      - go vet ./...
+    plugins:
+      - docker#v5.12.0:
+          image: "golang:$${GO_VERSION}"
+          workdir: /go/src/github.com/alexhraber/builddeck
+    agents:
+      queue: default
+
+  - label: ":go: Test"
+    key: test
+    depends_on: fmt
+    command:
+      - go mod download
+      - go test ./... -v -count=1
+    plugins:
+      - docker#v5.12.0:
+          image: "golang:$${GO_VERSION}"
+          workdir: /go/src/github.com/alexhraber/builddeck
+    agents:
+      queue: default
+
+  - label: ":go: Build"
+    key: build
+    depends_on:
+      - vet
+      - test
+    command:
+      - go mod download
+      - go build -ldflags="-s -w" ./cmd/builddeck
+    plugins:
+      - docker#v5.12.0:
+          image: "golang:$${GO_VERSION}"
+          workdir: /go/src/github.com/alexhraber/builddeck
+    agents:
+      queue: default
+
+  - label: ":rocket: Release"
+    key: release
+    depends_on: build
+    if: build.branch == "main" && build.message =~ /^release:/
+    command:
+      - echo "Releasing builddeck..."
+      - go build -ldflags="-s -w -X main.version=${BUILDKITE_TAG:-dev}" ./cmd/builddeck
+      - echo "builddeck binary ready"
+    plugins:
+      - docker#v5.12.0:
+          image: "golang:$${GO_VERSION}"
+          workdir: /go/src/github.com/alexhraber/builddeck
+    agents:
+      queue: default
