@@ -173,12 +173,12 @@ var nerdFontIcons = map[string]string{
 	// so the API never returns them. We seed them as real Unicode emoji.
 	// Both underscore and hyphen variants are provided since Buildkite shortcodes
 	// use hyphens (e.g. :female-detective:), while our internal naming uses underscores.
-	"broom":                 "\U0001F9F9", // 🧹
-	"detective":             "\U0001F575", // 🕵
-	"male_detective":        "\U0001F575", // 🕵
-	"male-detective":        "\U0001F575", // 🕵
-	"female_detective":      "\U0001F575", // 🕵
-	"female-detective":      "\U0001F575", // 🕵
+	"broom":                 "\U0001F9F9",   // 🧹
+	"detective":             "\U0001F575\uFE0F",           // 🕵️
+	"male_detective":        "\U0001F575\uFE0F\u200D\u2642\uFE0F", // 🕵️‍♂️
+	"male-detective":        "\U0001F575\uFE0F\u200D\u2642\uFE0F", // 🕵️‍♂️
+	"female_detective":      "\U0001F575\uFE0F\u200D\u2640\uFE0F", // 🕵️‍♀️
+	"female-detective":      "\U0001F575\uFE0F\u200D\u2640\uFE0F", // 🕵️‍♀️
 	"building_construction": "\U0001F3D7", // 🏗
 	"building-construction": "\U0001F3D7", // 🏗
 	"construction":          "\U0001F6A7", // 🚧
