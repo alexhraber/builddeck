@@ -573,6 +573,7 @@ func (m Model) helpView() string {
 	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("\n")
 	b.WriteString("Views:\n")
+	b.WriteString("  m           Show agent metrics for selected job\n")
 	b.WriteString("  ctrl+l      Toggle live mode (force 2s refresh)\n")
 	b.WriteString("  a           Toggle agent/queue saturation view\n")
 	b.WriteString("  ctrl+f      Global search across all data\n")

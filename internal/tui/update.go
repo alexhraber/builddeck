@@ -514,8 +514,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, keys.Metrics):
-		if m.selectedBuild == nil || m.activePane != rightPane {
-			m.searchMsg = "Select a build on the detail pane"
+		if m.selectedBuild == nil {
+			m.searchMsg = "Select a build first"
 			return m, nil
 		}
 		if len(m.selectedBuild.Jobs) == 0 {
