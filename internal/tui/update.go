@@ -481,12 +481,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case key.Matches(msg, keys.RetryJob):
-		cmd := m.retrySelectedJob()
-		return m, cmd
-
-	case key.Matches(msg, keys.Rebuild):
-		cmd := m.rebuildSelectedBuild()
-		return m, cmd
+		switch m.activePane {
+		case rightPane:
+			cmd := m.retrySelectedJob()
+			return m, cmd
+		default:
+			cmd := m.rebuildSelectedBuild()
+			return m, cmd
+		}
 
 	case key.Matches(msg, keys.Cancel):
 		cmd := m.cancelSelectedBuild()
