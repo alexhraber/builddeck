@@ -13,5 +13,6 @@ fi
 
 export PATH="${INSTALL_DIR}/go/bin:${PATH}"
 echo "go $(go version)"
+echo "+++ $*"
 
 exec "$@"
