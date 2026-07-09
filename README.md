@@ -6,6 +6,10 @@ Think `htop` for Buildkite. Or `k9s` for your CI.
 
 `b7k` is used as a short moniker, but the product, repository, documentation, and command identity are consistently **`builddeck`**.
 
+## Screenshot
+
+![builddeck TUI showing organizations, builds, and build detail panes](assets/builddeck-screenshot.png)
+
 ## Why
 
 Buildkite's web UI is powerful, but if you live in the terminal, context-switching to a browser to check build status is friction. `builddeck` brings real-time Buildkite visibility into your terminal with keyboard-driven navigation, live polling, and a dense pane-based layout.
