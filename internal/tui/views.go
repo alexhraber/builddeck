@@ -912,6 +912,7 @@ func (m Model) statsOverlay(base string) string {
 				label = job.Command
 			}
 			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), label))
+			b.WriteString(fmt.Sprintf("    Duration: %s\n", FormatDuration(job.StartedAt, job.FinishedAt)))
 			if job.Agent != nil {
 				ag := job.Agent
 				b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
