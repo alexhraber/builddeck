@@ -23,29 +23,60 @@ steps:
   - label: ":female-detective: Lint"
     key: lint
     depends_on: fmt
-    command: .buildkite/setup-go.sh go vet -v ./...
+    command: |
+      .buildkite/setup-go.sh
+      go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      golangci-lint run ./...
+
+  - label: ":lock: Sec Scan"
+    key: gosec
+    depends_on: fmt
+    command: |
+      .buildkite/setup-go.sh
+      go install github.com/securego/gosec/v2/cmd/gosec@latest
+      gosec ./...
+
+  - label: ":mag: Vuln Check"
+    key: vulncheck
+    depends_on: tidy
+    command: |
+      .buildkite/setup-go.sh
+      go install golang.org/x/vuln/cmd/govulncheck@latest
+      govulncheck ./...
 
   - label: ":go: Test"
     key: test
     depends_on: fmt
     command: |
-      echo "--- Running tests"
-      .buildkite/setup-go.sh go test ./... -count=1 -v 2>&1
+      echo "--- Running tests with coverage"
+      .buildkite/setup-go.sh go test ./... -count=1 -coverprofile=coverage.out -v 2>&1
       echo "All tests passed"
+      buildkite-agent artifact upload coverage.out
+
+  - label: ":chart_with_upwards_trend: Codecov"
+    key: codecov
+    depends_on: test
+    command: |
+      buildkite-agent artifact download coverage.out .
+      curl -sOs https://uploader.codecov.io/latest/linux/codecov
+      chmod +x codecov
+      ./codecov -f coverage.out
 
   - label: ":go: Build all packages"
     key: build-all
     depends_on:
       - vet
       - lint
+      - gosec
       - tidy
     command: .buildkite/setup-go.sh go build ./...
 
-  - label: ":go: Build"
+  - label: ":go: Build and Release"
     key: build
     depends_on:
       - test
       - build-all
+      - vulncheck
     command: |
       echo "--- Building builddeck binary"
       .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
@@ -57,5 +88,3 @@ steps:
     depends_on: build
     command: .buildkite/release.sh
     if: build.tag != null
-
-
