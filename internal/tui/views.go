@@ -622,12 +622,12 @@ func (m Model) renderArtifacts(w int) string {
 			size := formatFileSize(art.FileSize)
 			b.WriteString(fmt.Sprintf(" %s %s", dimStyle.Render("•"), filename))
 			b.WriteString(dimStyle.Render(fmt.Sprintf(" %6s", size)))
+			if art.Tag != "" {
+				b.WriteString(dimStyle.Render(fmt.Sprintf("  tag:%s", art.Tag)))
+			}
 			if art.Checksum != "" {
 				short := art.Checksum[:3] + "..." + art.Checksum[len(art.Checksum)-3:]
 				b.WriteString(dimStyle.Render(fmt.Sprintf("  sha256:%s", short)))
-			}
-			if art.Tag != "" {
-				b.WriteString(dimStyle.Render(fmt.Sprintf("  tag:%s", art.Tag)))
 			}
 			b.WriteString("\n")
 		}
