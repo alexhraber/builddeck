@@ -27,10 +27,11 @@ type emojiEntry struct {
 	assetGlyph string // half-block art from PNG/GIF for pipeline badges
 }
 
-var (
-	emojiBank  map[string]emojiEntry
-	emojiMu    sync.RWMutex
-	httpClient = &http.Client{Timeout: 10 * time.Second}
+	var (
+	emojiBank     map[string]emojiEntry
+	emojiMu       sync.RWMutex
+	httpClient    = &http.Client{Timeout: 10 * time.Second}
+	assetAliases  = map[string]string{"go": "golang"}
 )
 
 // nerdFontIcons maps Buildkite emoji names to Nerd Font codepoints.
@@ -363,6 +364,15 @@ func loadAssetEmoji() {
 			emojiBank[key] = existing
 		} else {
 			emojiBank[key] = emojiEntry{assetGlyph: glyph}
+		}
+	}
+	for alias, canonical := range assetAliases {
+		aliasKey := ":" + alias + ":"
+		canonicalKey := ":" + canonical + ":"
+		if ce, ok := emojiBank[canonicalKey]; ok && ce.assetGlyph != "" {
+			if ae, exists := emojiBank[aliasKey]; !exists || ae.assetGlyph == "" {
+				emojiBank[aliasKey] = emojiEntry{assetGlyph: ce.assetGlyph}
+			}
 		}
 	}
 }
