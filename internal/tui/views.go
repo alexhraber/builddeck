@@ -165,9 +165,6 @@ func (m Model) leftPaneView(w, h int) string {
 			if len(orgName) > w-10 {
 				orgName = orgName[:w-10]
 			}
-			if w := lipgloss.Width(orgIcon); w < 8 {
-				orgIcon += strings.Repeat(" ", 8-w)
-			}
 			line := fmt.Sprintf("%s%s%s", cursor, orgIcon, orgName)
 			if i == m.orgIndex {
 				b.WriteString(selectedItemStyle.Render(line))
@@ -216,9 +213,6 @@ func (m Model) leftPaneView(w, h int) string {
 				emojiName = "buildkite"
 			}
 			badge := loadPipelineEmoji(emojiName)
-			if w := lipgloss.Width(badge); w < 8 {
-				badge += strings.Repeat(" ", 8-w)
-			}
 			name := badge + pipeName
 			if i == m.pipeIndex {
 				b.WriteString(selectedItemStyle.Render(cursor + name))
