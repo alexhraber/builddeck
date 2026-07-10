@@ -1573,7 +1573,7 @@ func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string,
 		outPath := filepath.Join(downloadDir, filename)
 		// Create parent dirs if needed
 		if dir := filepath.Dir(outPath); dir != "." {
-			if err := os.MkdirAll(dir, 0o755); err != nil {
+			if err := os.MkdirAll(dir, 0o750); err != nil {
 				return artifactDownloadMsg{filename: filename, err: fmt.Errorf("creating download dir: %w", err)}
 			}
 		}
