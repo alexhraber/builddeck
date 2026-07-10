@@ -53,7 +53,7 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":go: Build all packages and Release"
+  - label: ":go: Build and Release"
     key: build
     depends_on:
       - test
