@@ -57,7 +57,6 @@ func Load() (*Config, error) {
 	if token := os.Getenv("BUILDKITE_API_TOKEN"); token != "" {
 		cfg.Token = token
 	}
-
 	return cfg, nil
 }
 

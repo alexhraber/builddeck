@@ -155,19 +155,21 @@ func (m Model) leftPaneView(w, h int) string {
 		b.WriteString(dimStyle.Render("No organizations"))
 		b.WriteString("\n")
 	} else {
+		orgIcon := loadPipelineEmoji("github")
 		for i, org := range m.orgs {
 			cursor := "  "
 			if i == m.orgIndex {
 				cursor = "▶ "
 			}
-			name := renderEmoji(org.Name)
-			if len(name) > w-6 {
-				name = name[:w-6]
+			orgName := renderEmoji(org.Name)
+			if len(orgName) > w-10 {
+				orgName = orgName[:w-10]
 			}
+			line := fmt.Sprintf("%s%-4s%s", cursor, orgIcon, orgName)
 			if i == m.orgIndex {
-				b.WriteString(selectedItemStyle.Render(cursor + name))
+				b.WriteString(selectedItemStyle.Render(line))
 			} else {
-				b.WriteString(normalItemStyle.Render(cursor + name))
+				b.WriteString(normalItemStyle.Render(line))
 			}
 			b.WriteString("\n")
 		}
@@ -202,20 +204,16 @@ func (m Model) leftPaneView(w, h int) string {
 			if i == m.pipeIndex {
 				cursor = "▶ "
 			}
-			name := renderEmoji(pipe.Name)
-			emojiCode := pipe.Emoji
-			if emojiCode == "" {
-				emojiCode = ":buildkite:"
-			} else if !strings.HasPrefix(emojiCode, ":") {
-				emojiCode = ":" + emojiCode + ":"
+			pipeName := renderEmoji(pipe.Name)
+			if len(pipeName) > w-10 {
+				pipeName = pipeName[:w-10]
 			}
-			emoji := renderEmoji(emojiCode)
-			if emoji != emojiCode {
-				name = emoji + " " + name
+			emojiName := pipe.Emoji
+			if emojiName == "" {
+				emojiName = "buildkite"
 			}
-			if len(name) > w-6 {
-				name = name[:w-6]
-			}
+			badge := loadPipelineEmoji(emojiName)
+			name := fmt.Sprintf("%-4s%s", badge, pipeName)
 			if i == m.pipeIndex {
 				b.WriteString(selectedItemStyle.Render(cursor + name))
 			} else {
@@ -357,21 +355,24 @@ func (m Model) rightPaneView(w, h int) string {
 			creator = bd.Creator.Name
 		}
 
-		b.WriteString(fmt.Sprintf("Number:  #%d\n", bd.Number))
-		b.WriteString(fmt.Sprintf("State:   %s\n", stateBadge(bd.State)))
-		b.WriteString(fmt.Sprintf("Branch:  %s\n", bd.Branch))
-		b.WriteString(fmt.Sprintf("Commit:  %s\n", shortSHA(bd.Commit)))
-		msg := formatBuildMessage(bd.Message)
-		if len(msg) > w-12 {
-			msg = msg[:w-12]
+		field := func(label, value string) string {
+			return fmt.Sprintf(" %-9s%s\n", label+":", value)
 		}
-		b.WriteString(fmt.Sprintf("Message:  %-*s\n", w-13, msg))
-		creator = renderEmoji(creator)
-		b.WriteString(fmt.Sprintf("Creator: %s\n", creator))
-		b.WriteString(fmt.Sprintf("Created: %s\n", FormatTime(bd.CreatedAt)))
-		b.WriteString(fmt.Sprintf("Started: %s\n", FormatTime(bd.StartedAt)))
-		b.WriteString(fmt.Sprintf("Finished:%s\n", FormatTime(bd.FinishedAt)))
-		b.WriteString(fmt.Sprintf("Duration:%s\n", FormatDuration(bd.StartedAt, bd.FinishedAt)))
+
+		b.WriteString(field("Number", fmt.Sprintf("#%d", bd.Number)))
+		b.WriteString(field("State", stateBadge(bd.State)))
+		b.WriteString(field("Branch", bd.Branch))
+		b.WriteString(field("Commit", shortSHA(bd.Commit)))
+		msg := formatBuildMessage(bd.Message)
+		if len(msg) > w-14 {
+			msg = msg[:w-14]
+		}
+		b.WriteString(field("Message", msg))
+		b.WriteString(field("Creator", renderEmoji(creator)))
+		b.WriteString(field("Created", FormatTime(bd.CreatedAt)))
+		b.WriteString(field("Started", FormatTime(bd.StartedAt)))
+		b.WriteString(field("Finished", FormatTime(bd.FinishedAt)))
+		b.WriteString(field("Duration", FormatDuration(bd.StartedAt, bd.FinishedAt)))
 
 		if !m.denseMode {
 			b.WriteString("\n")
@@ -405,6 +406,7 @@ func (m Model) rightPaneView(w, h int) string {
 				if label == "" {
 					label = job.Command
 				}
+				label = renderEmoji(label)
 				if len(label) > w-20 {
 					label = label[:w-20]
 				}
@@ -412,17 +414,17 @@ func (m Model) rightPaneView(w, h int) string {
 				if m.activePane == rightPane && jobIndex == m.rightScroll {
 					cursor = "▶ "
 				}
-				line := fmt.Sprintf("%s%s %s", cursor, stateBadge(job.State), renderEmoji(label))
+				line := fmt.Sprintf("%s %-6s%s", cursor, stateBadge(job.State), label)
 
 				if job.Agent != nil {
-					line += dimStyle.Render(fmt.Sprintf(" [%s]", job.Agent.Name))
+					line += dimStyle.Render(fmt.Sprintf(" %s", job.Agent.Name))
 				}
 				if job.ExitStatus != nil {
 					exitStyle := dimStyle
 					if *job.ExitStatus != 0 {
 						exitStyle = errorStyle
 					}
-					line += exitStyle.Render(fmt.Sprintf(" exit:%d", *job.ExitStatus))
+					line += exitStyle.Render(fmt.Sprintf(" %d", *job.ExitStatus))
 				}
 				if m.activePane == rightPane && jobIndex == m.rightScroll {
 					b.WriteString(selectedItemStyle.Render(line))

@@ -1,20 +1,30 @@
 package tui
 
 import (
+	"encoding/json"
 	"image"
+	_ "image/gif"
 	_ "image/png"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
 	"github.com/charmbracelet/lipgloss"
 )
 
+type emojiEntry struct {
+	glyph      string // Nerd Font / Unicode for inline use
+	assetGlyph string // half-block art from PNG/GIF for pipeline badges
+}
+
 var (
-	emojiMap   map[string]string
+	emojiBank  map[string]emojiEntry
 	emojiMu    sync.RWMutex
 	httpClient = &http.Client{Timeout: 10 * time.Second}
 )
@@ -214,37 +224,68 @@ var nerdFontIcons = map[string]string{
 	"smile":                 "\U0001F604", // 😄
 	"sob":                   "\U0001F62D", // 😭
 	"scream":                "\U0001F631", // 😱
+	"buildkite_party":       "\U0001F973", // 🥳 (alias for Buildkite's :buildkite-party:)
+	"buildkite-party":       "\U0001F973", // 🥳
 	"partying_face":         "\U0001F973", // 🥳
 	"partying-face":         "\U0001F973", // 🥳
 	"facepalm":              "\U0001F926", // 🤦
 }
 
 func init() {
-	emojiMap = make(map[string]string, len(nerdFontIcons))
+	emojiBank = make(map[string]emojiEntry, len(nerdFontIcons)+200)
 	for name, glyph := range nerdFontIcons {
-		emojiMap[":"+name+":"] = glyph
+		if r, _ := utf8.DecodeRuneInString(glyph); r >= 0xE000 && r <= 0xF8FF {
+			glyph += " "
+		}
+		emojiBank[":"+name+":"] = emojiEntry{glyph: glyph}
+	}
+	loadUnicodeEmojiMap()
+	loadAssetEmoji()
+}
+
+// loadUnicodeEmojiMap seeds glyph from the Buildkite emoji-unicode.json bundle.
+// Only entries not already in the bank (from nerdFontIcons) are added.
+func loadUnicodeEmojiMap() {
+	path := filepath.Join(emojiAssetsDir, "emoji-unicode.json")
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	var entries map[string]string
+	if err := json.NewDecoder(f).Decode(&entries); err != nil {
+		return
+	}
+
+	emojiMu.Lock()
+	defer emojiMu.Unlock()
+	for name, glyph := range entries {
+		key := ":" + name + ":"
+		if _, exists := emojiBank[key]; !exists {
+			emojiBank[key] = emojiEntry{glyph: glyph}
+		}
 	}
 }
 
 func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 	emojiMu.Lock()
-	defer emojiMu.Unlock()
-
 	for _, e := range apiEmojis {
 		key := ":" + e.Name + ":"
-		if _, exists := emojiMap[key]; !exists {
-			emojiMap[key] = ""
+		if _, exists := emojiBank[key]; !exists {
+			emojiBank[key] = emojiEntry{}
 		}
 	}
+	emojiMu.Unlock()
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 4)
 	for _, e := range apiEmojis {
 		key := ":" + e.Name + ":"
 		emojiMu.RLock()
-		already := emojiMap[key]
+		entry := emojiBank[key]
 		emojiMu.RUnlock()
-		if already != "" || e.URL == "" {
+		if entry.glyph != "" || entry.assetGlyph != "" || e.URL == "" {
 			continue
 		}
 		wg.Add(1)
@@ -254,8 +295,11 @@ func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 			defer func() { <-sem }()
 			glyph := downloadEmoji(entry.URL)
 			if glyph != "" {
+				key := ":" + entry.Name + ":"
 				emojiMu.Lock()
-				emojiMap[":"+entry.Name+":"] = glyph
+				e := emojiBank[key]
+				e.glyph = glyph
+				emojiBank[key] = e
 				emojiMu.Unlock()
 			}
 		}(e)
@@ -263,6 +307,64 @@ func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 	wg.Wait()
 }
 
+var emojiAssetsDir = "assets/pipeline-emojis"
+
+func loadAssetEmoji() {
+	entries, err := os.ReadDir(emojiAssetsDir)
+	if err != nil {
+		return
+	}
+
+	emojiMu.Lock()
+	defer emojiMu.Unlock()
+
+	for _, entry := range entries {
+		name := entry.Name()
+		var base string
+		if strings.HasSuffix(name, ".png") {
+			base = name[:len(name)-4]
+		} else if strings.HasSuffix(name, ".gif") {
+			base = name[:len(name)-4]
+		} else {
+			continue
+		}
+
+		path := filepath.Join(emojiAssetsDir, name)
+		f, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		img, _, err := image.Decode(io.LimitReader(f, 512*1024))
+		f.Close()
+		if err != nil {
+			continue
+		}
+
+		glyph := renderEmojiGlyph(img)
+		key := ":" + base + ":"
+		if existing, ok := emojiBank[key]; ok {
+			existing.assetGlyph = glyph
+			emojiBank[key] = existing
+		} else {
+			emojiBank[key] = emojiEntry{assetGlyph: glyph}
+		}
+	}
+}
+
+func loadPipelineEmoji(name string) string {
+	if name == "" {
+		name = "buildkite"
+	}
+
+	emojiMu.RLock()
+	entry, ok := emojiBank[":"+name+":"]
+	emojiMu.RUnlock()
+
+	if ok && entry.assetGlyph != "" {
+		return entry.assetGlyph
+	}
+	return renderEmoji(":" + name + ":")
+}
 func downloadEmoji(url string) string {
 	resp, err := httpClient.Get(url)
 	if err != nil {
@@ -373,10 +475,14 @@ func renderEmoji(s string) string {
 			break
 		}
 		shortcode := s[pos : pos+end+2]
-		glyph, ok := emojiMap[shortcode]
+		entry, ok := emojiBank[shortcode]
 		if ok {
-			if glyph != "" {
-				buf.WriteString(glyph)
+			if entry.glyph != "" {
+				buf.WriteString(entry.glyph)
+				if entry.glyph[len(entry.glyph)-1] == ' ' && pos+end+2 < len(s) && s[pos+end+2] == ' ' {
+					i = pos + end + 3
+					continue
+				}
 			} else {
 				buf.WriteString(shortcode[1 : len(shortcode)-1])
 			}
