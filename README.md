@@ -61,14 +61,30 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Jobs** — all jobs for the selected build with state, label, agent, exit status
 - **Logs** — tail the selected/top job log in a dedicated log pane
 - **Annotations** — build annotations (info, warning, error, success styles)
-- **Artifacts** — build artifacts with filename and size
+- **Artifacts** — build artifacts with filename, size, and SHA256 checksum
 - **Agents** — organization agent listing with queue saturation view (`a`)
 - **Buildkite actions** — retry jobs, rebuild builds, cancel running builds, and unblock blocked jobs from the TUI
 - **Open in browser** — `o` opens the current org/pipeline/build in the Buildkite web UI
-- **Artifact download** — `d` downloads the first artifact for the selected build
+- **Artifact picker** — `d` opens an interactive overlay to browse and download artifacts
 - **Global search** — `ctrl+f` fuzzy search across all loaded organizations, pipelines, builds, and jobs
 - **Config file** — token and preferences in `~/.config/builddeck/config.toml`
 - **Saved filter presets** — `S` saves current filter, `P` loads a saved preset
+
+### Artifact SHA256 Checksums
+
+When a build contains a `.sha256` companion artifact (e.g. `builddeck.sha256` alongside `builddeck`), builddeck reads the real content hash and displays it inline next to the matching artifact. The checksum shown is the actual `sha256sum` output, not a hash of the download URL — so it matches what you'd get by verifying locally.
+
+**Contract:** To see checksums in the TUI, add a step to your pipeline that generates a `.sha256` file and uploads it as an artifact:
+
+```yaml
+- label: ":lock: Checksum"
+  command: |
+    buildkite-agent artifact download builddeck /tmp/
+    sha256sum /tmp/builddeck | tee builddeck.sha256
+    buildkite-agent artifact upload builddeck.sha256
+```
+
+The `.sha256` file should contain the hash followed by a space and filename (standard `sha256sum` format). Only the hash portion (first whitespace-delimited field) is displayed.
 
 ### TUI
 - **Three-pane layout** — orgs/pipelines | builds | detail+steps+annotations+artifacts
@@ -103,7 +119,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `x` | Cancel selected/top running build |
 | `u` | Unblock selected blocked job |
 | `o` | Open current resource in browser |
-| `d` | Download first artifact |
+| `d` | Open artifact download picker |
 | `a` | Toggle agent/queue saturation view |
 | `/` | Filter active pane |
 | `ctrl+f` | Global search across all data |
@@ -113,6 +129,16 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 | `ctrl+u` | Clear filter input |
 | `?` | Toggle help |
 | `q` | Quit |
+
+#### Artifact Picker Keys (when `d` overlay is open)
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Navigate up |
+| `↓` / `j` | Navigate down |
+| `enter` | Download selected artifact |
+| `a` | Download all artifacts in parallel |
+| `esc` | Close overlay |
 
 ### Refresh Behavior
 - **Smart Adaptive Polling**: Dynamically adjusts polling interval:
@@ -158,9 +184,9 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 │                 │                          │  Annotations         │
 │                 │                          │   [ctx] Deploy done  │
 │                 │                          │                      │
-│                 │                          │  Artifacts           │
-│                 │                          │   • log.txt (1.2KB)  │
-│                 │                          │     sha256:abc...321 │
+│                 │                          │  Artifacts   d:download│
+│                 │                          │   • builddeck  1.2KB │
+│                 │                          │     sha256:abc...321  │
 ├─────────────────┴──────────────────────────┴──────────────────────┤
 │ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit R:refresh ...    │
 └───────────────────────────────────────────────────────────────────┘
@@ -171,7 +197,6 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **REST API only** — GraphQL support planned for more efficient nested queries
 - **Limited pagination** — builds show first 25; pipelines and agents paginate up to 500
 - **Annotations are HTML-stripped** — rich content is flattened to text
-- **Artifact download** — downloads the first artifact; per-artifact selection not yet implemented
 - **Global search** — searches only currently-loaded data, not all pipelines across orgs
 
 ## Planned Next Features

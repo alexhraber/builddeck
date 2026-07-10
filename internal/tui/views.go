@@ -624,7 +624,7 @@ func (m Model) renderArtifacts(w int) string {
 			b.WriteString(dimStyle.Render(fmt.Sprintf(" %6s", size)))
 			if art.Checksum != "" {
 				short := art.Checksum[:3] + "..." + art.Checksum[len(art.Checksum)-3:]
-				b.WriteString(dimStyle.Render(fmt.Sprintf(" sha256:%s", short)))
+				b.WriteString(dimStyle.Render(fmt.Sprintf("  sha256:%s", short)))
 			}
 			b.WriteString("\n")
 		}
