@@ -72,7 +72,7 @@ steps:
     secrets:
       - GITHUB_TOKEN
 
-- label: ":golang: Build and Release"
+  - label: ":golang: Build and Release"
     key: build
     depends_on: tag
     command: |
