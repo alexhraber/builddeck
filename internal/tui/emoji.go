@@ -24,7 +24,7 @@ var (
 var nerdFontIcons = map[string]string{
 	"docker":                "\uf21b",                             //  fa-docker
 	"go":                    "\ue627",                             //  dev-go
-	"golang":                "\ue627",                             //  dev-go (GO letters)
+	"golang":                "\ue724",                             //  dev-go (GO letters)
 	"python":                "\ue73c",                             //  dev-python
 	"rust":                  "\ue7a8",                             // 
 	"ruby":                  "\ue791",                             // 

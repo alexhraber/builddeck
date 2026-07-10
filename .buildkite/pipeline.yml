@@ -10,12 +10,12 @@ steps:
       fi
       echo "go.mod and go.sum are clean"
 
-  - label: ":go: Format"
+  - label: ":golang: Format"
     key: fmt
     depends_on: tidy
     command: .buildkite/setup-go.sh go fmt ./...
 
-  - label: ":go: Vet"
+  - label: ":golang: Vet"
     key: vet
     depends_on: fmt
     command: .buildkite/setup-go.sh go vet ./...
@@ -35,7 +35,7 @@ steps:
     depends_on: tidy
     command: .buildkite/setup-go.sh go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-  - label: ":go: Test"
+  - label: ":golang: Test"
     key: test
     depends_on: fmt
     command: |
@@ -53,7 +53,7 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":go: Build and Release"
+  - label: ":golang: Build and Release"
     key: build
     depends_on:
       - test
@@ -73,12 +73,12 @@ steps:
         .buildkite/release.sh
       fi
 
-  - label: ":locked: SHA256"
-    key: sha256
+  - label: ":lock: Checksum"
+    key: checksum
     depends_on: build
     command: |
-      echo "--- Waiting for builddeck binary"
-      buildkite-agent artifact download builddeck .
+      echo "--- Downloading builddeck binary"
+      buildkite-agent artifact download builddeck /tmp/
       echo "--- Generating SHA256 checksum"
-      sha256sum builddeck | tee builddeck.sha256
+      sha256sum /tmp/builddeck | tee builddeck.sha256
       buildkite-agent artifact upload builddeck.sha256
