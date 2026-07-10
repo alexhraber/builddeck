@@ -62,7 +62,7 @@ steps:
       - gosec
       - vulncheck
       - tidy
-    if: build.tag == "" && build.branch == "main"
+    if: 'build.tag == "" && build.branch == "main"'
     command: .buildkite/tag.sh
 
   - label: ":golang: Build and Release"
