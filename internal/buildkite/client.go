@@ -295,15 +295,40 @@ func (c *Client) ListArtifacts(ctx context.Context, orgSlug, pipelineSlug string
 	return decode[Artifact](resp.Body)
 }
 
+func (c *Client) getRawText(ctx context.Context, url string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Accept", "text/plain")
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
 func (c *Client) GetStepLog(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, stepID string) (*StepLog, error) {
 	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/log", orgSlug, pipelineSlug, buildNumber, stepID)
-	resp, err := c.get(ctx, path, nil)
+	resp, err := c.get(ctx, path, map[string]string{"content": "true"})
 	if err != nil {
 		return nil, fmt.Errorf("getting step log for %s/%s#%d step %s: %w", orgSlug, pipelineSlug, buildNumber, stepID, err)
 	}
 	var stepLog StepLog
 	if err := json.Unmarshal(resp.Body, &stepLog); err != nil {
 		return nil, fmt.Errorf("decoding step log: %w", err)
+	}
+	if stepLog.Content == "" && stepLog.URL != "" {
+		raw, err := c.getRawText(ctx, stepLog.URL)
+		if err == nil && raw != "" {
+			stepLog.Content = strings.TrimRight(raw, "\n\r\t ")
+		}
 	}
 	return &stepLog, nil
 }
