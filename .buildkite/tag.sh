@@ -12,6 +12,10 @@ fi
 
 echo "--- Determining version bump from conventional commits"
 
+# Configure git identity for tag creation
+git config user.email "builddeck@buildkite.com"
+git config user.name "builddeck-bot"
+
 # Get the latest tag (or v0.0.0 if none)
 LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "v0.0.0")
 
