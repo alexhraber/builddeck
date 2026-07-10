@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
   "template_version": "scaffold-v3",
-  "generated_at": "1783623219Z",
-  "repo_signal_fingerprint": "2d07e2ea1d55c97ce2fabdc3b7124fef073ff0cb088481ab69ff92ddf7ce1bb1",
+  "generated_at": "1783663828Z",
+  "repo_signal_fingerprint": "4fc55f85576cdd46de19c8c83be0872d19f659240303ff6ed93668597c1273ca",
   "files": [
     {
       "path": ".decapod/generated/specs/README.md",
@@ -12,7 +12,7 @@
     {
       "path": ".decapod/generated/specs/INTENT.md",
       "template_hash": "e6c06430e23ca87ae33169a6b1f9c70a3fd283655f5b5b29755fb83181f989e9",
-      "content_hash": "bad6b387f478bea02aaac435a08cc5da1707d7ddd635a431e213bb2bc82662ef"
+      "content_hash": "449a9fc0e2043fe59e661f38ed4f2c71d0868e3029e47cbe7f55e382a9bbf9b2"
     },
     {
       "path": ".decapod/generated/specs/ARCHITECTURE.md",
