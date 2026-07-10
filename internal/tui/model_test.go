@@ -137,9 +137,9 @@ func TestLogsToggle(t *testing.T) {
 		ID:     "build-1",
 		Number: 10,
 		State:  "running",
-		Jobs: []buildkite.Job{
-			{ID: "job-wait", Type: "waiter"},
-			{ID: "job-run", Type: "script", Label: "Run tests"},
+		Steps: []buildkite.Step{
+			{ID: "step-wait", Type: "waiter"},
+			{ID: "step-run", Type: "script", Label: "Run tests"},
 		},
 	}
 	m2Detail, cmd := model2.Update(buildDetailMsg{
@@ -147,17 +147,17 @@ func TestLogsToggle(t *testing.T) {
 		build:   &buildWithJobs,
 	})
 	modelDetail := m2Detail.(Model)
-	if modelDetail.logJobID != "job-run" {
-		t.Errorf("Expected logJobID to be job-run, got %s", modelDetail.logJobID)
+	if modelDetail.logStepID != "step-run" {
+		t.Errorf("Expected logStepID to be step-run, got %s", modelDetail.logStepID)
 	}
 	if cmd == nil {
-		t.Error("Expected command to load logs after jobs are loaded")
+		t.Error("Expected command to load logs after steps are loaded")
 	}
 
 	// 4. Simulate log loaded
 	mLoaded, _ := modelDetail.Update(logLoadedMsg{
-		jobID: "job-run",
-		log:   "test output",
+		stepID: "step-run",
+		log:    "test output",
 	})
 	modelLoaded := mLoaded.(Model)
 	if modelLoaded.loadingLog {
@@ -200,7 +200,7 @@ func TestBuildActionKeyBindings(t *testing.T) {
 		wantCmd bool
 	}{
 		{"r on builds pane rebuilds", "r", centerPane, "Rebuilding build...", true},
-		{"r on detail pane retries job", "r", rightPane, "Retrying job...", true},
+		{"r on detail pane retries step", "r", rightPane, "Retrying step...", true},
 		{"cancel build", "x", centerPane, "Canceling build...", true},
 	}
 
@@ -214,7 +214,7 @@ func TestBuildActionKeyBindings(t *testing.T) {
 				ID:     "build-1",
 				Number: 10,
 				State:  "running",
-				Jobs:   []buildkite.Job{{ID: "job-1", Type: "script"}},
+				Steps:  []buildkite.Step{{ID: "step-1", Type: "script"}},
 			}}
 			m.selectedBuild = &m.builds[0]
 			m.activePane = tt.pane
@@ -279,7 +279,7 @@ func TestLogsToggleLeftPane(t *testing.T) {
 
 	// Simulate builds loaded
 	builds := []buildkite.Build{
-		{ID: "build-latest", Number: 20, State: "passed", Jobs: []buildkite.Job{{ID: "job-1", Type: "script"}}},
+		{ID: "build-latest", Number: 20, State: "passed", Steps: []buildkite.Step{{ID: "step-1", Type: "script"}}},
 		{ID: "build-old", Number: 19, State: "passed"},
 	}
 	m2, _ := model1.Update(buildsLoadedMsg{builds: builds})
@@ -290,8 +290,8 @@ func TestLogsToggleLeftPane(t *testing.T) {
 	if model2.buildIndex != 0 || model2.selectedBuild.ID != "build-latest" {
 		t.Errorf("Expected latest build to be selected, got index %d ID %s", model2.buildIndex, model2.selectedBuild.ID)
 	}
-	if model2.logJobID != "job-1" {
-		t.Errorf("Expected logJobID to be job-1, got %s", model2.logJobID)
+	if model2.logStepID != "step-1" {
+		t.Errorf("Expected logStepID to be step-1, got %s", model2.logStepID)
 	}
 }
 
@@ -304,7 +304,7 @@ func TestUnblockKeyBinding(t *testing.T) {
 		ID:     "build-1",
 		Number: 10,
 		State:  "running",
-		Jobs:   []buildkite.Job{{ID: "job-1", Type: "script", State: "blocked"}},
+		Steps:  []buildkite.Step{{ID: "step-1", Type: "script", State: "blocked"}},
 	}}
 	m.selectedBuild = &m.builds[0]
 	m.activePane = centerPane
@@ -317,8 +317,8 @@ func TestUnblockKeyBinding(t *testing.T) {
 	if !model.actionInFlight {
 		t.Fatal("Expected actionInFlight to be true")
 	}
-	if model.searchMsg != "Unblocking job..." {
-		t.Fatalf("searchMsg = %q, want %q", model.searchMsg, "Unblocking job...")
+	if model.searchMsg != "Unblocking step..." {
+		t.Fatalf("searchMsg = %q, want %q", model.searchMsg, "Unblocking step...")
 	}
 }
 

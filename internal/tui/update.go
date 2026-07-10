@@ -20,7 +20,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var errNoRetryableJob = errors.New("no retryable job found")
+var errNoRetryableStep = errors.New("no retryable step found")
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(loadOrgsCmd(m.client), tickCmd())
@@ -112,10 +112,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showLogs = true
 				m.logScroll = 0
 
-				var targetJob *buildkite.Job
-				for i := range m.selectedBuild.Jobs {
-					if m.selectedBuild.Jobs[i].Type != "waiter" {
-						targetJob = &m.selectedBuild.Jobs[i]
+				var targetStep *buildkite.Step
+				for i := range m.selectedBuild.Steps {
+					if m.selectedBuild.Steps[i].Type != "waiter" {
+						targetStep = &m.selectedBuild.Steps[i]
 						break
 					}
 				}
@@ -123,10 +123,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var cmds []tea.Cmd
 				cmds = append(cmds, m.onBuildIndexChanged()...)
 
-				if targetJob != nil {
-					m.logJobID = targetJob.ID
+				if targetStep != nil {
+					m.logStepID = targetStep.ID
 					m.ensureCachesInitialized()
-					if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+					if cachedLog, has := m.stepLogs[targetStep.ID]; has {
 						m.currentLog = cachedLog
 						m.loadingLog = false
 					} else {
@@ -134,10 +134,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.loadingLog = true
 						org := m.selectedOrg()
 						pipe := m.selectedPipeline()
-						cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetJob.ID))
+						cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID))
 					}
 				} else {
-					m.logJobID = ""
+					m.logStepID = ""
 					m.currentLog = ""
 					m.loadingLog = true
 				}
@@ -161,18 +161,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.buildDetails[msg.buildID] = msg.build
 			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
 				m.selectedBuild = msg.build
-				if m.showLogs && m.logJobID == "" {
-					var targetJob *buildkite.Job
-					for i := range msg.build.Jobs {
-						if msg.build.Jobs[i].Type != "waiter" {
-							targetJob = &msg.build.Jobs[i]
+				if m.showLogs && m.logStepID == "" {
+					var targetStep *buildkite.Step
+					for i := range msg.build.Steps {
+						if msg.build.Steps[i].Type != "waiter" {
+							targetStep = &msg.build.Steps[i]
 							break
 						}
 					}
-					if targetJob != nil {
-						m.logJobID = targetJob.ID
+					if targetStep != nil {
+						m.logStepID = targetStep.ID
 						m.logScroll = 0
-						if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+						if cachedLog, has := m.stepLogs[targetStep.ID]; has {
 							m.currentLog = cachedLog
 							m.loadingLog = false
 						} else {
@@ -180,10 +180,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.loadingLog = true
 							org := m.selectedOrg()
 							pipe := m.selectedPipeline()
-							return m, loadLogCmd(m.client, org.Slug, pipe.Slug, msg.build.Number, targetJob.ID)
+							return m, loadLogCmd(m.client, org.Slug, pipe.Slug, msg.build.Number, targetStep.ID)
 						}
 					} else {
-						m.currentLog = "No jobs found for this build"
+						m.currentLog = "No steps found for this build"
 						m.loadingLog = false
 					}
 				}
@@ -247,8 +247,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.ensureCachesInitialized()
-		m.jobLogs[msg.jobID] = msg.log
-		if m.showLogs && m.logJobID == msg.jobID {
+		m.stepLogs[msg.stepID] = msg.log
+		if m.showLogs && m.logStepID == msg.stepID {
 			m.currentLog = msg.log
 		}
 		return m, nil
@@ -263,14 +263,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = nil
 		m.errMsg = ""
 		switch msg.action {
-		case actionRetryJob:
+		case actionRetryStep:
 			m.searchMsg = "Retry queued"
 		case actionRebuild:
 			m.searchMsg = "Rebuild queued"
 		case actionCancel:
 			m.searchMsg = "Cancel requested"
 		case actionUnblock:
-			m.searchMsg = "Job unblocked"
+			m.searchMsg = "Step unblocked"
 		}
 		return m, m.refreshBuilds()
 
@@ -355,25 +355,25 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.buildIndex = 0
 				m.selectedBuild = &m.builds[0]
 
-				var targetJob *buildkite.Job
-				for i := range m.selectedBuild.Jobs {
-					if m.selectedBuild.Jobs[i].Type != "waiter" {
-						targetJob = &m.selectedBuild.Jobs[i]
+				var targetStep *buildkite.Step
+				for i := range m.selectedBuild.Steps {
+					if m.selectedBuild.Steps[i].Type != "waiter" {
+						targetStep = &m.selectedBuild.Steps[i]
 						break
 					}
 				}
 
-				if targetJob == nil {
-					m.logJobID = ""
+				if targetStep == nil {
+					m.logStepID = ""
 					m.currentLog = ""
 					m.loadingLog = true
 					cmd := m.loadSelectedBuildDetailsForce()
 					return m, cmd
 				}
 
-				m.logJobID = targetJob.ID
+				m.logStepID = targetStep.ID
 				m.ensureCachesInitialized()
-				if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+				if cachedLog, has := m.stepLogs[targetStep.ID]; has {
 					m.currentLog = cachedLog
 					m.loadingLog = false
 					return m, nil
@@ -381,7 +381,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 				m.currentLog = ""
 				m.loadingLog = true
-				return m, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetJob.ID)
+				return m, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID)
 			}
 
 			m.pendingLogsForLatestBuild = true
@@ -401,16 +401,22 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.showLogs = true
 		m.logScroll = 0
 		m.selectedBuild = b
-		var targetJob *buildkite.Job
-		for i := range b.Jobs {
-			if b.Jobs[i].Type != "waiter" {
-				targetJob = &b.Jobs[i]
-				break
+
+		var targetStep *buildkite.Step
+		if m.activePane == rightPane {
+			targetStep = m.selectedRightPaneStep()
+		}
+		if targetStep == nil {
+			for i := range b.Steps {
+				if b.Steps[i].Type != "waiter" {
+					targetStep = &b.Steps[i]
+					break
+				}
 			}
 		}
-		if targetJob == nil {
-			if m.loadingDetail || len(b.Jobs) == 0 {
-				m.logJobID = ""
+		if targetStep == nil {
+			if m.loadingDetail || len(b.Steps) == 0 {
+				m.logStepID = ""
 				m.currentLog = ""
 				m.loadingLog = true
 				var cmd tea.Cmd
@@ -419,13 +425,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 				return m, cmd
 			}
-			m.searchMsg = "No jobs found for this build"
+			m.searchMsg = "No steps found for this build"
 			m.showLogs = false
 			return m, nil
 		}
-		m.logJobID = targetJob.ID
+		m.logStepID = targetStep.ID
 		m.ensureCachesInitialized()
-		if cachedLog, has := m.jobLogs[targetJob.ID]; has {
+		if cachedLog, has := m.stepLogs[targetStep.ID]; has {
 			m.currentLog = cachedLog
 			m.loadingLog = false
 			return m, nil
@@ -434,7 +440,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.loadingLog = true
 		org := m.selectedOrg()
 		pipe := m.selectedPipeline()
-		return m, loadLogCmd(m.client, org.Slug, pipe.Slug, b.Number, targetJob.ID)
+		return m, loadLogCmd(m.client, org.Slug, pipe.Slug, b.Number, targetStep.ID)
 	}
 
 	if m.showLogs {
@@ -486,10 +492,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		cmd := m.refresh()
 		return m, cmd
 
-	case key.Matches(msg, keys.RetryJob):
+	case key.Matches(msg, keys.RetryStep):
 		switch m.activePane {
 		case rightPane:
-			cmd := m.retrySelectedJob()
+			cmd := m.retrySelectedStep()
 			return m, cmd
 		default:
 			cmd := m.rebuildSelectedBuild()
@@ -501,7 +507,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case key.Matches(msg, keys.Unblock):
-		cmd := m.unblockSelectedJob()
+		cmd := m.unblockSelectedStep()
 		return m, cmd
 
 	case key.Matches(msg, keys.OpenRepo):
@@ -539,14 +545,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.showStatsOverlay = "build"
 			return m, nil
 		case rightPane:
-			if m.selectedRightPaneJob() == nil {
-				m.searchMsg = "No job selected"
+			if m.selectedRightPaneStep() == nil {
+				m.searchMsg = "No step selected"
 				return m, nil
 			}
 			m.showStatsOverlay = "agent"
 			return m, nil
 		default:
-			m.searchMsg = "Select a build or job first"
+			m.searchMsg = "Select a build or step first"
 			return m, nil
 		}
 
@@ -694,7 +700,7 @@ func (m Model) handlePresetPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.filterPane = leftPane
 			case "builds":
 				m.filterPane = centerPane
-			case "jobs":
+			case "steps":
 				m.filterPane = rightPane
 			}
 			m.showPresetPicker = false
@@ -900,7 +906,7 @@ func (m Model) moveDown() (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmds...)
 		}
 	case rightPane:
-		maxScroll := len(m.visibleRunnableJobs()) - 1
+		maxScroll := len(m.visibleRunnableSteps()) - 1
 		if maxScroll < 0 {
 			maxScroll = 0
 		}
@@ -1068,7 +1074,7 @@ func (m *Model) loadSelectedBuildDetailsForce() tea.Cmd {
 
 	var cmds []tea.Cmd
 
-	if hasNoJobs(b) && !m.detailInFlight {
+	if hasNoSteps(b) && !m.detailInFlight {
 		m.loadingDetail = true
 		m.detailInFlight = true
 		cmds = append(cmds, loadBuildDetailCmd(m.client, org.Slug, pipe.Slug, b.ID, b.Number))
@@ -1098,7 +1104,7 @@ func (m *Model) onEnter() tea.Cmd {
 	return nil
 }
 
-func (m *Model) retrySelectedJob() tea.Cmd {
+func (m *Model) retrySelectedStep() tea.Cmd {
 	if m.actionInFlight {
 		m.searchMsg = "Action already in flight"
 		return nil
@@ -1111,21 +1117,21 @@ func (m *Model) retrySelectedJob() tea.Cmd {
 		return nil
 	}
 
-	jobID := ""
+	stepID := ""
 	if m.activePane == rightPane {
-		job := m.selectedRightPaneJob()
-		if job == nil {
-			m.searchMsg = "No job selected to retry"
+		step := m.selectedRightPaneStep()
+		if step == nil {
+			m.searchMsg = "No step selected to retry"
 			return nil
 		}
-		jobID = job.ID
-	} else if job := firstRunnableJob(build.Jobs); job != nil {
-		jobID = job.ID
+		stepID = step.ID
+	} else if step := firstRunnableStep(build.Steps); step != nil {
+		stepID = step.ID
 	}
 
 	m.actionInFlight = true
-	m.searchMsg = "Retrying job..."
-	return retryJobCmd(m.client, org.Slug, pipe.Slug, build.Number, jobID)
+	m.searchMsg = "Retrying step..."
+	return retryStepCmd(m.client, org.Slug, pipe.Slug, build.Number, stepID)
 }
 
 func (m *Model) rebuildSelectedBuild() tea.Cmd {
@@ -1168,7 +1174,7 @@ func (m *Model) cancelSelectedBuild() tea.Cmd {
 	return cancelBuildCmd(m.client, org.Slug, pipe.Slug, build.Number)
 }
 
-func (m *Model) unblockSelectedJob() tea.Cmd {
+func (m *Model) unblockSelectedStep() tea.Cmd {
 	if m.actionInFlight {
 		m.searchMsg = "Action already in flight"
 		return nil
@@ -1181,33 +1187,33 @@ func (m *Model) unblockSelectedJob() tea.Cmd {
 		return nil
 	}
 
-	// Find blocked job
-	var blockedJob *buildkite.Job
+	// Find blocked step
+	var blockedStep *buildkite.Step
 	if m.activePane == rightPane {
-		job := m.selectedRightPaneJob()
-		if job != nil && job.State == "blocked" {
-			blockedJob = job
+		step := m.selectedRightPaneStep()
+		if step != nil && step.State == "blocked" {
+			blockedStep = step
 		}
 	}
 
-	if blockedJob == nil {
-		// Try to find first blocked job in build
-		for i := range build.Jobs {
-			if build.Jobs[i].State == "blocked" {
-				blockedJob = &build.Jobs[i]
+	if blockedStep == nil {
+		// Try to find first blocked step in build
+		for i := range build.Steps {
+			if build.Steps[i].State == "blocked" {
+				blockedStep = &build.Steps[i]
 				break
 			}
 		}
 	}
 
-	if blockedJob == nil {
-		m.searchMsg = "No blocked job found"
+	if blockedStep == nil {
+		m.searchMsg = "No blocked step found"
 		return nil
 	}
 
 	m.actionInFlight = true
-	m.searchMsg = "Unblocking job..."
-	return unblockJobCmd(m.client, org.Slug, pipe.Slug, build.Number, blockedJob.ID)
+	m.searchMsg = "Unblocking step..."
+	return unblockStepCmd(m.client, org.Slug, pipe.Slug, build.Number, blockedStep.ID)
 }
 
 func (m *Model) openInBrowser() {
@@ -1302,7 +1308,7 @@ func (m *Model) downloadSelectedArtifact() tea.Cmd {
 
 	m.actionInFlight = true
 	m.searchMsg = fmt.Sprintf("Downloading %s...", art.Filename)
-	return downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.JobID, art.ID, art.Filename, downloadDir)
+	return downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, art.Filename, downloadDir)
 }
 
 func (m Model) toggleAgentView() (tea.Model, tea.Cmd) {
@@ -1374,24 +1380,24 @@ func (m Model) actionBuild() *buildkite.Build {
 	return m.selectedBuildEntry()
 }
 
-func (m Model) selectedRightPaneJob() *buildkite.Job {
-	jobs := m.visibleRunnableJobs()
-	if m.rightScroll < 0 || m.rightScroll >= len(jobs) {
+func (m Model) selectedRightPaneStep() *buildkite.Step {
+	steps := m.visibleRunnableSteps()
+	if m.rightScroll < 0 || m.rightScroll >= len(steps) {
 		return nil
 	}
-	return &jobs[m.rightScroll]
+	return &steps[m.rightScroll]
 }
 
-func (m Model) visibleRunnableJobs() []buildkite.Job {
-	filtered := m.filteredJobs()
-	jobs := make([]buildkite.Job, 0, len(filtered))
-	for _, job := range filtered {
-		if job.Type == "waiter" {
+func (m Model) visibleRunnableSteps() []buildkite.Step {
+	filtered := m.filteredSteps()
+	steps := make([]buildkite.Step, 0, len(filtered))
+	for _, step := range filtered {
+		if step.Type == "waiter" {
 			continue
 		}
-		jobs = append(jobs, job)
+		steps = append(steps, step)
 	}
-	return jobs
+	return steps
 }
 
 func (m *Model) refresh() tea.Cmd {
@@ -1463,14 +1469,14 @@ func preserveSelection(builds []buildkite.Build, prevNumber, prevIndex int) int 
 	return clampIndex(prevIndex, len(builds))
 }
 
-func hasNoJobs(b *buildkite.Build) bool {
-	return b == nil || len(b.Jobs) == 0
+func hasNoSteps(b *buildkite.Build) bool {
+	return b == nil || len(b.Steps) == 0
 }
 
-func firstRunnableJob(jobs []buildkite.Job) *buildkite.Job {
-	for i := range jobs {
-		if jobs[i].Type != "waiter" {
-			return &jobs[i]
+func firstRunnableStep(steps []buildkite.Step) *buildkite.Step {
+	for i := range steps {
+		if steps[i].Type != "waiter" {
+			return &steps[i]
 		}
 	}
 	return nil
@@ -1490,43 +1496,43 @@ func containsIndex(indices []int, idx int) bool {
 }
 
 type logLoadedMsg struct {
-	jobID string
-	log   string
-	err   error
+	stepID string
+	log    string
+	err    error
 }
 
 type buildActionMsg struct {
 	action      buildAction
 	buildNumber int
-	jobID       string
+	stepID      string
 	err         error
 }
 
-func loadLogCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+func loadLogCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID string) tea.Cmd {
 	return func() tea.Msg {
-		log, err := client.GetJobLog(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
+		log, err := client.GetStepLog(context.Background(), orgSlug, pipelineSlug, buildNumber, stepID)
 		if err != nil {
-			return logLoadedMsg{jobID: jobID, err: err}
+			return logLoadedMsg{stepID: stepID, err: err}
 		}
-		return logLoadedMsg{jobID: jobID, log: log.Content, err: nil}
+		return logLoadedMsg{stepID: stepID, log: log.Content, err: nil}
 	}
 }
 
-func retryJobCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+func retryStepCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID string) tea.Cmd {
 	return func() tea.Msg {
-		if jobID == "" {
+		if stepID == "" {
 			build, err := client.GetBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
 			if err != nil {
-				return buildActionMsg{action: actionRetryJob, buildNumber: buildNumber, err: err}
+				return buildActionMsg{action: actionRetryStep, buildNumber: buildNumber, err: err}
 			}
-			job := firstRunnableJob(build.Jobs)
-			if job == nil {
-				return buildActionMsg{action: actionRetryJob, buildNumber: buildNumber, err: errNoRetryableJob}
+			step := firstRunnableStep(build.Steps)
+			if step == nil {
+				return buildActionMsg{action: actionRetryStep, buildNumber: buildNumber, err: errNoRetryableStep}
 			}
-			jobID = job.ID
+			stepID = step.ID
 		}
-		err := client.RetryJob(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
-		return buildActionMsg{action: actionRetryJob, buildNumber: buildNumber, jobID: jobID, err: err}
+		err := client.RetryStep(context.Background(), orgSlug, pipelineSlug, buildNumber, stepID)
+		return buildActionMsg{action: actionRetryStep, buildNumber: buildNumber, stepID: stepID, err: err}
 	}
 }
 
@@ -1544,16 +1550,16 @@ func cancelBuildCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buil
 	}
 }
 
-func unblockJobCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID string) tea.Cmd {
+func unblockStepCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID string) tea.Cmd {
 	return func() tea.Msg {
-		err := client.UnblockJob(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID)
-		return buildActionMsg{action: actionUnblock, buildNumber: buildNumber, jobID: jobID, err: err}
+		err := client.UnblockStep(context.Background(), orgSlug, pipelineSlug, buildNumber, stepID)
+		return buildActionMsg{action: actionUnblock, buildNumber: buildNumber, stepID: stepID, err: err}
 	}
 }
 
-func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, jobID, artifactID, filename, downloadDir string) tea.Cmd {
+func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID, artifactID, filename, downloadDir string) tea.Cmd {
 	return func() tea.Msg {
-		downloadURL, err := client.DownloadArtifactURL(context.Background(), orgSlug, pipelineSlug, buildNumber, jobID, artifactID)
+		downloadURL, err := client.DownloadArtifactURL(context.Background(), orgSlug, pipelineSlug, buildNumber, stepID, artifactID)
 		if err != nil {
 			return artifactDownloadMsg{filename: filename, err: err}
 		}
@@ -1624,7 +1630,7 @@ func openURL(url string) {
 	cmd.Start() //nolint:errcheck
 }
 
-// performGlobalSearch searches across all loaded orgs, pipelines, builds, and jobs.
+// performGlobalSearch searches across all loaded orgs, pipelines, builds, and steps.
 func (m Model) performGlobalSearch(query string) []GlobalSearchResult {
 	if query == "" {
 		return nil
@@ -1683,11 +1689,11 @@ func (m Model) performGlobalSearch(query string) []GlobalSearchResult {
 	}
 
 	if m.selectedBuild != nil {
-		for _, job := range m.selectedBuild.Jobs {
-			if job.Type == "waiter" {
+		for _, step := range m.selectedBuild.Steps {
+			if step.Type == "waiter" {
 				continue
 			}
-			if jobMatches(job, q) {
+			if stepMatches(step, q) {
 				org := m.selectedOrg()
 				pipe := m.selectedPipeline()
 				orgSlug, pipeSlug := "", ""
@@ -1697,18 +1703,18 @@ func (m Model) performGlobalSearch(query string) []GlobalSearchResult {
 				if pipe != nil {
 					pipeSlug = pipe.Slug
 				}
-				label := job.Label
+				label := step.Label
 				if label == "" {
-					label = job.Command
+					label = step.Command
 				}
 				results = append(results, GlobalSearchResult{
-					Type:     "job",
-					Label:    fmt.Sprintf("%s [%s]", label, job.State),
+					Type:     "step",
+					Label:    fmt.Sprintf("%s [%s]", label, step.State),
 					OrgSlug:  orgSlug,
 					PipeSlug: pipeSlug,
 					BuildNum: m.selectedBuild.Number,
-					JobID:    job.ID,
-					WebURL:   job.WebURL,
+					StepID:   step.ID,
+					WebURL:   step.WebURL,
 				})
 			}
 		}

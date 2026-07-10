@@ -62,20 +62,20 @@ func TestFilteredPipelineIndices(t *testing.T) {
 	}
 }
 
-func TestFilteredJobs(t *testing.T) {
+func TestFilteredSteps(t *testing.T) {
 	m := Model{
 		filterPane:  rightPane,
 		filterQuery: "linux",
 		selectedBuild: &buildkite.Build{
-			Jobs: []buildkite.Job{
+			Steps: []buildkite.Step{
 				{Label: "Unit tests", AgentQueryRules: []string{"queue=linux"}},
 				{Label: "Lint", AgentQueryRules: []string{"queue=mac"}},
 			},
 		},
 	}
 
-	got := m.filteredJobs()
+	got := m.filteredSteps()
 	if len(got) != 1 || got[0].Label != "Unit tests" {
-		t.Fatalf("filteredJobs() = %+v, want Unit tests only", got)
+		t.Fatalf("filteredSteps() = %+v, want Unit tests only", got)
 	}
 }

@@ -81,7 +81,7 @@ type Model struct {
 	showLogs                  bool
 	loadingLog                bool
 	currentLog                string
-	logJobID                  string
+	logStepID                 string
 	pendingLogsForLatestBuild bool
 
 	// Global search state
@@ -108,18 +108,18 @@ type Model struct {
 	buildDetails      map[string]*buildkite.Build
 	buildAnnotations  map[string][]buildkite.Annotation
 	buildArtifacts    map[string][]buildkite.Artifact
-	jobLogs           map[string]string
+	stepLogs          map[string]string
 	buildSelectionSeq int
 }
 
 // GlobalSearchResult holds one match from global search.
 type GlobalSearchResult struct {
-	Type     string // "org", "pipeline", "build", "job"
+	Type     string // "org", "pipeline", "build", "step"
 	Label    string
 	OrgSlug  string
 	PipeSlug string
 	BuildNum int
-	JobID    string
+	StepID   string
 	WebURL   string
 }
 
@@ -131,7 +131,7 @@ func NewModel(client *buildkite.Client) Model {
 		buildDetails:     make(map[string]*buildkite.Build),
 		buildAnnotations: make(map[string][]buildkite.Annotation),
 		buildArtifacts:   make(map[string][]buildkite.Artifact),
-		jobLogs:          make(map[string]string),
+		stepLogs:         make(map[string]string),
 		themeIndex:       0,
 		refreshRateIndex: 0,
 		denseMode:        false,
@@ -202,10 +202,10 @@ type tickMsg time.Time
 type buildAction string
 
 const (
-	actionRetryJob buildAction = "retry job"
-	actionRebuild  buildAction = "rebuild"
-	actionCancel   buildAction = "cancel"
-	actionUnblock  buildAction = "unblock job"
+	actionRetryStep buildAction = "retry step"
+	actionRebuild   buildAction = "rebuild"
+	actionCancel    buildAction = "cancel"
+	actionUnblock   buildAction = "unblock step"
 )
 
 func isTerminalState(state string) bool {
@@ -232,8 +232,8 @@ func (m *Model) ensureCachesInitialized() {
 	if m.buildArtifacts == nil {
 		m.buildArtifacts = make(map[string][]buildkite.Artifact)
 	}
-	if m.jobLogs == nil {
-		m.jobLogs = make(map[string]string)
+	if m.stepLogs == nil {
+		m.stepLogs = make(map[string]string)
 	}
 }
 
@@ -241,7 +241,7 @@ func (m *Model) clearCaches() {
 	m.buildDetails = make(map[string]*buildkite.Build)
 	m.buildAnnotations = make(map[string][]buildkite.Annotation)
 	m.buildArtifacts = make(map[string][]buildkite.Artifact)
-	m.jobLogs = make(map[string]string)
+	m.stepLogs = make(map[string]string)
 }
 
 func loadOrgsCmd(client *buildkite.Client) tea.Cmd {
@@ -389,7 +389,7 @@ func (m Model) selectedArtifact() *buildkite.Artifact {
 	}
 	// We reuse rightScroll relative to artifact section in agent view
 	// For the detail pane, artifacts don't have separate selection.
-	// In the primary layout, artifacts are rendered below jobs.
+	// In the primary layout, artifacts are rendered below steps.
 	// We track artifact selection only when the right pane is active and there are artifacts.
 	return nil
 }
@@ -410,7 +410,7 @@ func paneName(p pane) string {
 	case centerPane:
 		return "builds"
 	case rightPane:
-		return "jobs"
+		return "steps"
 	}
 	return "unknown"
 }

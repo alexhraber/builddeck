@@ -373,62 +373,138 @@ func (m Model) rightPaneView(w, h int) string {
 		if !m.denseMode {
 			b.WriteString("\n")
 		}
-		b.WriteString(titleStyle.Render("Jobs"))
+		b.WriteString(titleStyle.Render("Steps"))
 		if query := normalizedQueryForPane(m, rightPane); query != "" {
 			b.WriteString(subtitleStyle.Render(fmt.Sprintf(" /%s", query)))
 		}
 		b.WriteString("\n")
 
-		jobs := m.filteredJobs()
-		if len(bd.Jobs) == 0 && m.loadingDetail {
+		steps := m.filteredSteps()
+		if len(bd.Steps) == 0 && m.loadingDetail {
 			b.WriteString(loadingStyle.Render("Loading..."))
 			b.WriteString("\n")
-		} else if len(bd.Jobs) == 0 {
-			b.WriteString(dimStyle.Render("No jobs"))
+		} else if len(bd.Steps) == 0 {
+			b.WriteString(dimStyle.Render("No steps"))
 			b.WriteString("\n")
-		} else if len(jobs) == 0 {
-			b.WriteString(dimStyle.Render("No matching jobs"))
+		} else if len(steps) == 0 {
+			b.WriteString(dimStyle.Render("No matching steps"))
 			b.WriteString("\n")
 		} else {
-			jobIndex := 0
-			for _, job := range jobs {
-				if job.Type == "waiter" {
+			type linedata struct {
+				label string
+				state string
+				agent string
+				exit  string
+			}
+			var lines []linedata
+			maxLabelW := 0
+			maxAgentW := 0
+			hasAgent := false
+			hasExit := false
+
+			for _, step := range steps {
+				if step.Type == "waiter" {
 					continue
 				}
-				label := job.Name
+				label := step.Name
 				if label == "" {
-					label = job.Label
+					label = step.Label
 				}
 				if label == "" {
-					label = job.Command
-				}
-				if len(label) > w-20 {
-					label = label[:w-20]
+					label = step.Command
 				}
 				label = renderEmoji(label)
+				lw := lipgloss.Width(label)
+				if lw > maxLabelW {
+					maxLabelW = lw
+				}
+
+				ld := linedata{label: label, state: step.State}
+				if step.Agent != nil {
+					hasAgent = true
+					ld.agent = step.Agent.Name
+					aw := lipgloss.Width(step.Agent.Name)
+					if aw > maxAgentW {
+						maxAgentW = aw
+					}
+				}
+				if step.ExitStatus != nil {
+					hasExit = true
+					ld.exit = fmt.Sprintf("%d", *step.ExitStatus)
+				}
+				lines = append(lines, ld)
+			}
+
+			availLabelW := w - 3 - 6
+			if hasAgent {
+				availLabelW -= 1 + maxAgentW
+			}
+			if hasExit {
+				availLabelW -= 1 + 5
+			}
+			if maxLabelW > availLabelW {
+				maxLabelW = availLabelW
+			}
+			if maxLabelW < 0 {
+				maxLabelW = 0
+			}
+
+			labelPad := lipgloss.NewStyle().Width(maxLabelW)
+			agentPad := lipgloss.NewStyle().Width(maxAgentW)
+			exitPad := lipgloss.NewStyle().Width(5)
+
+			for i, ld := range lines {
+				label := ld.label
+				if lipgloss.Width(label) > maxLabelW {
+					runes := []rune(label)
+					n := maxLabelW
+					if n > len(runes) {
+						n = len(runes)
+					}
+					label = string(runes[:n])
+					for lipgloss.Width(label) > maxLabelW && len([]rune(label)) > 0 {
+						runes = []rune(label)
+						label = string(runes[:len(runes)-1])
+					}
+				}
+				label = labelPad.Render(label)
+
 				cursor := "  "
-				if m.activePane == rightPane && jobIndex == m.rightScroll {
+				if m.activePane == rightPane && i == m.rightScroll {
 					cursor = "▶ "
 				}
-				line := fmt.Sprintf("%s %-6s%s", cursor, stateBadge(job.State), label)
 
-				if job.Agent != nil {
-					line += dimStyle.Render(fmt.Sprintf(" %s", job.Agent.Name))
+				line := fmt.Sprintf("%s %s%s", cursor, stateBadge(ld.state), label)
+
+				if hasAgent {
+					agentStr := ld.agent
+					agentStr = agentPad.Render(agentStr)
+					line += dimStyle.Render(" " + agentStr)
+				} else if ld.agent != "" {
+					line += dimStyle.Render(fmt.Sprintf(" %s", ld.agent))
 				}
-				if job.ExitStatus != nil {
+
+				if hasExit {
 					exitStyle := dimStyle
-					if *job.ExitStatus != 0 {
+					if ld.exit != "" && ld.exit != "0" {
 						exitStyle = errorStyle
 					}
-					line += exitStyle.Render(fmt.Sprintf(" %d", *job.ExitStatus))
+					exitStr := exitPad.Render(exitStyle.Render(ld.exit))
+					line += " " + exitStr
+				} else if ld.exit != "" {
+					exitStyle := dimStyle
+					if ld.exit != "0" {
+						exitStyle = errorStyle
+					}
+					line += exitStyle.Render(" " + ld.exit)
 				}
-				if m.activePane == rightPane && jobIndex == m.rightScroll {
+
+				if m.activePane == rightPane && i == m.rightScroll {
 					b.WriteString(selectedItemStyle.Render(line))
 				} else {
 					b.WriteString(normalItemStyle.Render(line))
 				}
 				b.WriteString("\n")
-				jobIndex++
 			}
 		}
 
@@ -575,8 +651,8 @@ func (m Model) helpView() string {
 	b.WriteString("  R           Refresh all data\n")
 	b.WriteString("  r           Rebuild (builds pane) / rerun (detail pane)\n")
 	b.WriteString("  x           Cancel selected/top running build\n")
-	b.WriteString("  u           Unblock selected blocked job\n")
-	b.WriteString("  L           Tail selected/top job logs\n")
+	b.WriteString("  u           Unblock selected blocked step\n")
+	b.WriteString("  L           Tail selected step logs\n")
 	b.WriteString("  o           Open current resource in browser\n")
 	b.WriteString("  ctrl+o      Open pipeline's git repo in browser\n")
 	b.WriteString("  ctrl+d      Open commit diff in browser\n")
@@ -586,7 +662,7 @@ func (m Model) helpView() string {
 	b.WriteString("  ctrl+u      Clear filter input\n")
 	b.WriteString("\n")
 	b.WriteString("Views:\n")
-	b.WriteString("  s           Stats for selected build/job\n")
+	b.WriteString("  s           Stats for selected build/step\n")
 	b.WriteString("  ctrl+l      Toggle live mode (force 2s refresh)\n")
 	b.WriteString("  a           Toggle agent/queue saturation view\n")
 	b.WriteString("  ctrl+f      Global search across all data\n")
@@ -768,7 +844,7 @@ func (m Model) globalSearchOverlay(base string) string {
 				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 			case "build":
 				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
-			case "job":
+			case "step":
 				typeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("199"))
 			}
 			b.WriteString(fmt.Sprintf("  %s %s", typeStyle.Render(fmt.Sprintf("[%-8s]", r.Type)), renderEmoji(r.Label)))
@@ -915,21 +991,21 @@ func (m Model) statsOverlay(base string) string {
 	case "agent":
 		b.WriteString(titleStyle.Render("  Agent Stats  "))
 		b.WriteString("\n\n")
-		job := m.selectedRightPaneJob()
-		if job == nil {
-			b.WriteString(dimStyle.Render("  No job selected"))
+		step := m.selectedRightPaneStep()
+		if step == nil {
+			b.WriteString(dimStyle.Render("  No step selected"))
 		} else {
-			label := job.Name
+			label := step.Name
 			if label == "" {
-				label = job.Label
+				label = step.Label
 			}
 			if label == "" {
-				label = job.Command
+				label = step.Command
 			}
-			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(job.State), renderEmoji(label)))
-			b.WriteString(fmt.Sprintf("    Duration: %s\n", FormatDuration(job.StartedAt, job.FinishedAt)))
-			if job.Agent != nil {
-				ag := job.Agent
+			b.WriteString(fmt.Sprintf("  %s  %s\n", stateBadge(step.State), renderEmoji(label)))
+			b.WriteString(fmt.Sprintf("    Duration: %s\n", FormatDuration(step.StartedAt, step.FinishedAt)))
+			if step.Agent != nil {
+				ag := step.Agent
 				b.WriteString(fmt.Sprintf("    Agent:    %s\n", ag.Name))
 				b.WriteString(fmt.Sprintf("    Hostname: %s\n", ag.Hostname))
 				b.WriteString(fmt.Sprintf("    OS:       %s\n", ag.OS))
@@ -1024,23 +1100,23 @@ func (m Model) logsView() string {
 	headerH := 1
 
 	bd := m.selectedBuild
-	jobName := "unknown job"
+	stepName := "unknown step"
 	if bd != nil {
-		for _, job := range bd.Jobs {
-			if job.ID == m.logJobID {
-				jobName = job.Name
-				if jobName == "" {
-					jobName = job.Label
+		for _, step := range bd.Steps {
+			if step.ID == m.logStepID {
+				stepName = step.Name
+				if stepName == "" {
+					stepName = step.Label
 				}
-				if jobName == "" {
-					jobName = job.Command
+				if stepName == "" {
+					stepName = step.Command
 				}
 				break
 			}
 		}
 	}
 
-	title := titleStyle.Render(fmt.Sprintf("Logs — %s", renderEmoji(jobName)))
+	title := titleStyle.Render(fmt.Sprintf("Logs — %s", renderEmoji(stepName)))
 	if bd != nil {
 		title += " " + subtitleStyle.Render(fmt.Sprintf("#%d", bd.Number))
 	}
@@ -1061,7 +1137,7 @@ func (m Model) logsView() string {
 	if m.loadingLog {
 		logBox.WriteString(loadingStyle.Render("Retrieving build logs from Buildkite API..."))
 	} else if m.currentLog == "" {
-		logBox.WriteString(dimStyle.Render("No log output recorded for this job."))
+		logBox.WriteString(dimStyle.Render("No log output recorded for this step."))
 	} else {
 		lines := strings.Split(m.currentLog, "\n")
 		start := m.logScroll

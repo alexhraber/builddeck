@@ -124,8 +124,8 @@ func TestListPipelinesPagination(t *testing.T) {
 
 func TestListBuilds(t *testing.T) {
 	builds := []Build{
-		{ID: "b1", Number: 42, State: "passed", Branch: "main", Commit: "abc1234", Jobs: []Job{{ID: "j1", State: "passed"}}},
-		{ID: "b2", Number: 41, State: "failed", Branch: "main", Commit: "def5678", Jobs: nil},
+		{ID: "b1", Number: 42, State: "passed", Branch: "main", Commit: "abc1234", Steps: []Step{{ID: "j1", State: "passed"}}},
+		{ID: "b2", Number: 41, State: "failed", Branch: "main", Commit: "def5678", Steps: nil},
 	}
 	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(builds)
@@ -139,16 +139,16 @@ func TestListBuilds(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("expected 2 builds, got %d", len(got))
 	}
-	if len(got[0].Jobs) != 1 {
-		t.Errorf("expected 1 job for first build, got %d", len(got[0].Jobs))
+	if len(got[0].Steps) != 1 {
+		t.Errorf("expected 1 step for first build, got %d", len(got[0].Steps))
 	}
-	if got[1].Jobs != nil {
-		t.Errorf("expected nil jobs for second build, got %v", got[1].Jobs)
+	if got[1].Steps != nil {
+		t.Errorf("expected nil steps for second build, got %v", got[1].Steps)
 	}
 }
 
 func TestGetBuild(t *testing.T) {
-	build := Build{ID: "b1", Number: 42, State: "passed", Branch: "main", Commit: "abc1234", Jobs: []Job{{ID: "j1", State: "passed", Label: "Build"}}}
+	build := Build{ID: "b1", Number: 42, State: "passed", Branch: "main", Commit: "abc1234", Steps: []Step{{ID: "j1", State: "passed", Label: "Build"}}}
 	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/organizations/org/pipelines/pipe/builds/42" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
@@ -300,8 +300,8 @@ func TestClientMissingToken(t *testing.T) {
 	}
 }
 
-func TestGetJobLog(t *testing.T) {
-	logResp := JobLog{
+func TestGetStepLog(t *testing.T) {
+	logResp := StepLog{
 		URL:     "http://example.com/log",
 		Content: "hello log",
 	}
@@ -313,16 +313,16 @@ func TestGetJobLog(t *testing.T) {
 	})
 	defer srv.Close()
 
-	got, err := testClient(srv).GetJobLog(context.Background(), "org", "pipe", 42, "j1")
+	got, err := testClient(srv).GetStepLog(context.Background(), "org", "pipe", 42, "j1")
 	if err != nil {
-		t.Fatalf("GetJobLog: %v", err)
+		t.Fatalf("GetStepLog: %v", err)
 	}
 	if got.Content != "hello log" {
 		t.Errorf("expected hello log, got %s", got.Content)
 	}
 }
 
-func TestRetryJob(t *testing.T) {
+func TestRetryStep(t *testing.T) {
 	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
 			t.Errorf("unexpected method: %s", r.Method)
@@ -334,8 +334,8 @@ func TestRetryJob(t *testing.T) {
 	})
 	defer srv.Close()
 
-	if err := testClient(srv).RetryJob(context.Background(), "org", "pipe", 42, "j1"); err != nil {
-		t.Fatalf("RetryJob: %v", err)
+	if err := testClient(srv).RetryStep(context.Background(), "org", "pipe", 42, "j1"); err != nil {
+		t.Fatalf("RetryStep: %v", err)
 	}
 }
 
@@ -383,7 +383,7 @@ func TestCancelBuild(t *testing.T) {
 	}
 }
 
-func TestUnblockJob(t *testing.T) {
+func TestUnblockStep(t *testing.T) {
 	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
 			t.Errorf("unexpected method: %s", r.Method)
@@ -395,8 +395,8 @@ func TestUnblockJob(t *testing.T) {
 	})
 	defer srv.Close()
 
-	if err := testClient(srv).UnblockJob(context.Background(), "org", "pipe", 42, "j1"); err != nil {
-		t.Fatalf("UnblockJob: %v", err)
+	if err := testClient(srv).UnblockStep(context.Background(), "org", "pipe", 42, "j1"); err != nil {
+		t.Fatalf("UnblockStep: %v", err)
 	}
 }
 

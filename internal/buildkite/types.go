@@ -29,7 +29,7 @@ type Build struct {
 	FinishedAt string   `json:"finished_at"`
 	WebURL     string   `json:"web_url"`
 	PipelineID string   `json:"pipeline_id"`
-	Jobs       []Job    `json:"jobs"`
+	Steps      []Step   `json:"jobs"`
 }
 
 type Creator struct {
@@ -38,7 +38,7 @@ type Creator struct {
 	Email string `json:"email"`
 }
 
-type Job struct {
+type Step struct {
 	ID              string   `json:"id"`
 	Type            string   `json:"type"`
 	State           string   `json:"state"`
@@ -79,7 +79,7 @@ type Annotation struct {
 
 type Artifact struct {
 	ID          string `json:"id"`
-	JobID       string `json:"job_id"`
+	StepID      string `json:"job_id"`
 	URL         string `json:"url"`
 	DownloadURL string `json:"download_url"`
 	Filename    string `json:"filename"`
@@ -95,7 +95,7 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-type JobLog struct {
+type StepLog struct {
 	URL         string `json:"url"`
 	Content     string `json:"content"`
 	Size        int    `json:"size"`

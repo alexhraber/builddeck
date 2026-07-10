@@ -18,7 +18,7 @@ type Config struct {
 type FilterPreset struct {
 	Name  string
 	Query string
-	Pane  string // "pipelines", "builds", "jobs"
+	Pane  string // "pipelines", "builds", "steps"
 }
 
 // configDir returns the XDG or default config directory.

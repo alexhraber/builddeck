@@ -45,22 +45,22 @@ func buildsByIndex(builds []buildkite.Build, indices []int) []buildkite.Build {
 	return filtered
 }
 
-func (m Model) filteredJobs() []buildkite.Job {
+func (m Model) filteredSteps() []buildkite.Step {
 	if m.selectedBuild == nil {
 		return nil
 	}
 	query := normalizedQueryForPane(m, rightPane)
 	if query == "" {
-		return m.selectedBuild.Jobs
+		return m.selectedBuild.Steps
 	}
 
-	jobs := make([]buildkite.Job, 0, len(m.selectedBuild.Jobs))
-	for _, job := range m.selectedBuild.Jobs {
-		if jobMatches(job, query) {
-			jobs = append(jobs, job)
+	steps := make([]buildkite.Step, 0, len(m.selectedBuild.Steps))
+	for _, step := range m.selectedBuild.Steps {
+		if stepMatches(step, query) {
+			steps = append(steps, step)
 		}
 	}
-	return jobs
+	return steps
 }
 
 func normalizedQueryForPane(m Model, p pane) string {
@@ -92,17 +92,17 @@ func buildMatches(build buildkite.Build, query string) bool {
 	)
 }
 
-func jobMatches(job buildkite.Job, query string) bool {
+func stepMatches(step buildkite.Step, query string) bool {
 	agent := ""
-	if job.Agent != nil {
-		agent = job.Agent.Name
+	if step.Agent != nil {
+		agent = step.Agent.Name
 	}
 	return containsQuery(query,
-		job.State,
-		job.Name,
-		job.Label,
-		job.Command,
-		strings.Join(job.AgentQueryRules, " "),
+		step.State,
+		step.Name,
+		step.Label,
+		step.Command,
+		strings.Join(step.AgentQueryRules, " "),
 		agent,
 	)
 }

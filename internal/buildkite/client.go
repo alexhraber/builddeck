@@ -201,8 +201,8 @@ func (c *Client) ListBuilds(ctx context.Context, orgSlug, pipelineSlug string) (
 		return nil, err
 	}
 	for i := range builds {
-		if len(builds[i].Jobs) == 0 {
-			builds[i].Jobs = nil
+		if len(builds[i].Steps) == 0 {
+			builds[i].Steps = nil
 		}
 	}
 	return builds, nil
@@ -295,38 +295,38 @@ func (c *Client) ListArtifacts(ctx context.Context, orgSlug, pipelineSlug string
 	return decode[Artifact](resp.Body)
 }
 
-func (c *Client) GetJobLog(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID string) (*JobLog, error) {
-	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/log", orgSlug, pipelineSlug, buildNumber, jobID)
+func (c *Client) GetStepLog(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, stepID string) (*StepLog, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/log", orgSlug, pipelineSlug, buildNumber, stepID)
 	resp, err := c.get(ctx, path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("getting job log for %s/%s#%d job %s: %w", orgSlug, pipelineSlug, buildNumber, jobID, err)
+		return nil, fmt.Errorf("getting step log for %s/%s#%d step %s: %w", orgSlug, pipelineSlug, buildNumber, stepID, err)
 	}
-	var jobLog JobLog
-	if err := json.Unmarshal(resp.Body, &jobLog); err != nil {
-		return nil, fmt.Errorf("decoding job log: %w", err)
+	var stepLog StepLog
+	if err := json.Unmarshal(resp.Body, &stepLog); err != nil {
+		return nil, fmt.Errorf("decoding step log: %w", err)
 	}
-	return &jobLog, nil
+	return &stepLog, nil
 }
 
-func (c *Client) RetryJob(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID string) error {
-	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/retry", orgSlug, pipelineSlug, buildNumber, jobID)
+func (c *Client) RetryStep(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, stepID string) error {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/retry", orgSlug, pipelineSlug, buildNumber, stepID)
 	if _, err := c.put(ctx, path); err != nil {
-		return fmt.Errorf("retrying job %s/%s#%d %s: %w", orgSlug, pipelineSlug, buildNumber, jobID, err)
+		return fmt.Errorf("retrying step %s/%s#%d %s: %w", orgSlug, pipelineSlug, buildNumber, stepID, err)
 	}
 	return nil
 }
 
-func (c *Client) UnblockJob(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID string) error {
-	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/unblock", orgSlug, pipelineSlug, buildNumber, jobID)
+func (c *Client) UnblockStep(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, stepID string) error {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/unblock", orgSlug, pipelineSlug, buildNumber, stepID)
 	if _, err := c.put(ctx, path); err != nil {
-		return fmt.Errorf("unblocking job %s/%s#%d %s: %w", orgSlug, pipelineSlug, buildNumber, jobID, err)
+		return fmt.Errorf("unblocking step %s/%s#%d %s: %w", orgSlug, pipelineSlug, buildNumber, stepID, err)
 	}
 	return nil
 }
 
 // DownloadArtifactURL returns a redirect URL for artifact download.
-func (c *Client) DownloadArtifactURL(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, jobID, artifactID string) (string, error) {
-	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/artifacts/%s/download", orgSlug, pipelineSlug, buildNumber, jobID, artifactID)
+func (c *Client) DownloadArtifactURL(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int, stepID, artifactID string) (string, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/jobs/%s/artifacts/%s/download", orgSlug, pipelineSlug, buildNumber, stepID, artifactID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+path, nil)
 	if err != nil {
 		return "", fmt.Errorf("creating download request: %w", err)

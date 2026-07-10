@@ -18,7 +18,7 @@ type keyMap struct {
 	Logs         key.Binding
 	LiveMode     key.Binding
 	AgentStats   key.Binding
-	RetryJob     key.Binding
+	RetryStep    key.Binding
 	Cancel       key.Binding
 	Quit         key.Binding
 	Unblock      key.Binding
@@ -94,7 +94,7 @@ var keys = keyMap{
 		key.WithKeys("s"),
 		key.WithHelp("s", "agent stats"),
 	),
-	RetryJob: key.NewBinding(
+	RetryStep: key.NewBinding(
 		key.WithKeys("r"),
 		key.WithHelp("r", "rebuild/rerun"),
 	),
@@ -108,7 +108,7 @@ var keys = keyMap{
 	),
 	Unblock: key.NewBinding(
 		key.WithKeys("u"),
-		key.WithHelp("u", "unblock job"),
+		key.WithHelp("u", "unblock step"),
 	),
 	OpenBrowser: key.NewBinding(
 		key.WithKeys("o"),
@@ -152,7 +152,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 	return []key.Binding{
 		k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab,
 		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh,
-		k.LiveMode, k.Logs, k.AgentStats, k.RetryJob, k.Cancel, k.Unblock,
+		k.LiveMode, k.Logs, k.AgentStats, k.RetryStep, k.Cancel, k.Unblock,
 		k.OpenBrowser, k.Download, k.Agents, k.GlobalSearch,
 		k.OpenCommit, k.OpenRepo, k.SavePreset, k.LoadPreset, k.Options, k.Help, k.Quit,
 	}
@@ -163,7 +163,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.Tab, k.ShiftTab, k.Enter},
 		{k.Top, k.Bottom, k.Search, k.GlobalSearch, k.Refresh, k.LiveMode, k.Logs, k.AgentStats},
-		{k.RetryJob, k.Cancel, k.Unblock},
+		{k.RetryStep, k.Cancel, k.Unblock},
 		{k.OpenBrowser, k.Download, k.Agents, k.Options, k.OpenRepo, k.OpenCommit},
 		{k.SavePreset, k.LoadPreset},
 		{k.Help, k.Quit},
