@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates a GitHub release with the builddeck binary attached.
+# Uploads builddeck binary to existing GitHub release.
 # Requires GITHUB_TOKEN env var with repo scope.
 # Usage: release.sh <version>
 set -euo pipefail
@@ -10,28 +10,9 @@ if [[ -z "${VERSION}" ]]; then
   exit 1
 fi
 
-echo "+++ Creating GitHub release ${VERSION}"
+echo "+++ Uploading builddeck binary to release ${VERSION}"
 
 buildkite-agent artifact download builddeck . --step build
 
-if ! gh release view "${VERSION}" &>/dev/null; then
-  gh release create "${VERSION}" \
-    --title "builddeck ${VERSION}" \
-    --notes "$(cat <<EOF
-## builddeck ${VERSION}
-
-Binary for Linux amd64. Download and run:
-
-\`\`\`
-chmod +x builddeck
-export BUILDKITE_API_TOKEN="your-token"
-./builddeck
-\`\`\`
-EOF
-)" \
-    builddeck
-  echo "Release ${VERSION} created"
-else
-  gh release upload "${VERSION}" builddeck --clobber
-  echo "Release ${VERSION} updated with new binary"
-fi
+gh release upload "${VERSION}" builddeck --clobber
+echo "Release ${VERSION} updated with new binary"
