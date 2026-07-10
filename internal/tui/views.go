@@ -626,6 +626,9 @@ func (m Model) renderArtifacts(w int) string {
 				short := art.Checksum[:3] + "..." + art.Checksum[len(art.Checksum)-3:]
 				b.WriteString(dimStyle.Render(fmt.Sprintf("  sha256:%s", short)))
 			}
+			if art.Tag != "" {
+				b.WriteString(dimStyle.Render(fmt.Sprintf("  tag:%s", art.Tag)))
+			}
 			b.WriteString("\n")
 		}
 	}
