@@ -102,6 +102,9 @@ type Model struct {
 	liveMode         bool
 	showStatsOverlay string // "" = none, "agent" = agent stats, "build" = build stats
 
+	showArtifactPicker bool
+	artifactCursor    int
+
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
 	buildAnnotations  map[string][]buildkite.Annotation

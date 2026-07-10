@@ -72,3 +72,13 @@ steps:
       if [[ -n "$BUILDKITE_TAG" ]]; then
         .buildkite/release.sh
       fi
+
+  - label: ":locked: SHA256"
+    key: sha256
+    depends_on: build
+    command: |
+      echo "--- Waiting for builddeck binary"
+      buildkite-agent artifact download builddeck .
+      echo "--- Generating SHA256 checksum"
+      sha256sum builddeck | tee builddeck.sha256
+      buildkite-agent artifact upload builddeck.sha256

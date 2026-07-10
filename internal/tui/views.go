@@ -70,6 +70,11 @@ func (m Model) View() string {
 		return m.statsOverlay(mainView)
 	}
 
+	// Overlay artifact picker if present
+	if m.showArtifactPicker {
+		return m.artifactPickerOverlay(mainView)
+	}
+
 	// Overlay options if present
 	if m.showOptions {
 		return m.optionsOverlay(mainView)
@@ -916,6 +921,46 @@ func (m Model) presetPickerOverlay(base string) string {
 
 	b.WriteString("\n")
 	b.WriteString(dimStyle.Render("  enter:select  │  esc:close  │  ↑/↓:navigate"))
+
+	overlay := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(activeTheme.BorderActive)).
+		Padding(1, 2).
+		Width(60).
+		Render(b.String())
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
+}
+
+func (m Model) artifactPickerOverlay(base string) string {
+	var b strings.Builder
+
+	n := len(m.artifacts)
+	title := fmt.Sprintf("  Artifacts (%d)  ", n)
+	b.WriteString(titleStyle.Render(title))
+	b.WriteString("\n\n")
+
+	for i, art := range m.artifacts {
+		cursor := "  "
+		if i == m.artifactCursor {
+			cursor = "❯ "
+		}
+
+		filename := art.Filename
+		if len(filename) > 40 {
+			filename = filename[:37] + "..."
+		}
+		size := formatFileSize(art.FileSize)
+		line := fmt.Sprintf("%s %s (%s)", cursor, filename, size)
+		if i == m.artifactCursor {
+			b.WriteString(selectedItemStyle.Render(line) + "\n")
+		} else {
+			b.WriteString(normalItemStyle.Render(line) + "\n")
+		}
+	}
+
+	b.WriteString("\n")
+	b.WriteString(dimStyle.Render("  ↑/↓:navigate  enter:download  a:download all  esc:close"))
 
 	overlay := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
