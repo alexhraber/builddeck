@@ -2,7 +2,7 @@
 # Ensures Go is available, then exec's the supplied command.
 set -euo pipefail
 
-GO_VERSION="1.25.12"
+GO_VERSION="1.26.5"
 INSTALL_DIR="/tmp/go-install"
 
 if ! command -v go &>/dev/null && [[ ! -x "${INSTALL_DIR}/go/bin/go" ]]; then
