@@ -346,3 +346,4 @@ MIT
 feat: add tag display in build details
 fix: fix typo in release notes
 feat: add tag display in build details
+feat: add tag artifact for build details display
