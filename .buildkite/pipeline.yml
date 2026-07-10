@@ -53,7 +53,7 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-- label: ":bookmark: Tag"
+  - label: ":bookmark: Tag"
     key: tag
     depends_on:
       - test
