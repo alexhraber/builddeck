@@ -772,8 +772,8 @@ func (m Model) agentView() string {
 				hostname = hostname[:14]
 			}
 
-			stateStyle := dimStyle
-			stateStr := agent.ConnectedState
+			var stateStyle lipgloss.Style
+			var stateStr string
 			if agent.ConnectedState == "connected" {
 				stateStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
 				stateStr = "● connected"

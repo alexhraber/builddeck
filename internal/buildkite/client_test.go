@@ -32,7 +32,7 @@ func TestListOrganizations(t *testing.T) {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(orgs)
+		_ = json.NewEncoder(w).Encode(orgs)
 	})
 	defer srv.Close()
 
@@ -51,7 +51,7 @@ func TestListOrganizations(t *testing.T) {
 func TestListOrganizationsAuthError(t *testing.T) {
 	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"Unauthorized"}`))
+		_, _ = w.Write([]byte(`{"message":"Unauthorized"}`))
 	})
 	defer srv.Close()
 
@@ -64,7 +64,7 @@ func TestListOrganizationsAuthError(t *testing.T) {
 func TestListOrganizationsServerError(t *testing.T) {
 	srv := setupTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`internal server error`))
+		_, _ = w.Write([]byte(`internal server error`))
 	})
 	defer srv.Close()
 

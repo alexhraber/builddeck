@@ -73,9 +73,7 @@ type Model struct {
 	width       int
 	height      int
 
-	leftScroll   int
-	centerScroll int
-	rightScroll  int
+	rightScroll int
 	logScroll    int
 
 	showLogs                  bool
@@ -380,18 +378,6 @@ func clampIndex(idx, length int) int {
 		return length - 1
 	}
 	return idx
-}
-
-// selectedArtifact returns the artifact at the current artifact scroll position, if any.
-func (m Model) selectedArtifact() *buildkite.Artifact {
-	if len(m.artifacts) == 0 {
-		return nil
-	}
-	// We reuse rightScroll relative to artifact section in agent view
-	// For the detail pane, artifacts don't have separate selection.
-	// In the primary layout, artifacts are rendered below steps.
-	// We track artifact selection only when the right pane is active and there are artifacts.
-	return nil
 }
 
 // activeFilterPresets returns filter presets from config.

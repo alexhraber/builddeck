@@ -53,22 +53,18 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":go: Build all packages"
-    key: build-all
-    depends_on:
-      - vet
-      - lint
-      - gosec
-      - tidy
-    command: .buildkite/setup-go.sh go build ./...
-
-  - label: ":go: Build and Release"
+  - label: ":go: Build all packages and Release"
     key: build
     depends_on:
       - test
-      - build-all
+      - vet
+      - lint
+      - gosec
       - vulncheck
+      - tidy
     command: |
+      echo "--- Checking all packages compile"
+      .buildkite/setup-go.sh go build ./...
       echo "--- Building builddeck binary"
       .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
       ls -lh builddeck
