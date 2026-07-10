@@ -49,8 +49,16 @@ esac
 VERSION="v${MAJOR}.${MINOR}.${PATCH}"
 echo "Previous: ${LATEST} -> Next: ${VERSION} (${BUMP})"
 
+# Debug: check if token is available
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+  echo "ERROR: GITHUB_TOKEN not set"
+  exit 1
+fi
+
 # Use GITHUB_TOKEN for authenticated push
 git remote set-url origin "https://${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
+git config user.email "builddeck@buildkite.com"
+git config user.name "builddeck-bot"
 
 git tag -a "${VERSION}" -m "Release ${VERSION}"
 git push origin "${VERSION}"
