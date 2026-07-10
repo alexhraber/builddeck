@@ -38,6 +38,25 @@ export BUILDKITE_API_TOKEN="your-token-here"
 builddeck
 ```
 
+## Configuration
+
+`builddeck` stores preferences in `~/.config/builddeck/config.toml`:
+
+```toml
+# Filter presets (saved via 'S', loaded via 'P')
+[filter_presets]
+"my-preset" = { pane = "builds", query = "main" }
+
+# UI preferences
+[ui]
+# theme = "dark"  # future: theme selection
+```
+
+Environment variables:
+- `BUILDKITE_API_TOKEN` — **required** (token from buildkite.com/user/api-access-tokens)
+- `BUILDKITE_BASE_URL` — optional (for testing against mock API)
+- `BUILDKITE_DEBUG=1` — logs HTTP requests to stderr
+
 ## Authentication
 
 `builddeck` reads your Buildkite API token from the `BUILDKITE_API_TOKEN` environment variable.
@@ -199,6 +218,17 @@ The `.sha256` file should contain the hash followed by a space and filename (sta
 - **Annotations are HTML-stripped** — rich content is flattened to text
 - **Global search** — searches only currently-loaded data, not all pipelines across orgs
 
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `BUILDKITE_API_TOKEN not set` | Export token: `export BUILDKITE_API_TOKEN=xxx` |
+| "401 Unauthorized" | Token expired or wrong scopes — regenerate at buildkite.com/user/api-access-tokens |
+| Emoji show as squares/boxes | Install a Nerd Font v3 (e.g. `JetBrainsMono Nerd Font`) |
+| Artifact checksums missing | Pipeline needs a step that uploads `*.sha256` files |
+| Builds show "No builds" | Pipeline may have no recent builds; check branch filter |
+| Terminal too small | Minimum ~80x24; smaller shows compact fallback |
+
 ## Architecture (for Contributors)
 
 `builddeck` is a single-binary Go CLI with a Bubble Tea TUI. No server, no database, no background processes.
@@ -223,6 +253,19 @@ internal/
 - **Grapheme-cluster emoji**: Nerd Font PUA glyphs + Unicode fallback; ZWJ sequences preserved
 - **Artifact checksums**: Fetches `.sha256` companion artifacts, parses first field of `sha256sum` output
 - **Token handling**: Reads `BUILDKITE_API_TOKEN` from env only; never persisted to disk
+- **Log fetching**: `?content=true` with raw text fallback + `Accept: text/plain`; script steps only
+- **Step types handled**: `script` (logs), `waiter` (hidden), `trigger`/`deploy` (metadata only)
+
+## CI Pipeline
+
+The project uses Buildkite for its own CI (`.buildkite/pipeline.yml`):
+
+1. **Lint & test** — `golangci-lint`, `go vet`, `go test`, `gosec`, `govulncheck`
+2. **Build** — `go build ./cmd/builddeck`
+3. **Checksum** — downloads binary, runs `sha256sum`, uploads `builddeck.sha256`
+4. **Release** — on tag push: builds multi-arch, creates GitHub Release, uploads binaries
+
+Pipeline reads from default branch — changes must be on `main` before PR builds pass.
 
 ## Planned Next Features
 
