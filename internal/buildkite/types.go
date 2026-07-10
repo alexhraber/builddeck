@@ -21,6 +21,7 @@ type Build struct {
 	Number     int      `json:"number"`
 	State      string   `json:"state"`
 	Branch     string   `json:"branch"`
+	Tag        string   `json:"tag"`
 	Commit     string   `json:"commit"`
 	Message    string   `json:"message"`
 	Creator    *Creator `json:"creator"`
