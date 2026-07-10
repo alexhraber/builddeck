@@ -11,7 +11,10 @@ Think `htop` for Buildkite. Or `k9s` for your CI.
 
 ## Screenshots
 
+builddeck TUI showing organizations, builds, and build detail panes:
 ![builddeck TUI showing organizations, builds, and build detail panes](assets/builddeck-screenshot1.png)
+
+builddeck TUI showing successful build in different theme:
 ![builddeck TUI showing successful build in different theme](assets/builddeck-screenshot2.png)
 
 ## Why
