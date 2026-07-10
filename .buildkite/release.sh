@@ -83,20 +83,21 @@ done
 
 echo "=== Assets to upload: ${ASSETS[@]} ==="
 
-# Create or update release (linked to git tag automatically by gh)
+# Create or update release
 if gh release view "${VERSION}" &>/dev/null; then
   echo "Release ${VERSION} exists, updating..."
   gh release edit "${VERSION}" \
     --title "builddeck ${VERSION}" \
-    --notes "${BODY}" \
-    "${ASSETS[@]}" --clobber 2>/dev/null || \
-    gh release upload "${VERSION}" "${ASSETS[@]}" --clobber
+    --notes "${BODY}"
 else
   echo "Creating release ${VERSION}..."
   gh release create "${VERSION}" \
     --title "builddeck ${VERSION}" \
-    --notes "${BODY}" \
-    "${ASSETS[@]}"
+    --notes "${BODY}"
 fi
+
+# Upload assets
+echo "Uploading assets: ${ASSETS[@]}"
+gh release upload "${VERSION}" "${ASSETS[@]}" --clobber
 
 echo "Release ${VERSION} complete"
