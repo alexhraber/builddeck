@@ -2,6 +2,7 @@
 # Creates a release tag based on conventional commits.
 # Runs only on main branch when not already a tag build.
 # Outputs version to tag.txt artifact for downstream consumption.
+# Exits silently if no conventional commits (feat/fix) since last tag.
 set -euo pipefail
 
 if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
@@ -15,6 +16,13 @@ git config user.email "builddeck@buildkite.com"
 git config user.name "builddeck-bot"
 
 VERSION=$(.buildkite/version.sh)
+
+# No conventional commits since last tag — silently exit (no tag, no release)
+if [[ -z "${VERSION}" ]]; then
+  echo "No conventional commits (feat/fix) since last tag — skipping release"
+  exit 0
+fi
+
 echo "Version: ${VERSION}"
 
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
