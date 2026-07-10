@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -597,8 +599,12 @@ func (m Model) renderArtifacts(w int) string {
 				filename = filename[:w-15] + "…"
 			}
 			size := formatFileSize(art.FileSize)
+			h := sha256.Sum256([]byte(art.DownloadURL))
+			digest := hex.EncodeToString(h[:])
+			short := digest[:3] + "..." + digest[len(digest)-3:]
 			b.WriteString(fmt.Sprintf(" %s %s", dimStyle.Render("•"), filename))
 			b.WriteString(dimStyle.Render(fmt.Sprintf(" (%s)", size)))
+			b.WriteString(dimStyle.Render(fmt.Sprintf(" sha256:%s", short)))
 			b.WriteString("\n")
 		}
 	}
