@@ -351,3 +351,4 @@ fix: fix tag step exit on no conventional commits
 fix: ensure tag creation works
 feat: release v0.2.0 with proper tag/release pipeline
 feat: test tag artifact
+feat: test tag artifact upload
