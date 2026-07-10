@@ -274,27 +274,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchMsg = fmt.Sprintf("Downloaded: %s", msg.filename)
 		return m, nil
 
-		case artifactChecksumMsg:
-			m.loadingArtifacts = false
-			if msg.err == nil && msg.checksum != "" {
-				for i := range m.artifacts {
-					if m.artifacts[i].ID == msg.artifactID {
-						m.artifacts[i].Checksum = msg.checksum
-						break
-					}
+	case artifactChecksumMsg:
+		m.loadingArtifacts = false
+		if msg.err == nil && msg.checksum != "" {
+			for i := range m.artifacts {
+				if m.artifacts[i].ID == msg.artifactID {
+					m.artifacts[i].Checksum = msg.checksum
+					break
 				}
 			}
-		case artifactTagMsg:
-			m.loadingArtifacts = false
-			if msg.err == nil {
-				for i := range m.artifacts {
-					if m.artifacts[i].ID == msg.artifactID {
-						m.artifacts[i].Tag = msg.tag
-						break
-					}
+		}
+	case artifactTagMsg:
+		m.loadingArtifacts = false
+		if msg.err == nil {
+			for i := range m.artifacts {
+				if m.artifacts[i].ID == msg.artifactID {
+					m.artifacts[i].Tag = msg.tag
+					break
 				}
 			}
-			return m, nil
+		}
+		return m, nil
 
 	case tickMsg:
 		cmds := []tea.Cmd{tickCmdWithInterval(m.currentPollInterval())}
