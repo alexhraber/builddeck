@@ -1574,8 +1574,8 @@ func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string,
 		// Create parent dirs if needed
 		if dir := filepath.Dir(outPath); dir != "." {
 			if err := os.MkdirAll(dir, 0o755); err != nil {
-			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("creating download dir: %w", err)}
-		}
+				return artifactDownloadMsg{filename: filename, err: fmt.Errorf("creating download dir: %w", err)}
+			}
 		}
 
 		f, err := os.Create(outPath)
@@ -1624,7 +1624,7 @@ func openURL(url string) {
 	default:
 		cmd = exec.Command("xdg-open", url)
 	}
-	cmd.Start() //nolint:errcheck
+	_ = cmd.Start()
 }
 
 // performGlobalSearch searches across all loaded orgs, pipelines, builds, and steps.

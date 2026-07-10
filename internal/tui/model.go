@@ -74,7 +74,7 @@ type Model struct {
 	height      int
 
 	rightScroll int
-	logScroll    int
+	logScroll   int
 
 	showLogs                  bool
 	loadingLog                bool
