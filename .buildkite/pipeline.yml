@@ -73,8 +73,8 @@ steps:
         .buildkite/release.sh
       fi
 
-  - label: ":lock: SHA256"
-    key: sha256
+  - label: ":lock: Checksum"
+    key: checksum
     depends_on: build
     command: |
       echo "--- Waiting for builddeck binary"
