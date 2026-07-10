@@ -45,6 +45,6 @@ else
 fi
 
 # Output version to artifact for TUI consumption
-echo "${VERSION}" > tag.txt
-buildkite-agent artifact upload tag.txt
-echo "Uploaded tag.txt artifact"
+echo "${VERSION}" > builddeck.tag
+buildkite-agent artifact upload builddeck.tag
+echo "Uploaded builddeck.tag artifact"

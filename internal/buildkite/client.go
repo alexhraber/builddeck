@@ -221,7 +221,7 @@ func (c *Client) GetBuild(ctx context.Context, orgSlug, pipelineSlug string, bui
 	return &build, nil
 }
 
-// GetTagArtifact fetches the tag.txt artifact content for a build
+// GetTagArtifact fetches the builddeck.tag artifact content for a build
 func (c *Client) GetTagArtifact(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int) (string, error) {
 	// List artifacts for this build
 	artifacts, err := c.ListArtifacts(ctx, orgSlug, pipelineSlug, buildNumber)
@@ -229,10 +229,10 @@ func (c *Client) GetTagArtifact(ctx context.Context, orgSlug, pipelineSlug strin
 		return "", err
 	}
 
-	// Find tag.txt artifact
+	// Find builddeck.tag artifact
 	var tagArtifact *Artifact
 	for _, a := range artifacts {
-		if strings.Contains(a.Filename, "tag.txt") {
+		if strings.Contains(a.Filename, "builddeck.tag") {
 			tagArtifact = &a
 			break
 		}
