@@ -165,7 +165,6 @@ func initStyles(theme Theme) {
 		Foreground(lipgloss.Color(theme.Dim))
 
 	selectedItemStyle = lipgloss.NewStyle().
-		Background(lipgloss.Color(theme.SelectedBg)).
 		Foreground(lipgloss.Color(theme.SelectedFg)).
 		Bold(true)
 
