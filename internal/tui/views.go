@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/rivo/uniseg"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
 )
@@ -414,12 +415,20 @@ func (m Model) rightPaneView(w, h int) string {
 					label = step.Command
 				}
 				label = renderEmoji(label)
-				if idx := strings.LastIndexByte(label, '\t'); idx >= 0 {
-					name := []rune(label[idx+1:])
-					if len(name) > 10 {
-						name = append(name[:10], []rune("...")...)
-						label = label[:idx+1] + string(name)
+				gr := uniseg.NewGraphemes(label)
+				if gr.Next() {
+					cluster := gr.Str()
+					_, end := gr.Positions()
+					cw := lipgloss.Width(cluster)
+					name := strings.TrimLeft(label[end:], " ")
+					if len([]rune(name)) > 10 {
+						name = string([]rune(name)[:10]) + "..."
 					}
+					pad := ""
+					if cw < 2 {
+						pad = " "
+					}
+					label = cluster + pad + " " + name
 				}
 				lw := lipgloss.Width(label)
 				if lw > maxLabelW {

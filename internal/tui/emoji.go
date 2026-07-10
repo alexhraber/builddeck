@@ -288,7 +288,6 @@ func renderEmoji(s string) string {
 		entry, ok := emojiBank[shortcode]
 		if ok && entry.glyph != "" {
 			buf.WriteString(entry.glyph)
-			buf.WriteByte('\t')
 		} else if ok {
 			buf.WriteString(shortcode[1 : len(shortcode)-1])
 		} else {
