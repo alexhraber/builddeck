@@ -10,8 +10,8 @@ set -euo pipefail
 LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "")
 
 if [[ -z "$LATEST" ]]; then
-  # No tags exist - start from v0.1.0
-  MAJOR=0; MINOR=1; PATCH=0
+  # No tags exist - start from v0.0.0
+  MAJOR=0; MINOR=0; PATCH=0
   COMMITS=$(git log --pretty=format:"%s" 2>/dev/null || echo "")
 else
   if [[ "$LATEST" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
@@ -26,7 +26,7 @@ else
 fi
 
 # Check if any conventional commits exist
-if ! echo "$COMMITS" | grep -qE '^(feat|fix|refactor|perf|docs|style|test|chore)(!|\()'; then
+if ! echo "$COMMITS" | grep -qE '^(feat|fix|refactor|perf|docs|style|test|chore)'; then
   # No conventional commits since last tag — no release needed
   exit 0
 fi
