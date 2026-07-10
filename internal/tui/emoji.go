@@ -376,7 +376,7 @@ func renderEmojiGlyph(img image.Image) string {
 		return ""
 	}
 
-	gridW := 2
+	gridW := 4
 	gridH := 2
 
 	sample := func(x, y int) (uint8, uint8, uint8, uint8) {
