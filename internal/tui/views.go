@@ -414,6 +414,14 @@ func (m Model) rightPaneView(w, h int) string {
 					label = step.Command
 				}
 				label = renderEmoji(label)
+				// insert tab after first emoji glyph for terminal alignment
+				for i, r := range label {
+					if r > 127 {
+						runes := []rune(label)
+						label = string(runes[:i+1]) + "\t" + string(runes[i+1:])
+						break
+					}
+				}
 				lw := lipgloss.Width(label)
 				if lw > maxLabelW {
 					maxLabelW = lw
