@@ -342,16 +342,4 @@ go vet ./...                  # vet
 ## License
 
 MIT
-# trigger
-feat: add tag display in build details
-fix: fix typo in release notes
-feat: add tag display in build details
-feat: add tag artifact for build details display
-fix: fix tag step exit on no conventional commits
-fix: ensure tag creation works
-feat: release v0.2.0 with proper tag/release pipeline
-feat: test tag artifact
-feat: test tag artifact upload
-feat: trigger release
-fix: test tag push
-feat: push to trigger tag
+
