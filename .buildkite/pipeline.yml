@@ -82,9 +82,6 @@ steps:
       .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
       ls -lh builddeck
       buildkite-agent artifact upload builddeck
-
-  - label: ":rocket: Release"
-    key: release
-    depends_on: build
-    command: .buildkite/release.sh
-    if: build.tag != null
+      if [[ -n "$BUILDKITE_TAG" ]]; then
+        .buildkite/release.sh
+      fi
