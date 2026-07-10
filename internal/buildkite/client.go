@@ -330,12 +330,31 @@ func (c *Client) ListAnnotations(ctx context.Context, orgSlug, pipelineSlug stri
 }
 
 func (c *Client) ListArtifacts(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int) ([]Artifact, error) {
-	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/artifacts", orgSlug, pipelineSlug, buildNumber)
-	resp, err := c.get(ctx, path, map[string]string{"per_page": "100"})
-	if err != nil {
-		return nil, fmt.Errorf("listing artifacts for %s/%s#%d: %w", orgSlug, pipelineSlug, buildNumber, err)
+	var allArtifacts []Artifact
+	page := 1
+	for {
+		path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/artifacts", orgSlug, pipelineSlug, buildNumber)
+		resp, err := c.get(ctx, path, map[string]string{"per_page": "100", "page": strconv.Itoa(page)})
+		if err != nil {
+			return nil, fmt.Errorf("listing artifacts for %s/%s#%d (page %d): %w", orgSlug, pipelineSlug, buildNumber, page, err)
+		}
+
+		artifacts, err := decode[Artifact](resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("decoding artifacts for %s/%s#%d (page %d): %w", orgSlug, pipelineSlug, buildNumber, page, err)
+		}
+
+		if len(artifacts) == 0 {
+			break
+		}
+
+		allArtifacts = append(allArtifacts, artifacts...)
+		if len(artifacts) < 100 {
+			break
+		}
+		page++
 	}
-	return decode[Artifact](resp.Body)
+	return allArtifacts, nil
 }
 
 func (c *Client) getRawText(ctx context.Context, url string) (string, error) {
