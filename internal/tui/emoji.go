@@ -358,7 +358,14 @@ func loadPipelineEmoji(name string) string {
 	if ok && entry.assetGlyph != "" {
 		return entry.assetGlyph
 	}
-	return renderEmoji(":" + name + ":")
+	if ok && entry.glyph != "" {
+		g := entry.glyph
+		if lipgloss.Width(g) == 1 {
+			g += " "
+		}
+		return g
+	}
+	return name
 }
 func downloadEmoji(url string) string {
 	resp, err := httpClient.Get(url)
@@ -385,15 +392,15 @@ func renderEmojiGlyph(img image.Image) string {
 		return ""
 	}
 
+	gridW := 2
+	gridH := 2
+
 	sample := func(x, y int) (uint8, uint8, uint8, uint8) {
-		sx := bounds.Min.X + x*w/w
-		sy := bounds.Min.Y + y*h/h
+		sx := bounds.Min.X + x*w/gridW
+		sy := bounds.Min.Y + y*h/gridH
 		r, g, b, a := img.At(sx, sy).RGBA()
 		return uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)
 	}
-
-	gridW := 2
-	gridH := 2
 
 	pixels := make([][4]uint8, gridW*gridH)
 	for y := range gridH {
