@@ -953,11 +953,14 @@ func (m Model) artifactPickerOverlay(base string) string {
 		}
 
 		filename := art.Filename
-		if len(filename) > 40 {
-			filename = filename[:37] + "..."
+		if len(filename) > 35 {
+			filename = filename[:32] + "..."
 		}
 		size := formatFileSize(art.FileSize)
-		line := fmt.Sprintf("%s %s (%s)", cursor, filename, size)
+		h := sha256.Sum256([]byte(art.DownloadURL))
+		digest := hex.EncodeToString(h[:])
+		short := digest[:3] + "..." + digest[len(digest)-3:]
+		line := fmt.Sprintf("%s %s (%s) sha256:%s", cursor, filename, size, short)
 		if i == m.artifactCursor {
 			b.WriteString(selectedItemStyle.Render(line) + "\n")
 		} else {
