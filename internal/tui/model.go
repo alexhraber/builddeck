@@ -275,7 +275,15 @@ func loadBuildsCmd(client *buildkite.Client, orgSlug, pipelineSlug string) tea.C
 func loadBuildDetailCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildID string, buildNumber int) tea.Cmd {
 	return func() tea.Msg {
 		build, err := client.GetBuild(context.Background(), orgSlug, pipelineSlug, buildNumber)
-		return buildDetailMsg{buildID: buildID, build: build, err: err}
+		if err != nil {
+			return buildDetailMsg{buildID: buildID, build: build, err: err}
+		}
+		// Fetch tags for this build's commit
+		tags, _ := client.ListTagsForCommit(context.Background(), orgSlug, pipelineSlug, build.Commit)
+		if len(tags) > 0 {
+			build.Tag = tags[0].Name // Use first (most recent) tag
+		}
+		return buildDetailMsg{buildID: buildID, build: build, err: nil}
 	}
 }
 

@@ -1125,6 +1125,9 @@ func (m Model) statsOverlay(base string) string {
 			b.WriteString(fmt.Sprintf("  State:    %s\n", bd.State))
 			b.WriteString(fmt.Sprintf("  Branch:   %s\n", bd.Branch))
 			b.WriteString(fmt.Sprintf("  Commit:   %s\n", shortSHA(bd.Commit)))
+			if bd.Tag != "" {
+				b.WriteString(fmt.Sprintf("  Tag:      %s\n", bd.Tag))
+			}
 			msg := renderEmoji(strings.SplitN(bd.Message, "\n", 2)[0])
 			b.WriteString(fmt.Sprintf("  Message:  %s\n", msg))
 			if bd.Creator != nil {

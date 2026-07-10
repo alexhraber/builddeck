@@ -419,3 +419,22 @@ func ParseAgentQueue(agent Agent) string {
 	}
 	return "default"
 }
+
+// GetTagsForCommit fetches tags pointing to a specific commit SHA
+func (c *Client) GetTagsForCommit(ctx context.Context, orgSlug, pipelineSlug, commitSHA string) ([]Tag, error) {
+	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%s/tags", orgSlug, pipelineSlug, commitSHA)
+	resp, err := c.get(ctx, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("getting tags for commit %s: %w", commitSHA, err)
+	}
+	var tags []Tag
+	if err := json.Unmarshal(resp.Body, &tags); err != nil {
+		return nil, fmt.Errorf("decoding tags for commit %s: %w", commitSHA, err)
+	}
+	return tags, nil
+}
+
+// ListTagsForCommit fetches tags for a commit (alias for GetTagsForCommit)
+func (c *Client) ListTagsForCommit(ctx context.Context, orgSlug, pipelineSlug, commitSHA string) ([]Tag, error) {
+	return c.GetTagsForCommit(ctx, orgSlug, pipelineSlug, commitSHA)
+}

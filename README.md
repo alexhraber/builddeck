@@ -247,16 +247,76 @@ internal/
 - **Log fetching**: `?content=true` with raw text fallback + `Accept: text/plain`; script steps only
 - **Step types handled**: `script` (logs), `waiter` (hidden), `trigger`/`deploy` (metadata only)
 
-## CI Pipeline
+## Dynamic Build Details (Tertiary Validation)
 
-The project uses Buildkite for its own CI (`.buildkite/pipeline.yml`):
+builddeck enriches build details and artifacts with data from dedicated pipeline steps — not from Buildkite itself. These are **tertiary validations**: Buildkite doesn't validate them; our dedicated steps do.
 
-1. **Lint & test** — `golangci-lint`, `go vet`, `go test`, `gosec`, `govulncheck`
-2. **Build** — `go build ./cmd/builddeck`
-3. **Checksum** — downloads binary, runs `sha256sum`, uploads `builddeck.sha256`
-4. **Release** — on tag push: builds multi-arch, creates GitHub Release, uploads binaries
+### Git Tag from Tag Step
 
-Pipeline reads from default branch — changes must be on `main` before PR builds pass.
+The **Tag step** (`:bookmark: Tag`) in the pipeline:
+1. Runs after all validation passes
+2. Analyzes conventional commits since last tag
+3. Creates/pushes semver tag (e.g., `v0.1.1`)
+3. builddeck queries Buildkite API for tags on the build's commit SHA
+4. Displays the tag in build details under the commit hash
+
+This is **not** Buildkite-managed — it's our step creating the tag, our TUI discovering it.
+
+### Artifact Checksum from Checksum Step
+
+The **Checksum step** (`:lock: Checksum`) in the pipeline:
+1. Downloads the binary artifact
+2. Runs `sha256sum` → produces `builddeck.sha256`
+3. Uploads `.sha256` as companion artifact
+4. builddeck detects `.sha256` artifacts, fetches them, parses the hash
+5. Displays checksum inline next to matching artifact
+
+This is **tertiary validation** — Buildkite doesn't compute or verify checksums; our dedicated step and TUI do.
+
+### Contract for Pipeline Authors
+
+To enable these features, add these steps to your pipeline:
+
+```yaml
+steps:
+  # ... your validation steps ...
+
+  - label: ":bookmark: Tag"
+    key: tag
+    depends_on:
+      - test
+      - lint
+      # ... all validation steps ...
+    command: |
+      # Auto-tag based on conventional commits
+      VERSION=$(determine_version_from_commits)
+      git tag -a "$VERSION" -m "Release $VERSION"
+      git push origin "$VERSION"
+
+  - label: ":golang: Build and Release"
+    key: build
+    depends_on: tag
+    command: |
+      # Build binary
+      # Query GitHub for tag on this commit SHA
+      VERSION=$(gh api repos/:owner/:repo/git/refs/tags --jq '.[] | select(.object.sha == "'$BUILDKITE_COMMIT'") | .ref' | sed 's|refs/tags/||')
+      go build -ldflags="-X main.version=$VERSION" ...
+
+  - label: ":lock: Checksum"
+    key: checksum
+    depends_on: build
+    command: |
+      buildkite-agent artifact download builddeck /tmp/
+      sha256sum /tmp/builddeck | tee builddeck.sha256
+      buildkite-agent artifact upload builddeck.sha256
+```
+
+The **Tag** step runs after all validation (fan-in), creates the tag.
+The **Checksum** step runs after build, creates `.sha256` companion artifact.
+
+builddeck automatically:
+- Queries tags for each build's commit SHA → shows in build details
+- Detects `.sha256` companion artifacts → shows checksum on artifacts
 
 ## Planned Next Features
 

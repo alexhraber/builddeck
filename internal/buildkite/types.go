@@ -108,3 +108,8 @@ type EmojiEntry struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
+
+type Tag struct {
+	Name   string `json:"name"`
+	Commit string `json:"commit"`
+}
