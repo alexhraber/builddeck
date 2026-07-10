@@ -1564,7 +1564,7 @@ func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string,
 		}
 
 		// Download the file
-		resp, err := http.Get(downloadURL) //nolint:gosec
+		resp, err := http.Get(downloadURL) //#nosec G107
 		if err != nil {
 			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("downloading: %w", err)}
 		}
@@ -1578,7 +1578,7 @@ func downloadArtifactCmd(client *buildkite.Client, orgSlug, pipelineSlug string,
 			}
 		}
 
-		f, err := os.Create(outPath)
+		f, err := os.Create(outPath) //#nosec G304
 		if err != nil {
 			return artifactDownloadMsg{filename: filename, err: fmt.Errorf("creating file: %w", err)}
 		}
@@ -1618,11 +1618,11 @@ func openURL(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", url) //#nosec G204
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		cmd = exec.Command("cmd", "/c", "start", url) //#nosec G204
 	default:
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", url) //#nosec G204
 	}
 	_ = cmd.Start()
 }
