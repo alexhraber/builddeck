@@ -343,3 +343,4 @@ go vet ./...                  # vet
 
 MIT
 # trigger
+feat: add tag display in build details
