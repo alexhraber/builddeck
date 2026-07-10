@@ -232,7 +232,7 @@ func stateLabel(state string) string {
 	case "failed":
 		return "FAIL"
 	case "running":
-		return "RUN "
+		return "EXEC"
 	case "scheduled":
 		return "SCHD"
 	case "canceled", "cancelled":

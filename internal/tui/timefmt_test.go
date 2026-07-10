@@ -69,7 +69,7 @@ func TestStateLabel(t *testing.T) {
 	}{
 		{"passed", "PASS"},
 		{"failed", "FAIL"},
-		{"running", "RUN "},
+		{"running", "EXEC"},
 		{"blocked", "BLCK"},
 		{"scheduled", "SCHD"},
 		{"canceled", "CNCL"},
