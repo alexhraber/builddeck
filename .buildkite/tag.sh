@@ -32,10 +32,19 @@ fi
 
 git remote set-url origin "https://alexhraber:${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
 
+# Create tag
 git tag -a "${VERSION}" -m "Release ${VERSION}"
-git push origin "${VERSION}"
-echo "Tagged ${VERSION}"
+echo "Tag created locally: ${VERSION}"
+
+# Push tag with explicit error handling
+if git push origin "${VERSION}"; then
+  echo "Tagged ${VERSION}"
+else
+  echo "ERROR: Failed to push tag ${VERSION}"
+  exit 1
+fi
 
 # Output version to artifact for TUI consumption
 echo "${VERSION}" > tag.txt
 buildkite-agent artifact upload tag.txt
+echo "Uploaded tag.txt artifact"
