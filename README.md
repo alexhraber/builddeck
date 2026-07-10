@@ -348,3 +348,4 @@ fix: fix typo in release notes
 feat: add tag display in build details
 feat: add tag artifact for build details display
 fix: fix tag step exit on no conventional commits
+fix: ensure tag creation works
