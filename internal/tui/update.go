@@ -112,13 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showLogs = true
 				m.logScroll = 0
 
-				var targetStep *buildkite.Step
-				for i := range m.selectedBuild.Steps {
-					if m.selectedBuild.Steps[i].Type != "waiter" {
-						targetStep = &m.selectedBuild.Steps[i]
-						break
-					}
-				}
+				targetStep := firstRunnableStep(m.selectedBuild.Steps)
 
 				var cmds []tea.Cmd
 				cmds = append(cmds, m.onBuildIndexChanged()...)
@@ -162,13 +156,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
 				m.selectedBuild = msg.build
 				if m.showLogs && m.logStepID == "" {
-					var targetStep *buildkite.Step
-					for i := range msg.build.Steps {
-						if msg.build.Steps[i].Type != "waiter" {
-							targetStep = &msg.build.Steps[i]
-							break
-						}
-					}
+					targetStep := firstRunnableStep(msg.build.Steps)
 					if targetStep != nil {
 						m.logStepID = targetStep.ID
 						m.logScroll = 0
@@ -355,13 +343,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.buildIndex = 0
 				m.selectedBuild = &m.builds[0]
 
-				var targetStep *buildkite.Step
-				for i := range m.selectedBuild.Steps {
-					if m.selectedBuild.Steps[i].Type != "waiter" {
-						targetStep = &m.selectedBuild.Steps[i]
-						break
-					}
-				}
+				targetStep := firstRunnableStep(m.selectedBuild.Steps)
 
 				if targetStep == nil {
 					m.logStepID = ""
@@ -407,12 +389,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			targetStep = m.selectedRightPaneStep()
 		}
 		if targetStep == nil {
-			for i := range b.Steps {
-				if b.Steps[i].Type != "waiter" {
-					targetStep = &b.Steps[i]
-					break
-				}
-			}
+			targetStep = firstRunnableStep(b.Steps)
 		}
 		if targetStep == nil {
 			if m.loadingDetail || len(b.Steps) == 0 {
@@ -1470,7 +1447,7 @@ func hasNoSteps(b *buildkite.Build) bool {
 
 func firstRunnableStep(steps []buildkite.Step) *buildkite.Step {
 	for i := range steps {
-		if steps[i].Type != "waiter" {
+		if steps[i].Type == "script" {
 			return &steps[i]
 		}
 	}
