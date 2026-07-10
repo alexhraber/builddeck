@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
-# Determines semver bump from conventional commits and creates/pushes tag
-# Uploads version.txt artifact for build step
+# Creates a release tag based on conventional commits since last tag.
+# Runs only on main branch when not already a tag build.
 set -euo pipefail
+
+if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
+  echo "Skipping tag creation (branch: ${BUILDKITE_BRANCH}, tag: ${BUILDKITE_TAG})"
+  echo "dev" > version.txt
+  buildkite-agent artifact upload version.txt
+  exit 0
+fi
 
 echo "--- Determining version bump from conventional commits"
 
+# Get the latest tag (or v0.0.0 if none)
 LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "v0.0.0")
+
 if [[ "$LATEST" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
   MAJOR="${BASH_REMATCH[1]}"
   MINOR="${BASH_REMATCH[2]}"
@@ -34,7 +43,6 @@ esac
 
 VERSION="v${MAJOR}.${MINOR}.${PATCH}"
 echo "Previous: ${LATEST} -> Next: ${VERSION} (${BUMP})"
-
 git tag -a "${VERSION}" -m "Release ${VERSION}"
 git push origin "${VERSION}"
 echo "Tagged ${VERSION}"

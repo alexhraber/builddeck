@@ -62,8 +62,16 @@ steps:
       - gosec
       - vulncheck
       - tidy
-    if: 'build.tag == "" && build.branch == "main"'
-    command: .buildkite/tag.sh
+    command: |
+      # Only create tag on main branch, not on tag pushes
+      if [[ -z "${BUILDKITE_TAG}" && "${BUILDKITE_BRANCH}" == "main" ]]; then
+        .buildkite/tag.sh
+      else
+        echo "Skipping tag creation (branch: ${BUILDKITE_BRANCH}, tag: ${BUILDKITE_TAG})"
+        # Create empty version.txt for downstream steps
+        echo "dev" > version.txt
+        buildkite-agent artifact upload version.txt
+      fi
 
   - label: ":golang: Build and Release"
     key: build
