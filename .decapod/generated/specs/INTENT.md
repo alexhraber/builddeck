@@ -1,57 +1,64 @@
 # Intent
 
 ## Product Outcome
-- A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
+A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, logs, annotations, artifacts, and build health.
 
 ## What This Project Is
-builddeck is a cli project built using Go.
-A production-quality Buildkite terminal flight deck: a sleek, live-updating Go TUI that gives platform engineers and release captains a dense, navigable control surface for organizations, pipelines, builds, jobs, queues, agents, logs, annotations, artifacts, and build health.
+`builddeck` (invoked as `builddeck` or aliased as `b7k`) is a Go CLI application that renders a Bubble Tea / Lip Gloss TUI for interacting with the Buildkite REST API. It is not a web dashboard or mobile app — it lives entirely in the terminal.
 
 Key operating facts:
 - **Primary languages**: Go
-- **Detected surfaces**: Go CLI
+- **Detected surfaces**: Go CLI (Bubble Tea TUI)
+- **External dependency**: Buildkite REST API (`api.buildkite.com`)
+- **Auth mechanism**: `BUILDKITE_API_TOKEN` environment variable
+- **Configuration**: `~/.config/builddeck/config.toml`
 
 ## Product View
 ```mermaid
 flowchart LR
-  U[Primary User] --> P[builddeck]
-  P --> O[User-visible Outcome]
-  P --> G[Proof Gates]
-  G --> E[Evidence Artifacts]
+  U[User] --> P[builddeck TUI]
+  P --> BK[Buildkite REST API]
+  P --> FS[Local filesystem config + artifacts]
 ```
 
 ## Inferred Baseline
 - Repository: builddeck
 - Product type: cli
 - Primary languages: Go
-- Detected surfaces: Go CLI
+- Detected surfaces: Go CLI (TUI)
 
 ## Scope
 | Area | In Scope | Proof Surface |
 |---|---|---|
-| Core workflow | Define a concrete user-visible workflow | Acceptance criteria + tests |
-| Data contracts | Document canonical inputs/outputs | [INTERFACES.md](./INTERFACES.md) and schema checks |
+| Core workflow | Browse orgs/pipelines/builds, view job logs, download artifacts | Acceptance criteria + tests |
+| Data contracts | Buildkite API client types, artifact checksum parsing | [INTERFACES.md](./INTERFACES.md) and schema checks |
 | Delivery quality | Block promotion on broken proof surfaces | [VALIDATION.md](./VALIDATION.md) blocking gates |
 
 ## Non-Goals (Falsifiable)
 | Non-goal | How to falsify |
 |---|---|
-| Feature creep beyond the primary outcome | Any PR adds capability not tied to outcome criteria |
-| Shipping without evidence | Missing validation artifacts for promoted changes |
-| Ambiguous ownership boundaries | Missing owner/system-of-record in interfaces |
+| Feature creep beyond TUI scope | Any PR adds capability not tied to terminal-based CI monitoring |
+| GraphQL support | Any PR that replaces REST API client with GraphQL without explicit intent |
+| Write operations beyond existing actions | Any PR adds mutating API calls beyond retry/rebuild/cancel/unblock |
+| Mobile/web UI | Any PR adds a web server or mobile target |
+| Multi-user / team features | Any PR adds user management, teams, or RBAC |
 
 ## Constraints
-- Technical: runtime, dependency, and topology boundaries are explicit.
-- Operational: deployment, rollback, and incident ownership are defined.
-- Security/compliance: sensitive data handling and authz are mandatory.
+- **Technical**: Must use Buildkite REST API only (no GraphQL). Must support dark terminal backgrounds. Must handle rate limits gracefully.
+- **Operational**: Single-user CLI tool — no deployment, rollback, or incident ownership needed.
+- **Security**: API token sourced from env var only. Artifacts downloaded over HTTPS. No secrets stored on disk beyond config file.
 
 ## Acceptance Criteria (must be objectively testable)
-- [ ] Done means `builddeck` is a compiling Go application with a clean repository structure, a typed internal Buildkite API client, authentication through `BUILDKITE_API_TOKEN`, real read-only Buildkite data loading for organizations, pipelines, recent builds, and build jobs, and a Bubble Tea/Lip Gloss TUI that supports pane navigation, selection changes, refresh, loading/error states, last-refresh visibility, and a non-blocking 5-second live update loop; the README clearly explains what `builddeck` is, how to install and run it, required token setup, current MVP scope, keybindings, and planned next features, and the codebase passes `go fmt ./...`, `go test ./...`, and `go build ./cmd/builddeck` without failures.
-- [ ] Non-functional targets are met (latency, reliability, cost, etc.).
-- [ ] Validation gates pass and artifacts are attached.
-- [ ] `go test ./...` passes for all packages
-- [ ] `go vet ./...` passes with no diagnostics
-- [ ] `gofmt -l .` returns no files
+- [ ] `go build ./cmd/builddeck` compiles cleanly
+- [ ] `go test ./...` passes all tests
+- [ ] `go vet ./...` produces no diagnostics
+- [ ] `golangci-lint run ./...` produces no linter violations
+- [ ] `gosec ./...` produces no security findings
+- [ ] TUI renders three-pane layout: orgs/pipelines | builds | build detail
+- [ ] TUI loads live data from Buildkite REST API for at least 3 orgs
+- [ ] Artifact picker overlay opens with `d`, downloads selected with `enter`, downloads all with `a`
+- [ ] SHA256 checksums from `.sha256` companion artifacts are displayed inline
+- [ ] README documents installation, auth, keybindings, and artifact SHA256 contract
 
 ## Epistemic Custody Fields
 
@@ -92,16 +99,17 @@ flowchart LR
 ## Tradeoffs Register
 | Decision | Benefit | Cost | Review Trigger |
 |---|---|---|---|
-| Simplicity vs extensibility | Faster iteration | Potential rework | Feature set expands |
-| Strict gates vs dev speed | Higher confidence | More upfront discipline | Lead time regressions |
+| Bubble Tea vs web UI | Fast startup, keyboard-native | Limited to terminal users | Users request browser UI |
+| REST API only | Simpler client code | No GraphQL efficiency | Rate limit exhaustion |
+| Nerd Font glyphs | Rich visual icons | Broken rendering without patched font | User reports without NF |
 
 ## First Implementation Slice
-- [ ] Define the smallest user-visible workflow to ship first.
-- [ ] Define required data/contracts for that workflow.
-- [ ] Define what is intentionally postponed until v2.
+- [x] MVP: Org/pipeline/build browsing with live polling and log viewing
+- [x] v2: Artifact download picker with SHA256 checksum display
+- [x] v3: Global search, filter presets, agent saturation view
 
 ## Open Questions (with decision deadlines)
 | Question | Owner | Deadline | Decision |
 |---|---|---|---|
-| Which interfaces are versioned at launch? | TBD | YYYY-MM-DD | |
-| Which non-functional target is hardest to hit? | TBD | YYYY-MM-DD | |
+| Should we add GraphQL support? | TBD | TBD | Not yet |
+| Should we support artifact multi-select? | TBD | TBD | Not yet |

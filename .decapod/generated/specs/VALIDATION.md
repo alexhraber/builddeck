@@ -4,11 +4,14 @@
 > Validation is a release gate, not documentation theater.
 
 ## Validation Harness
-Define the test and verification harness used by this project.
+All tests and verification run locally via the Go toolchain and CI via the Buildkite pipeline defined in `.buildkite/pipeline.yml`.
+
 Key features:
-- **Automated Tests**: Unit and integration test suites.
-- **Linting & Formatting**: Static analysis tools and checkers.
-- **CI/CD Integration**: Automatic execution of validation gates on push.
+- **Automated Tests**: Go unit tests in every `internal/` package
+- **Linting & Formatting**: `golangci-lint`, `go vet`, `go fmt`
+- **Security Scanning**: `gosec`, `govulncheck`
+- **CI/CD Integration**: Buildkite pipeline runs all gates on every PR push
+- **Code Coverage**: Reported to Codecov after test run
 
 ## Generated Spec Refresh Gates
 Decapod must keep generated specs synchronized at governance pressure points. When repository surfaces change, validation should either fail with a concrete refresh instruction or, when explicitly requested through a refresh path, regenerate the existing spec files and update the manifest fingerprint. Refresh must update the canonical spec set rather than creating one-off analysis files.
@@ -31,45 +34,56 @@ flowchart TD
   W -->|No| F1[Fail: workspace gate]
   W -->|Yes| T{Tests pass?}
   T -->|No| F2[Fail: test gate]
-  T -->|Yes| D{Docs + diagrams + changelog updated?}
-  D -->|No| F3[Fail: docs gate]
+  T -->|Yes| L{Lint + vet pass?}
+  L -->|No| F3[Fail: lint gate]
+  L -->|Yes| S1{Security scan pass?}
+  S1 -->|No| F4[Fail: security gate]
+  S1 -->|Yes| D{Docs + specs current?}
+  D -->|No| F5[Fail: docs gate]
   D -->|Yes| V[Run decapod validate]
   V --> P{All blocking gates pass?}
-  P -->|No| F4[Fail: promotion blocked]
+  P -->|No| F6[Fail: promotion blocked]
   P -->|Yes| E[Emit promotion evidence]
 ```
 
 ## Promotion Flow
 ```mermaid
 flowchart LR
-  A[Plan] --> B[Implement]
-  B --> C[Test]
-  C --> D[Validate]
-  D --> E[Assemble Evidence]
-  E --> F[Promote]
+  A[Feature branch] --> B[PR created]
+  B --> C[CI: lint + test + security]
+  C --> D[CI: build + deploy]
+  D --> E[Decapod validate]
+  E --> F[Promote to main]
 ```
 
 ## Proof Surfaces
-- `decapod validate`
+- `decapod validate` — methodology compliance
 - Required test commands:
-- `go test ./...`
-- Required integration/e2e commands:
+  - `go test ./...`
+  - `go vet ./...`
+  - `go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run ./...`
+  - `go run github.com/securego/gosec/v2/cmd/gosec@latest ./...`
+- Required build command:
+  - `go build ./cmd/builddeck`
 
 ## Promotion Gates
 
-## Blocking Gates
+### Blocking Gates
 | Gate | Command | Evidence |
 |---|---|---|
-| Architecture + interface drift check | `decapod validate` | Gate output |
-| Tests pass | project test command | CI + local logs |
-| Docs + changelog current | repo docs checks | PR diff |
-| Security critical checks pass | security scanner suite | scanner reports |
+| Workspace protection | `decapod validate` | Gate output |
+| Go tests pass | `go test ./...` | CI + local logs |
+| Go vet passes | `go vet ./...` | CI + local logs |
+| Linter passes | `golangci-lint run ./...` | CI + local logs |
+| Security scan passes | `gosec ./...` | CI + local logs |
+| Build succeeds | `go build ./cmd/builddeck` | CI + local logs |
 
-## Warning Gates
+### Warning Gates
 | Gate | Trigger | Follow-up SLA |
 |---|---|---|
-| Coverage regression warning | Coverage drops below target | 48h |
-| Non-blocking perf drift | P95 regression below hard threshold | 72h |
+| Code coverage regression | Coverage drops below current baseline | 48h |
+| Non-blocking lint warning | `golangci-lint` warning output | 72h |
+| Spec staleness | `decapod validate` spec drift | 24h |
 
 ## Evidence Artifacts
 | Artifact | Path | Required For |
@@ -77,22 +91,23 @@ flowchart LR
 | Validation report | `.decapod/generated/artifacts/provenance/*` | Promotion |
 | Test logs | CI artifact store | Promotion |
 | Architecture diagram snapshot | `ARCHITECTURE.md` | Promotion |
-| Changelog entry | `CHANGELOG.md` | Promotion |
+| Coverage report | Codecov dashboard | Monitoring |
 
 ## Regression Guardrails
-- Baseline references:
-- Statistical thresholds (if non-deterministic):
-- Rollback criteria:
+- Baseline references: `go test ./...` against main branch
+- Statistical thresholds: N/A (deterministic test suite)
+- Rollback criteria: Build fails or tests regress after merge
 
 ## Bounded Execution
 | Operation | Timeout | Failure Mode |
 |---|---|---|
 | Validation | 30s | timeout or lock |
-| Unit test suite | project-defined | non-zero exit |
-| Integration suite | project-defined | non-zero exit |
+| Unit test suite | 120s | non-zero exit |
+| Integration suite | 120s | non-zero exit |
+| Security scan | 120s | non-zero exit |
 
 ## Coverage Checklist
-- [ ] Unit tests cover critical branches.
-- [ ] Integration tests cover key user flows.
-- [ ] Failure-path tests cover retries/timeouts.
-- [ ] Docs/diagram/changelog updates included.
+- [x] Unit tests cover critical branches (API client, config, TUI)
+- [x] Integration tests cover key user flows (API client HTTP mocks)
+- [x] Failure-path tests cover retries/timeouts (error states in TUI)
+- [x] Docs/diagram/changelog updates included in each PR
