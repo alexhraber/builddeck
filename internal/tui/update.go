@@ -1418,6 +1418,9 @@ func loadTagCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNum
 		}
 
 		resp, err := http.Get(url) // #nosec G107
+		if err != nil {
+			return artifactTagMsg{artifactID: targetArtifactID, err: err}
+		}
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
