@@ -23,26 +23,17 @@ steps:
   - label: ":female-detective: Lint"
     key: lint
     depends_on: fmt
-    command: |
-      .buildkite/setup-go.sh
-      go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-      golangci-lint run ./...
+    command: .buildkite/setup-go.sh go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run ./...
 
   - label: ":lock: Sec Scan"
     key: gosec
     depends_on: fmt
-    command: |
-      .buildkite/setup-go.sh
-      go install github.com/securego/gosec/v2/cmd/gosec@latest
-      gosec ./...
+    command: .buildkite/setup-go.sh go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
 
   - label: ":mag: Vuln Check"
     key: vulncheck
     depends_on: tidy
-    command: |
-      .buildkite/setup-go.sh
-      go install golang.org/x/vuln/cmd/govulncheck@latest
-      govulncheck ./...
+    command: .buildkite/setup-go.sh go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   - label: ":go: Test"
     key: test
@@ -62,29 +53,22 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":go: Build all packages"
-    key: build-all
-    depends_on:
-      - vet
-      - lint
-      - gosec
-      - tidy
-    command: .buildkite/setup-go.sh go build ./...
-
   - label: ":go: Build and Release"
     key: build
     depends_on:
       - test
-      - build-all
+      - vet
+      - lint
+      - gosec
       - vulncheck
+      - tidy
     command: |
+      echo "--- Checking all packages compile"
+      .buildkite/setup-go.sh go build ./...
       echo "--- Building builddeck binary"
       .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
       ls -lh builddeck
       buildkite-agent artifact upload builddeck
-
-  - label: ":rocket: Release"
-    key: release
-    depends_on: build
-    command: .buildkite/release.sh
-    if: build.tag != null
+      if [[ -n "$BUILDKITE_TAG" ]]; then
+        .buildkite/release.sh
+      fi

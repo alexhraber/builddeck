@@ -111,8 +111,8 @@ func TestEnvOverridesConfigToken(t *testing.T) {
 
 	// Write config with a token
 	dir := filepath.Join(tmp, "builddeck")
-	os.MkdirAll(dir, 0o700)
-	os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`token = "config-token"`), 0o600)
+	_ = os.MkdirAll(dir, 0o700)
+	_ = os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`token = "config-token"`), 0o600)
 
 	// Env token should override
 	t.Setenv("BUILDKITE_API_TOKEN", "env-token")

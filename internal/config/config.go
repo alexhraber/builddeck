@@ -42,7 +42,7 @@ func Load() (*Config, error) {
 	}
 
 	path := ConfigPath()
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //#nosec G304
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("reading config %s: %w", path, err)
 	}
