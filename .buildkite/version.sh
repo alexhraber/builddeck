@@ -36,8 +36,6 @@ BUMP="patch"
 if echo "$COMMITS" | grep -qE '^feat(!|\()'; then
   BUMP="minor"
 fi
-  BUMP="minor"
-fi
 if echo "$COMMITS" | grep -qE '^feat!:'; then
   BUMP="major"
 fi
