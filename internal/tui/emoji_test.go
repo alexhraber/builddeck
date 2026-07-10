@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -23,8 +24,8 @@ func TestInitEmojiBankDocker(t *testing.T) {
 	if !ok {
 		t.Fatal("expected :docker: to be in emojiBank after init")
 	}
-	if entry.glyph != "\uf21b" {
-		t.Fatalf("expected :docker: glyph to be \\uf21b, got %q", entry.glyph)
+	if entry.assetGlyph == "" {
+		t.Fatal("expected :docker: to have assetGlyph from docker.png")
 	}
 }
 
@@ -160,5 +161,36 @@ func TestLoadPipelineEmojiMissing(t *testing.T) {
 	result := loadPipelineEmoji("clearly-nonexistent-emoji-name")
 	if result == "" {
 		t.Fatal("loadPipelineEmoji missing should fall back, not be empty")
+	}
+}
+
+func TestLoadPipelineEmojiGolang(t *testing.T) {
+	result := loadPipelineEmoji("golang")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji(\"golang\") returned empty")
+	}
+	if strings.HasPrefix(result, ":") {
+		t.Fatalf("loadPipelineEmoji(\"golang\") got raw shortcode %q", result)
+	}
+}
+
+func TestLoadPipelineEmojiPipeline(t *testing.T) {
+	result := loadPipelineEmoji("pipeline")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji(\"pipeline\") returned empty")
+	}
+	if strings.HasPrefix(result, ":") {
+		t.Fatalf("loadPipelineEmoji(\"pipeline\") got raw shortcode %q", result)
+	}
+}
+
+func TestLoadPipelineEmojiGo(t *testing.T) {
+	result := loadPipelineEmoji("go")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji(\"go\") returned empty")
+	}
+	// go has no PNG so uses name fallback
+	if strings.HasPrefix(result, ":") {
+		t.Fatalf("loadPipelineEmoji(\"go\") got raw shortcode %q", result)
 	}
 }
