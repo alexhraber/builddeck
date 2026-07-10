@@ -364,6 +364,7 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(field("State", stateBadge(bd.State)))
 		b.WriteString(field("Branch", bd.Branch))
 		b.WriteString(field("Commit", shortSHA(bd.Commit)))
+		b.WriteString(field("Tag", bd.Tag))
 		msg := bd.Message
 		if len(msg) > w-14 {
 			msg = msg[:w-14]
