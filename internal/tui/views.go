@@ -363,8 +363,11 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(field("Number", fmt.Sprintf("#%d", bd.Number)))
 		b.WriteString(field("State", stateBadge(bd.State)))
 		b.WriteString(field("Branch", bd.Branch))
-		b.WriteString(field("Commit", shortSHA(bd.Commit)))
-		b.WriteString(field("Tag", bd.Tag))
+		commitVal := shortSHA(bd.Commit)
+		if bd.Tag != "" {
+			commitVal = fmt.Sprintf("%s %s", bd.Tag, commitVal)
+		}
+		b.WriteString(field("Commit", commitVal))
 		msg := bd.Message
 		if len(msg) > w-14 {
 			msg = msg[:w-14]
@@ -1125,8 +1128,11 @@ func (m Model) statsOverlay(base string) string {
 			b.WriteString(fmt.Sprintf("  Build:    #%d\n", bd.Number))
 			b.WriteString(fmt.Sprintf("  State:    %s\n", bd.State))
 			b.WriteString(fmt.Sprintf("  Branch:   %s\n", bd.Branch))
-			b.WriteString(fmt.Sprintf("  Commit:   %s\n", shortSHA(bd.Commit)))
-			b.WriteString(fmt.Sprintf("  Tag:      %s\n", bd.Tag))
+			commitVal := shortSHA(bd.Commit)
+			if bd.Tag != "" {
+				commitVal = fmt.Sprintf("%s %s", bd.Tag, commitVal)
+			}
+			b.WriteString(fmt.Sprintf("  Commit:   %s\n", commitVal))
 			msg := renderEmoji(strings.SplitN(bd.Message, "\n", 2)[0])
 			b.WriteString(fmt.Sprintf("  Message:  %s\n", msg))
 			if bd.Creator != nil {
