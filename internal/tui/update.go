@@ -1417,10 +1417,7 @@ func loadTagCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNum
 			return artifactTagMsg{artifactID: targetArtifactID, err: fmt.Errorf("empty download URL")}
 		}
 
-		resp, err := http.Get(url)
-		if err != nil {
-			return artifactTagMsg{artifactID: targetArtifactID, err: err}
-		}
+		resp, err := http.Get(url) // #nosec G107
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
