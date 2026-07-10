@@ -221,6 +221,55 @@ func (c *Client) GetBuild(ctx context.Context, orgSlug, pipelineSlug string, bui
 	return &build, nil
 }
 
+// GetTagArtifact fetches the tag.txt artifact content for a build
+func (c *Client) GetTagArtifact(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int) (string, error) {
+	// List artifacts for this build
+	artifacts, err := c.ListArtifacts(ctx, orgSlug, pipelineSlug, buildNumber)
+	if err != nil {
+		return "", err
+	}
+
+	// Find tag.txt artifact
+	var tagArtifact *Artifact
+	for _, a := range artifacts {
+		if a.Filename == "tag.txt" {
+			tagArtifact = &a
+			break
+		}
+	}
+	if tagArtifact == nil {
+		return "", nil // Not found
+	}
+
+	// Download the artifact
+	url, err := c.DownloadArtifactURL(ctx, orgSlug, pipelineSlug, buildNumber, tagArtifact.StepID, tagArtifact.ID)
+	if err != nil {
+		return "", err
+	}
+	if url == "" {
+		return "", nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating tag download request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("downloading tag artifact: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("reading tag artifact: %w", err)
+	}
+
+	return strings.TrimSpace(string(body)), nil
+}
+
 func (c *Client) RebuildBuild(ctx context.Context, orgSlug, pipelineSlug string, buildNumber int) (*Build, error) {
 	path := fmt.Sprintf("/organizations/%s/pipelines/%s/builds/%d/rebuild", orgSlug, pipelineSlug, buildNumber)
 	resp, err := c.put(ctx, path)

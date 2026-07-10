@@ -278,10 +278,9 @@ func loadBuildDetailCmd(client *buildkite.Client, orgSlug, pipelineSlug string, 
 		if err != nil {
 			return buildDetailMsg{buildID: buildID, build: build, err: err}
 		}
-		// Fetch tags for this build's commit
-		tags, _ := client.ListTagsForCommit(context.Background(), orgSlug, pipelineSlug, build.Commit)
-		if len(tags) > 0 {
-			build.Tag = tags[0].Name // Use first (most recent) tag
+		// Fetch tag from tag.txt artifact if it exists
+		if tag, err := client.GetTagArtifact(context.Background(), orgSlug, pipelineSlug, buildNumber); err == nil && tag != "" {
+			build.Tag = tag
 		}
 		return buildDetailMsg{buildID: buildID, build: build, err: nil}
 	}

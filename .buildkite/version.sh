@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Computes semver version from conventional commits since last tag.
-# Outputs version string (e.g., v0.1.1) to stdout.
+# Outputs version string (e.g., v0.1.1) to stdout ONLY if feat/fix commits exist.
+# Exits 0 with no output if no conventional commits since last tag.
 # Usage: .buildkite/version.sh
 
 set -euo pipefail
@@ -18,6 +19,12 @@ fi
 
 # Get commits since last tag
 COMMITS=$(git log "${LATEST}..HEAD" --pretty=format:"%s" 2>/dev/null || echo "")
+
+# Check if any conventional commits exist
+if ! echo "$COMMITS" | grep -qE '^(feat|fix)(\!|\(|:)'; then
+  # No conventional commits since last tag — no release needed
+  exit 0
+fi
 
 # Determine bump type from conventional commits
 BUMP="patch"

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Creates a release tag based on conventional commits.
 # Runs only on main branch when not already a tag build.
+# Outputs version to tag.txt artifact for downstream consumption.
 set -euo pipefail
 
 if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
@@ -26,3 +27,7 @@ git remote set-url origin "https://alexhraber:${GITHUB_TOKEN}@github.com/alexhra
 git tag -a "${VERSION}" -m "Release ${VERSION}"
 git push origin "${VERSION}"
 echo "Tagged ${VERSION}"
+
+# Output version to artifact for TUI consumption
+echo "${VERSION}" > tag.txt
+buildkite-agent artifact upload tag.txt
