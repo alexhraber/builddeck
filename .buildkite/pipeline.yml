@@ -23,26 +23,17 @@ steps:
   - label: ":female-detective: Lint"
     key: lint
     depends_on: fmt
-    command: |
-      .buildkite/setup-go.sh
-      go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-      golangci-lint run ./...
+    command: .buildkite/setup-go.sh sh -c "go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && golangci-lint run ./..."
 
   - label: ":lock: Sec Scan"
     key: gosec
     depends_on: fmt
-    command: |
-      .buildkite/setup-go.sh
-      go install github.com/securego/gosec/v2/cmd/gosec@latest
-      gosec ./...
+    command: .buildkite/setup-go.sh sh -c "go install github.com/securego/gosec/v2/cmd/gosec@latest && gosec ./..."
 
   - label: ":mag: Vuln Check"
     key: vulncheck
     depends_on: tidy
-    command: |
-      .buildkite/setup-go.sh
-      go install golang.org/x/vuln/cmd/govulncheck@latest
-      govulncheck ./...
+    command: .buildkite/setup-go.sh sh -c "go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./..."
 
   - label: ":go: Test"
     key: test
