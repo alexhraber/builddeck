@@ -39,8 +39,8 @@ func TestInitEmojiBankBuildkite(t *testing.T) {
 
 func TestRenderEmojiKnown(t *testing.T) {
 	result := renderEmoji(":go:")
-	if result != "\ue627 " {
-		t.Fatalf("renderEmoji(:go:) = %q, want \\ue627 followed by space", result)
+	if result != "go" {
+		t.Fatalf("renderEmoji(:go:) = %q, want shortcode name", result)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestRenderEmojiNoShortcodes(t *testing.T) {
 
 func TestRenderEmojiInContext(t *testing.T) {
 	result := renderEmoji(":go: Tidy")
-	expected := "\ue627  Tidy"
+	expected := "go Tidy"
 	if result != expected {
 		t.Fatalf("renderEmoji(\":go: Tidy\") = %q, want %q", result, expected)
 	}
@@ -76,7 +76,7 @@ func TestRenderEmojiInContext(t *testing.T) {
 
 func TestRenderEmojiMultiple(t *testing.T) {
 	result := renderEmoji(":docker: Build :go:")
-	expected := "\uf21b  Build \ue627 "
+	expected := "docker Build go"
 	if result != expected {
 		t.Fatalf("renderEmoji(\":docker: Build :go:\") = %q, want %q", result, expected)
 	}
@@ -84,7 +84,7 @@ func TestRenderEmojiMultiple(t *testing.T) {
 
 func TestRenderEmojiPartialColon(t *testing.T) {
 	result := renderEmoji(":go:without closing")
-	want := "\ue627 without closing"
+	want := "gowithout closing"
 	if result != want {
 		t.Fatalf("renderEmoji(\":go:without closing\") = %q, want %q", result, want)
 	}

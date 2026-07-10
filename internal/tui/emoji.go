@@ -358,12 +358,8 @@ func loadPipelineEmoji(name string) string {
 	if ok && entry.assetGlyph != "" {
 		return entry.assetGlyph
 	}
-	if ok && entry.glyph != "" {
-		g := entry.glyph
-		if lipgloss.Width(g) == 1 {
-			g += " "
-		}
-		return g
+	if ok && entry.glyph != "" && !isPUA(entry.glyph) {
+		return entry.glyph
 	}
 	return name
 }
@@ -442,6 +438,15 @@ func renderEmojiGlyph(img image.Image) string {
 	return buf.String()
 }
 
+func isPUA(s string) bool {
+	for _, r := range s {
+		if 0xE000 <= r && r <= 0xF8FF {
+			return true
+		}
+	}
+	return false
+}
+
 func uint8ToHex(r, g, b uint8) string {
 	hex := [7]byte{'#', 0, 0, 0, 0, 0, 0}
 	const hextable = "0123456789abcdef"
@@ -478,15 +483,10 @@ func renderEmoji(s string) string {
 		}
 		shortcode := s[pos : pos+end+2]
 		entry, ok := emojiBank[shortcode]
-		if ok {
-			if entry.glyph != "" {
-				buf.WriteString(entry.glyph)
-				if lipgloss.Width(entry.glyph) == 1 {
-					buf.WriteString(" ")
-				}
-			} else {
-				buf.WriteString(shortcode[1 : len(shortcode)-1])
-			}
+		if ok && entry.glyph != "" && !isPUA(entry.glyph) {
+			buf.WriteString(entry.glyph)
+		} else if ok {
+			buf.WriteString(shortcode[1 : len(shortcode)-1])
 		} else {
 			buf.WriteString(shortcode)
 		}
