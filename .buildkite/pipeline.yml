@@ -77,9 +77,8 @@ steps:
     key: checksum
     depends_on: build
     command: |
-      echo "--- Waiting for builddeck binary"
-      rm -f builddeck
-      buildkite-agent artifact download builddeck .
+      echo "--- Downloading builddeck binary"
+      buildkite-agent artifact download builddeck /tmp/
       echo "--- Generating SHA256 checksum"
-      sha256sum builddeck | tee builddeck.sha256
+      sha256sum /tmp/builddeck | tee builddeck.sha256
       buildkite-agent artifact upload builddeck.sha256
