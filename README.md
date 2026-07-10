@@ -9,7 +9,7 @@ Think `htop` for Buildkite. Or `k9s` for your CI.
 
 `b7k` is used as a short moniker, but the product, repository, documentation, and command identity are consistently **`builddeck`**.
 
-## Screenshot
+## Screenshots
 
 ![builddeck TUI showing organizations, builds, and build detail panes](assets/builddeck-screenshot.png)
 
@@ -78,7 +78,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Builds** — recent 25 builds per pipeline with build health summary
 - **Build Detail** — full metadata: state, branch, commit, message, creator, timestamps, duration
 - **Jobs** — all jobs for the selected build with state, label, agent, exit status
-- **Logs** — tail the selected/top job log in a dedicated log pane
+- **Logs** — tail the selected/top job log in a dedicated log pane (raw text fallback for large logs)
 - **Annotations** — build annotations (info, warning, error, success styles)
 - **Artifacts** — build artifacts with filename, size, and SHA256 checksum
 - **Agents** — organization agent listing with queue saturation view (`a`)
@@ -118,6 +118,19 @@ The `.sha256` file should contain the hash followed by a space and filename (sta
 - **Agent saturation view** — dedicated view showing queue depth and agent utilization per queue
 - **Filter presets** — save and load reusable filter patterns from config
 
+### Themes & Options
+
+Press **`Shift+O`** to open the options overlay with:
+
+| Option | Values | Default |
+|--------|--------|---------|
+| **Theme** | Tokyo Night, Dracula, Gruvbox Dark, Nord | Tokyo Night |
+| **Refresh Rate** | Dynamic (2s/10s), 2s Live, 5s, 10s Idle, 30s, Disabled | Dynamic |
+| **Layout Density** | Spacious, Dense | Spacious |
+| **Build Sorting** | Newest First, Oldest First | Newest First |
+
+Themes are full Lip Gloss color palettes — borders, titles, selection highlights, state colors (success/warning/failure/info/blocked), and dim text all adapt per theme.
+
 ### Navigation
 
 | Key | Action |
@@ -138,6 +151,7 @@ The `.sha256` file should contain the hash followed by a space and filename (sta
 | `x` | Cancel selected/top running build |
 | `u` | Unblock selected blocked job |
 | `o` | Open current resource in browser |
+| `Shift+O` | Open options overlay (theme, refresh, density, sort) |
 | `d` | Open artifact download picker |
 | `a` | Toggle agent/queue saturation view |
 | `/` | Filter active pane |
