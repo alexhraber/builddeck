@@ -55,10 +55,10 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
   exit 1
 fi
 
-# Use GITHUB_TOKEN for authenticated push
-git remote set-url origin "https://${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
-git config user.email "builddeck@buildkite.com"
-git config user.name "builddeck-bot"
+# Use token as username (GitHub PAT format: token@github.com)
+  git remote set-url origin "https://${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
+  git config user.email "builddeck@buildkite.com"
+  git config user.name "builddeck-bot"
 
 git tag -a "${VERSION}" -m "Release ${VERSION}"
 git push origin "${VERSION}"
