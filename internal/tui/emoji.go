@@ -376,52 +376,48 @@ func renderEmojiGlyph(img image.Image) string {
 		return ""
 	}
 
-	gridW := 4
+	gridW := 8
 	gridH := 2
 
-	sample := func(x, y int) (uint8, uint8, uint8, uint8) {
-		sx := bounds.Min.X + x*w/gridW
-		sy := bounds.Min.Y + y*h/gridH
-		r, g, b, a := img.At(sx, sy).RGBA()
-		return uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)
+	type accum struct {
+		r, g, b, a, n uint32
 	}
+	cells := make([]accum, gridW*gridH)
 
-	pixels := make([][4]uint8, gridW*gridH)
-	for y := range gridH {
-		for x := range gridW {
-			r, g, b, a := sample(x, y)
-			if a < 128 {
-				pixels[y*gridW+x] = [4]uint8{0, 0, 0, 0}
-			} else {
-				pixels[y*gridW+x] = [4]uint8{r, g, b, a}
-			}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			cellX := (x - bounds.Min.X) * gridW / w
+			cellY := (y - bounds.Min.Y) * gridH / h
+			idx := cellY*gridW + cellX
+			r, g, b, a := img.At(x, y).RGBA()
+			cells[idx].r += r
+			cells[idx].g += g
+			cells[idx].b += b
+			cells[idx].a += a
+			cells[idx].n++
 		}
 	}
 
-	nearest := func(c [4]uint8) lipgloss.Color {
-		return lipgloss.Color(uint8ToHex(c[0], c[1], c[2]))
+	nearest := func(r, g, b uint32) lipgloss.Color {
+		return lipgloss.Color(uint8ToHex(uint8(r>>8), uint8(g>>8), uint8(b>>8)))
 	}
 
 	var buf strings.Builder
 	for x := range gridW {
-		top := pixels[x]
-		bottom := pixels[(gridH-1)*gridW+x]
-		if top[3] == 0 && bottom[3] == 0 {
+		top := cells[x]
+		bottom := cells[gridW+x]
+		if top.n == 0 || bottom.n == 0 || top.a/top.n < 128 || bottom.a/bottom.n < 128 {
 			buf.WriteString(" ")
 			continue
 		}
-		fg := nearest(top)
-		bg := nearest(bottom)
-		char := "▀"
-		if top[3] == 0 {
+		fg := nearest(top.r/top.n, top.g/top.n, top.b/top.n)
+		bg := nearest(bottom.r/bottom.n, bottom.g/bottom.n, bottom.b/bottom.n)
+		if top.a/top.n < 128 {
 			fg = bg
-			char = " "
+			buf.WriteString(lipgloss.NewStyle().Background(bg).Render(" "))
+		} else {
+			buf.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render("▀"))
 		}
-		s := lipgloss.NewStyle().
-			Foreground(fg).
-			Background(bg).
-			Render(char)
-		buf.WriteString(s)
 	}
 	return buf.String()
 }
