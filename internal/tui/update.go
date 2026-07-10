@@ -323,6 +323,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleStatsOverlayKey(msg)
 	}
 
+	if m.showArtifactPicker {
+		return m.handleArtifactPickerKey(msg)
+	}
+
 	if key.Matches(msg, keys.Logs) {
 		if m.showLogs {
 			m.showLogs = false
@@ -500,8 +504,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, keys.Download):
-		cmd := m.downloadSelectedArtifact()
-		return m, cmd
+		if m.selectedBuild == nil || len(m.artifacts) == 0 {
+			m.searchMsg = "No artifacts available"
+			return m, nil
+		}
+		m.showArtifactPicker = true
+		m.artifactCursor = 0
+		return m, nil
 
 	case key.Matches(msg, keys.Agents):
 		return m.toggleAgentView()
@@ -739,6 +748,42 @@ func (m Model) handleStatsOverlayKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		return m, nil
+	}
+	return m, nil
+}
+
+func (m Model) handleArtifactPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	n := len(m.artifacts)
+	switch {
+	case msg.String() == "esc", key.Matches(msg, keys.Download):
+		m.showArtifactPicker = false
+		return m, nil
+	case key.Matches(msg, keys.Quit):
+		return m, tea.Quit
+	case key.Matches(msg, keys.Up):
+		if m.artifactCursor > 0 {
+			m.artifactCursor--
+		}
+		return m, nil
+	case key.Matches(msg, keys.Down):
+		if m.artifactCursor < n-1 {
+			m.artifactCursor++
+		}
+		return m, nil
+	case key.Matches(msg, keys.Top):
+		m.artifactCursor = 0
+		return m, nil
+	case key.Matches(msg, keys.Bottom):
+		m.artifactCursor = n - 1
+		return m, nil
+	case msg.String() == "a":
+		m.showArtifactPicker = false
+		cmd := m.downloadAllArtifacts()
+		return m, cmd
+	case msg.String() == "enter":
+		m.showArtifactPicker = false
+		cmd := m.downloadArtifactAtIndex(m.artifactCursor)
+		return m, cmd
 	}
 	return m, nil
 }
@@ -1254,13 +1299,12 @@ func (m *Model) openCommitInBrowser() {
 	m.searchMsg = "Opened commit in browser"
 }
 
-func (m *Model) downloadSelectedArtifact() tea.Cmd {
+func (m *Model) downloadArtifactAtIndex(idx int) tea.Cmd {
 	if m.actionInFlight {
 		m.searchMsg = "Action already in flight"
 		return nil
 	}
-	if m.selectedBuild == nil || len(m.artifacts) == 0 {
-		m.searchMsg = "No artifacts available"
+	if idx < 0 || idx >= len(m.artifacts) {
 		return nil
 	}
 
@@ -1271,8 +1315,7 @@ func (m *Model) downloadSelectedArtifact() tea.Cmd {
 		return nil
 	}
 
-	// Pick first artifact (or could enhance with artifact selection)
-	art := m.artifacts[0]
+	art := m.artifacts[idx]
 	downloadDir := "."
 	if m.config != nil && m.config.DownloadDir != "" {
 		downloadDir = m.config.DownloadDir
@@ -1281,6 +1324,38 @@ func (m *Model) downloadSelectedArtifact() tea.Cmd {
 	m.actionInFlight = true
 	m.searchMsg = fmt.Sprintf("Downloading %s...", art.Filename)
 	return downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, art.Filename, downloadDir)
+}
+
+func (m *Model) downloadAllArtifacts() tea.Cmd {
+	if m.actionInFlight {
+		m.searchMsg = "Action already in flight"
+		return nil
+	}
+	if len(m.artifacts) == 0 {
+		return nil
+	}
+
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	if org == nil || pipe == nil {
+		m.searchMsg = "No pipeline selected"
+		return nil
+	}
+
+	downloadDir := "."
+	if m.config != nil && m.config.DownloadDir != "" {
+		downloadDir = m.config.DownloadDir
+	}
+
+	m.actionInFlight = true
+	m.searchMsg = fmt.Sprintf("Downloading %d artifacts...", len(m.artifacts))
+
+	cmds := make([]tea.Cmd, 0, len(m.artifacts))
+	for i := range m.artifacts {
+		art := m.artifacts[i]
+		cmds = append(cmds, downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, art.Filename, downloadDir))
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m Model) toggleAgentView() (tea.Model, tea.Cmd) {
