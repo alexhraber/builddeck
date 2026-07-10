@@ -6,32 +6,37 @@
 
 set -euo pipefail
 
-# Get the latest tag (or v0.0.0 if none)
-LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "v0.0.0")
+# Get the latest tag (or empty if none)
+LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "")
 
-if [[ "$LATEST" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-  MAJOR="${BASH_REMATCH[1]}"
-  MINOR="${BASH_REMATCH[2]}"
-  PATCH="${BASH_REMATCH[3]}"
-else
+if [[ -z "$LATEST" ]]; then
+  # No tags exist - start from v0.1.0
   MAJOR=0; MINOR=1; PATCH=0
+  COMMITS=$(git log --pretty=format:"%s" 2>/dev/null || echo "")
+else
+  if [[ "$LATEST" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    MAJOR="${BASH_REMATCH[1]}"
+    MINOR="${BASH_REMATCH[2]}"
+    PATCH="${BASH_REMATCH[3]}"
+  else
+    MAJOR=0; MINOR=1; PATCH=0
+  fi
+  # Get commits since last tag
+  COMMITS=$(git log "${LATEST}..HEAD" --pretty=format:"%s" 2>/dev/null || echo "")
 fi
 
-# Get commits since last tag
-COMMITS=$(git log "${LATEST}..HEAD" --pretty=format:"%s" 2>/dev/null || echo "")
-
 # Check if any conventional commits exist
-if ! echo "$COMMITS" | grep -qE '^(feat|fix)(\!|\(|:)'; then
+if ! echo "$COMMITS" | grep -qE '^(feat|fix)(!|\()'; then
   # No conventional commits since last tag — no release needed
   exit 0
 fi
 
 # Determine bump type from conventional commits
 BUMP="patch"
-if echo "$COMMITS" | grep -qE '^feat(\!|\(|:)'; then
+if echo "$COMMITS" | grep -qE '^feat(!|\()'; then
   BUMP="minor"
 fi
-if echo "$COMMITS" | grep -qE '^BREAKING CHANGE:|^feat\!\:'; then
+if echo "$COMMITS" | grep -qE '^feat!:'; then
   BUMP="major"
 fi
 
