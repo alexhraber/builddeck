@@ -421,8 +421,8 @@ func (m Model) rightPaneView(w, h int) string {
 					_, end := gr.Positions()
 					cw := lipgloss.Width(cluster)
 					name := strings.TrimLeft(label[end:], " ")
-					if len([]rune(name)) > 10 {
-						name = string([]rune(name)[:10]) + "..."
+					if len([]rune(name)) > 17 {
+						name = string([]rune(name)[:17]) + "..."
 					}
 					pad := ""
 					if cw < 2 {
