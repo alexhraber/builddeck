@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -598,18 +596,36 @@ func (m Model) renderArtifacts(w int) string {
 		b.WriteString(dimStyle.Render("No artifacts"))
 		b.WriteString("\n")
 	} else {
+		maxNameW := 0
+		for _, art := range m.artifacts {
+			w := lipgloss.Width(art.Filename)
+			if w > maxNameW {
+				maxNameW = w
+			}
+		}
+		availNameW := w - 15
+		if maxNameW > availNameW {
+			maxNameW = availNameW
+		}
+		if maxNameW < 10 {
+			maxNameW = 10
+		}
+		namePad := lipgloss.NewStyle().Width(maxNameW)
+
 		for _, art := range m.artifacts {
 			filename := art.Filename
-			if len(filename) > w-15 {
-				filename = filename[:w-15] + "…"
+			if lipgloss.Width(filename) > maxNameW {
+				runes := []rune(filename)
+				filename = string(runes[:maxNameW-1]) + "…"
 			}
+			filename = namePad.Render(filename)
 			size := formatFileSize(art.FileSize)
-			h := sha256.Sum256([]byte(art.DownloadURL))
-			digest := hex.EncodeToString(h[:])
-			short := digest[:3] + "..." + digest[len(digest)-3:]
 			b.WriteString(fmt.Sprintf(" %s %s", dimStyle.Render("•"), filename))
-			b.WriteString(dimStyle.Render(fmt.Sprintf(" (%s)", size)))
-			b.WriteString(dimStyle.Render(fmt.Sprintf(" sha256:%s", short)))
+			b.WriteString(dimStyle.Render(fmt.Sprintf(" %6s", size)))
+			if art.Checksum != "" {
+				short := art.Checksum[:3] + "..." + art.Checksum[len(art.Checksum)-3:]
+				b.WriteString(dimStyle.Render(fmt.Sprintf(" sha256:%s", short)))
+			}
 			b.WriteString("\n")
 		}
 	}
@@ -957,10 +973,11 @@ func (m Model) artifactPickerOverlay(base string) string {
 			filename = filename[:32] + "..."
 		}
 		size := formatFileSize(art.FileSize)
-		h := sha256.Sum256([]byte(art.DownloadURL))
-		digest := hex.EncodeToString(h[:])
-		short := digest[:3] + "..." + digest[len(digest)-3:]
-		line := fmt.Sprintf("%s %s (%s) sha256:%s", cursor, filename, size, short)
+		line := fmt.Sprintf("%s %s (%s)", cursor, filename, size)
+		if art.Checksum != "" {
+			short := art.Checksum[:3] + "..." + art.Checksum[len(art.Checksum)-3:]
+			line += fmt.Sprintf(" sha256:%s", short)
+		}
 		if i == m.artifactCursor {
 			b.WriteString(selectedItemStyle.Render(line) + "\n")
 		} else {

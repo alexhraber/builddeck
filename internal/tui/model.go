@@ -194,6 +194,12 @@ type artifactDownloadMsg struct {
 	err      error
 }
 
+type artifactChecksumMsg struct {
+	artifactID string
+	checksum   string
+	err        error
+}
+
 type buildSelectionDebounceMsg struct {
 	seq int
 }
