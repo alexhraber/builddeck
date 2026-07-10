@@ -1358,35 +1358,6 @@ func (m *Model) downloadAllArtifacts() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *Model) downloadSelectedArtifact() tea.Cmd {
-	if m.actionInFlight {
-		m.searchMsg = "Action already in flight"
-		return nil
-	}
-	if m.selectedBuild == nil || len(m.artifacts) == 0 {
-		m.searchMsg = "No artifacts available"
-		return nil
-	}
-
-	org := m.selectedOrg()
-	pipe := m.selectedPipeline()
-	if org == nil || pipe == nil {
-		m.searchMsg = "No pipeline selected"
-		return nil
-	}
-
-	// Pick first artifact (or could enhance with artifact selection)
-	art := m.artifacts[0]
-	downloadDir := "."
-	if m.config != nil && m.config.DownloadDir != "" {
-		downloadDir = m.config.DownloadDir
-	}
-
-	m.actionInFlight = true
-	m.searchMsg = fmt.Sprintf("Downloading %s...", art.Filename)
-	return downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, art.Filename, downloadDir)
-}
-
 func (m Model) toggleAgentView() (tea.Model, tea.Cmd) {
 	if m.showAgents {
 		m.showAgents = false

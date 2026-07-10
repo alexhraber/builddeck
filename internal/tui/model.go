@@ -103,7 +103,7 @@ type Model struct {
 	showStatsOverlay string // "" = none, "agent" = agent stats, "build" = build stats
 
 	showArtifactPicker bool
-	artifactCursor    int
+	artifactCursor     int
 
 	// Cache maps to prevent duplicate, rate-limiting API requests
 	buildDetails      map[string]*buildkite.Build
