@@ -79,21 +79,8 @@ steps:
       echo "--- Checking all packages compile"
       .buildkite/setup-go.sh go build ./...
       echo "--- Building builddeck binary"
-      # Get version by querying GitHub for tag on this commit SHA
-      if [[ -n "${BUILDKITE_TAG}" ]]; then
-        VERSION="${BUILDKITE_TAG}"
-        echo "Using BUILDKITE_TAG: ${VERSION}"
-      else
-        # Query GitHub API for tags on this commit
-        VERSION=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
-          "https://api.github.com/repos/alexhraber/builddeck/git/refs/tags" | \
-          jq -r --arg sha "${BUILDKITE_COMMIT}" '.[] | select(.object.sha == $sha) | .ref' | \
-          sed 's|refs/tags/||' | head -1)
-        if [[ -z "${VERSION}" || "${VERSION}" == "null" ]]; then
-          VERSION="dev"
-        fi
-        echo "Found version from GitHub tags: ${VERSION}"
-      fi
+      # Get version from the tag that was just created
+      VERSION=$(.buildkite/version.sh)
       echo "Building version: ${VERSION}"
       .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
       ls -lh builddeck
