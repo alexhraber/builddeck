@@ -232,7 +232,7 @@ func (c *Client) GetTagArtifact(ctx context.Context, orgSlug, pipelineSlug strin
 	// Find tag.txt artifact
 	var tagArtifact *Artifact
 	for _, a := range artifacts {
-		if a.Filename == "tag.txt" {
+		if strings.HasSuffix(a.Filename, "tag.txt") {
 			tagArtifact = &a
 			break
 		}
