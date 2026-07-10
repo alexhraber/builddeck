@@ -250,13 +250,7 @@ func (c *Client) GetTagArtifact(ctx context.Context, orgSlug, pipelineSlug strin
 		return "", nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", fmt.Errorf("creating tag download request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.HTTPClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("downloading tag artifact: %w", err)
 	}
@@ -421,7 +415,7 @@ func (c *Client) DownloadArtifactURL(ctx context.Context, orgSlug, pipelineSlug 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusTemporaryRedirect {
+	if resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusTemporaryRedirect || resp.StatusCode == http.StatusSeeOther {
 		return resp.Header.Get("Location"), nil
 	}
 
