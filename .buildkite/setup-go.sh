@@ -12,7 +12,6 @@ if ! command -v go &>/dev/null && [[ ! -x "${INSTALL_DIR}/go/bin/go" ]]; then
 fi
 
 export PATH="${INSTALL_DIR}/go/bin:${PATH}"
-export PATH="$(go env GOPATH)/bin:${PATH}"
 echo "go $(go version)"
 echo "+++ $*"
 
