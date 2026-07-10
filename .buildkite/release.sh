@@ -12,11 +12,18 @@ fi
 
 echo "+++ Creating GitHub Release ${VERSION}"
 
+# Ensure we're in the repo root
+cd "$(dirname "$0")/.."
+
 # Download ALL artifacts from build and checksum steps
 echo "Downloading artifacts..."
 buildkite-agent artifact download "builddeck*" . --step build 2>/dev/null || true
 buildkite-agent artifact download "*.sha256" . --step checksum 2>/dev/null || true
 buildkite-agent artifact download "tag.txt" . --step tag 2>/dev/null || true
+
+# Debug: list what we have
+echo "=== Files in workspace ==="
+ls -la
 
 # Generate release notes from conventional commits since last tag
 LAST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -2 | tail -1)
@@ -28,8 +35,8 @@ echo "Generating release notes from ${LAST_TAG}..HEAD"
 RELEASE_NOTES=$(git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" --reverse 2>/dev/null || echo "Initial release")
 
 # Categorize commits
-FEATURES=$(echo "$RELEASE_NOTES" | grep -E '^feat' | sed 's/^feat[\(!]*: */  - /' | sed 's/^feat!:/  - **BREAKING**: /')
-FIXES=$(echo "$RELEASE_NOTES" | grep -E '^fix' | sed 's/^fix[\(!]*: */  - /')
+FEATURES=$(echo "$RELEASE_NOTES" | grep -E '^feat' | sed 's/^feat[(!]*: */  - /' | sed 's/^feat!:/  - **BREAKING**: /')
+FIXES=$(echo "$RELEASE_NOTES" | grep -E '^fix' | sed 's/^fix[(!]*: */  - /')
 CHANGES=$(echo "$RELEASE_NOTES" | grep -vE '^(feat|fix)' | sed 's/^/  - /')
 
 # Build release body
@@ -73,6 +80,8 @@ ASSETS=()
 for f in builddeck*; do
   [[ -f "$f" ]] && ASSETS+=("$f")
 done
+
+echo "=== Assets to upload: ${ASSETS[@]} ==="
 
 # Create or update release (linked to git tag automatically by gh)
 if gh release view "${VERSION}" &>/dev/null; then
