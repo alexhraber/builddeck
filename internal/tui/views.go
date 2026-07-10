@@ -414,6 +414,13 @@ func (m Model) rightPaneView(w, h int) string {
 					label = step.Command
 				}
 				label = renderEmoji(label)
+				if idx := strings.LastIndexByte(label, '\t'); idx >= 0 {
+					name := []rune(label[idx+1:])
+					if len(name) > 10 {
+						name = append(name[:10], []rune("...")...)
+						label = label[:idx+1] + string(name)
+					}
+				}
 				lw := lipgloss.Width(label)
 				if lw > maxLabelW {
 					maxLabelW = lw
