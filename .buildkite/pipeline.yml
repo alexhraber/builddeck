@@ -52,4 +52,10 @@ steps:
       ls -lh builddeck
       buildkite-agent artifact upload builddeck
 
+  - label: ":rocket: Release"
+    key: release
+    depends_on: build
+    command: .buildkite/release.sh
+    if: build.tag != null
+
 
