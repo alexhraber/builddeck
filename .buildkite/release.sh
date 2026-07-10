@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Creates a GitHub release with the builddeck binary attached.
 # Requires GITHUB_TOKEN env var with repo scope.
+# Usage: release.sh <version>
 set -euo pipefail
 
-VERSION="${BUILDKITE_TAG:-}"
-if [[ -z "$VERSION" ]]; then
-  VERSION="v$(date +%Y%m%d).${BUILDKITE_BUILD_NUMBER}"
+VERSION="${1:-${BUILDKITE_TAG}}"
+if [[ -z "${VERSION}" ]]; then
+  echo "Usage: $0 <version>"
+  exit 1
 fi
 
 echo "+++ Creating GitHub release ${VERSION}"

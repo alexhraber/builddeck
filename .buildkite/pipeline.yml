@@ -53,8 +53,8 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":golang: Build and Release"
-    key: build
+  - label: ":tag: Tag Version"
+    key: tag
     depends_on:
       - test
       - vet
@@ -63,14 +63,33 @@ steps:
       - vulncheck
       - tidy
     command: |
+      echo "--- Determining version"
+      # Date-based version: vYYYYMMDD.buildNumber
+      VERSION="v$(date +%Y%m%d).${BUILDKITE_BUILD_NUMBER}"
+      echo "Version: ${VERSION}"
+      echo "${VERSION}" > version.txt
+      buildkite-agent artifact upload version.txt
+      # Create and push tag (requires GITHUB_TOKEN with repo scope)
+      git config user.email "builddeck@buildkite.com"
+      git config user.name "builddeck-bot"
+      git tag "${VERSION}"
+      git push origin "${VERSION}"
+
+  - label: ":golang: Build and Release"
+    key: build
+    depends_on: tag
+    command: |
       echo "--- Checking all packages compile"
       .buildkite/setup-go.sh go build ./...
       echo "--- Building builddeck binary"
-      .buildkite/setup-go.sh go build -ldflags="-s -w" -o builddeck ./cmd/builddeck
+      VERSION=$(buildkite-agent artifact download version.txt . --step tag && cat version.txt)
+      echo "Building version: ${VERSION}"
+      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
       ls -lh builddeck
       buildkite-agent artifact upload builddeck
-      if [[ -n "$BUILDKITE_TAG" ]]; then
-        .buildkite/release.sh
+      # Create GitHub release with this version
+      if [[ -n "${VERSION}" ]]; then
+        .buildkite/release.sh "${VERSION}"
       fi
 
   - label: ":lock: Checksum"
