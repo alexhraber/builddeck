@@ -160,6 +160,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 │                 │                          │                      │
 │                 │                          │  Artifacts           │
 │                 │                          │   • log.txt (1.2KB)  │
+│                 │                          │     sha256:abc...321 │
 ├─────────────────┴──────────────────────────┴──────────────────────┤
 │ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit R:refresh ...    │
 └───────────────────────────────────────────────────────────────────┘
