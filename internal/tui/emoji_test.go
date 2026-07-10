@@ -1,19 +1,32 @@
 package tui
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/alexhraber/builddeck/internal/buildkite"
 )
 
-func TestInitEmojiBank(t *testing.T) {
+func TestInitEmojiBankGo(t *testing.T) {
 	emojiMu.RLock()
 	entry, ok := emojiBank[":go:"]
 	emojiMu.RUnlock()
 	if !ok {
 		t.Fatal("expected :go: to be in emojiBank after init")
 	}
-	if entry.assetGlyph == "" {
-		t.Fatal("expected :go: to have assetGlyph from golang alias")
+	if entry.glyph == "" {
+		t.Fatal("expected :go: to have a glyph")
+	}
+}
+
+func TestInitEmojiBankGolang(t *testing.T) {
+	emojiMu.RLock()
+	entry, ok := emojiBank[":golang:"]
+	emojiMu.RUnlock()
+	if !ok {
+		t.Fatal("expected :golang: to be in emojiBank after init")
+	}
+	if entry.glyph == "" {
+		t.Fatal("expected :golang: to have a glyph")
 	}
 }
 
@@ -24,17 +37,20 @@ func TestInitEmojiBankDocker(t *testing.T) {
 	if !ok {
 		t.Fatal("expected :docker: to be in emojiBank after init")
 	}
-	if entry.assetGlyph == "" {
-		t.Fatal("expected :docker: to have assetGlyph from docker.png")
+	if entry.glyph == "" {
+		t.Fatal("expected :docker: to have a glyph")
 	}
 }
 
 func TestInitEmojiBankBuildkite(t *testing.T) {
 	emojiMu.RLock()
-	_, ok := emojiBank[":buildkite:"]
+	entry, ok := emojiBank[":buildkite:"]
 	emojiMu.RUnlock()
 	if !ok {
 		t.Fatal("expected :buildkite: to be in emojiBank after init")
+	}
+	if entry.glyph == "" {
+		t.Fatal("expected :buildkite: to have a glyph")
 	}
 }
 
@@ -44,7 +60,17 @@ func TestRenderEmojiGo(t *testing.T) {
 		t.Fatal("renderEmoji(:go:) returned empty")
 	}
 	if result == "go" {
-		t.Fatal("renderEmoji(:go:) returned literal 'go', expected asset glyph")
+		t.Fatal("renderEmoji(:go:) returned literal 'go', expected glyph")
+	}
+}
+
+func TestRenderEmojiGolang(t *testing.T) {
+	result := renderEmoji(":golang:")
+	if result == "" {
+		t.Fatal("renderEmoji(:golang:) returned empty")
+	}
+	if result == "golang" {
+		t.Fatal("renderEmoji(:golang:) returned literal 'golang', expected glyph")
 	}
 }
 
@@ -71,12 +97,12 @@ func TestRenderEmojiNoShortcodes(t *testing.T) {
 }
 
 func TestRenderEmojiInContext(t *testing.T) {
-	result := renderEmoji(":go: Tidy")
+	result := renderEmoji(":docker: Build")
 	if result == "" {
-		t.Fatal("renderEmoji(\":go: Tidy\") returned empty")
+		t.Fatal("renderEmoji(\":docker: Build\") returned empty")
 	}
-	if result == "go Tidy" {
-		t.Fatal("renderEmoji(\":go: Tidy\") returned literal, expected asset glyph")
+	if result == "docker Build" {
+		t.Fatal("renderEmoji(\":docker: Build\") returned literal, expected glyph")
 	}
 }
 
@@ -86,7 +112,7 @@ func TestRenderEmojiMultiple(t *testing.T) {
 		t.Fatal("renderEmoji(\":docker: Build :go:\") returned empty")
 	}
 	if result == "docker Build go" {
-		t.Fatal("renderEmoji(\":docker: Build :go:\") returned literal, expected asset glyphs")
+		t.Fatal("renderEmoji(\":docker: Build :go:\") returned literal, expected glyphs")
 	}
 }
 
@@ -96,7 +122,7 @@ func TestRenderEmojiPartialColon(t *testing.T) {
 		t.Fatal("renderEmoji(\":go:without closing\") returned empty")
 	}
 	if result == "gowithout closing" {
-		t.Fatal("renderEmoji(\":go:without closing\") returned literal, expected asset glyph")
+		t.Fatal("renderEmoji(\":go:without closing\") returned literal, expected glyph")
 	}
 }
 
@@ -144,85 +170,20 @@ func TestRenderEmojiTestTube(t *testing.T) {
 	}
 }
 
-func TestPipelineEmojiBank(t *testing.T) {
+func TestInitEmojiMap(t *testing.T) {
+	origLen := len(emojiBank)
+	emojis := []buildkite.EmojiEntry{{Name: "custom_test_emoji_xyz"}}
+	initEmojiMap(emojis)
 	emojiMu.RLock()
-	entry, ok := emojiBank[":buildkite:"]
+	_, ok := emojiBank[":custom_test_emoji_xyz:"]
 	emojiMu.RUnlock()
 	if !ok {
-		t.Fatal("expected :buildkite: to be in emojiBank")
+		t.Fatal("expected :custom_test_emoji_xyz: to be in emojiBank after initEmojiMap")
 	}
-	if entry.glyph == "" && entry.assetGlyph == "" {
-		t.Fatal("expected :buildkite: to have a glyph or assetGlyph")
-	}
-}
-
-func TestLoadPipelineEmoji(t *testing.T) {
-	result := loadPipelineEmoji("buildkite")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji(\"buildkite\") returned empty")
-	}
-	if result == ":buildkite:" {
-		t.Fatal("loadPipelineEmoji returned raw fallback, expected rendered glyph")
-	}
-}
-
-func TestLoadPipelineEmojiMissing(t *testing.T) {
-	result := loadPipelineEmoji("clearly-nonexistent-emoji-name")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji missing should fall back, not be empty")
-	}
-}
-
-func TestLoadPipelineEmojiGolang(t *testing.T) {
-	result := loadPipelineEmoji("golang")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji(\"golang\") returned empty")
-	}
-	if strings.HasPrefix(result, ":") {
-		t.Fatalf("loadPipelineEmoji(\"golang\") got raw shortcode %q", result)
-	}
-}
-
-func TestLoadPipelineEmojiPipeline(t *testing.T) {
-	result := loadPipelineEmoji("pipeline")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji(\"pipeline\") returned empty")
-	}
-	if strings.HasPrefix(result, ":") {
-		t.Fatalf("loadPipelineEmoji(\"pipeline\") got raw shortcode %q", result)
-	}
-}
-
-func TestLoadPipelineEmojiGo(t *testing.T) {
-	result := loadPipelineEmoji("go")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji(\"go\") returned empty")
-	}
-	if strings.HasPrefix(result, ":") {
-		t.Fatalf("loadPipelineEmoji(\"go\") got raw shortcode %q", result)
-	}
-	// go should use golang.png as alias
-	if result == "go" {
-		t.Fatal("loadPipelineEmoji(\"go\") returned literal 'go', expected golang asset glyph")
-	}
-}
-
-func TestLoadPipelineEmojiBuildkiteParty(t *testing.T) {
-	result := loadPipelineEmoji("buildkite-party")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji(\"buildkite-party\") returned empty")
-	}
-	if strings.HasPrefix(result, ":") {
-		t.Fatalf("loadPipelineEmoji(\"buildkite-party\") got raw shortcode %q", result)
-	}
-}
-
-func TestLoadPipelineEmojiGithub(t *testing.T) {
-	result := loadPipelineEmoji("github")
-	if result == "" {
-		t.Fatal("loadPipelineEmoji(\"github\") returned empty")
-	}
-	if strings.HasPrefix(result, ":") {
-		t.Fatalf("loadPipelineEmoji(\"github\") got raw shortcode %q", result)
+	emojiMu.RLock()
+	newLen := len(emojiBank)
+	emojiMu.RUnlock()
+	if newLen != origLen+1 {
+		t.Fatalf("emojiBank grew by %d (expected 1)", newLen-origLen)
 	}
 }
