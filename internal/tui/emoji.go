@@ -1,22 +1,26 @@
 package tui
 
 import (
+	"embed"
 	"encoding/json"
 	"image"
 	_ "image/gif"
 	_ "image/png"
 	"io"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/alexhraber/builddeck/internal/buildkite"
 	"github.com/charmbracelet/lipgloss"
 )
+
+//go:embed emoji_assets
+var emojiAssets embed.FS
+
+const emojiAssetsPrefix = "emoji_assets"
 
 type emojiEntry struct {
 	glyph      string // Nerd Font / Unicode for inline use
@@ -234,20 +238,14 @@ var nerdFontIcons = map[string]string{
 func init() {
 	emojiBank = make(map[string]emojiEntry, len(nerdFontIcons)+200)
 	for name, glyph := range nerdFontIcons {
-		if r, _ := utf8.DecodeRuneInString(glyph); r >= 0xE000 && r <= 0xF8FF {
-			glyph += " "
-		}
 		emojiBank[":"+name+":"] = emojiEntry{glyph: glyph}
 	}
 	loadUnicodeEmojiMap()
 	loadAssetEmoji()
 }
 
-// loadUnicodeEmojiMap seeds glyph from the Buildkite emoji-unicode.json bundle.
-// Only entries not already in the bank (from nerdFontIcons) are added.
 func loadUnicodeEmojiMap() {
-	path := filepath.Join(emojiAssetsDir, "emoji-unicode.json")
-	f, err := os.Open(path)
+	f, err := emojiAssets.Open(emojiAssetsPrefix + "/emoji-unicode.json")
 	if err != nil {
 		return
 	}
@@ -307,10 +305,8 @@ func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 	wg.Wait()
 }
 
-var emojiAssetsDir = "assets/pipeline-emojis"
-
 func loadAssetEmoji() {
-	entries, err := os.ReadDir(emojiAssetsDir)
+	entries, err := fs.ReadDir(emojiAssets, emojiAssetsPrefix)
 	if err != nil {
 		return
 	}
@@ -329,8 +325,7 @@ func loadAssetEmoji() {
 			continue
 		}
 
-		path := filepath.Join(emojiAssetsDir, name)
-		f, err := os.Open(path)
+		f, err := emojiAssets.Open(emojiAssetsPrefix + "/" + name)
 		if err != nil {
 			continue
 		}
@@ -479,9 +474,8 @@ func renderEmoji(s string) string {
 		if ok {
 			if entry.glyph != "" {
 				buf.WriteString(entry.glyph)
-				if entry.glyph[len(entry.glyph)-1] == ' ' && pos+end+2 < len(s) && s[pos+end+2] == ' ' {
-					i = pos + end + 3
-					continue
+				if lipgloss.Width(entry.glyph) == 1 {
+					buf.WriteString(" ")
 				}
 			} else {
 				buf.WriteString(shortcode[1 : len(shortcode)-1])

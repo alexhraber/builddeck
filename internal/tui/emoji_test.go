@@ -11,8 +11,8 @@ func TestInitEmojiBank(t *testing.T) {
 	if !ok {
 		t.Fatal("expected :go: to be in emojiBank after init")
 	}
-	if entry.glyph != "\ue627 " {
-		t.Fatalf("expected :go: glyph to be \\ue627 (space), got %q", entry.glyph)
+	if entry.glyph != "\ue627" {
+		t.Fatalf("expected :go: glyph to be \\ue627, got %q", entry.glyph)
 	}
 }
 
@@ -23,8 +23,8 @@ func TestInitEmojiBankDocker(t *testing.T) {
 	if !ok {
 		t.Fatal("expected :docker: to be in emojiBank after init")
 	}
-	if entry.glyph != "\uf21b " {
-		t.Fatalf("expected :docker: glyph to be \\uf21b (space), got %q", entry.glyph)
+	if entry.glyph != "\uf21b" {
+		t.Fatalf("expected :docker: glyph to be \\uf21b, got %q", entry.glyph)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestRenderEmojiNoShortcodes(t *testing.T) {
 
 func TestRenderEmojiInContext(t *testing.T) {
 	result := renderEmoji(":go: Tidy")
-	expected := "\ue627 Tidy"
+	expected := "\ue627  Tidy"
 	if result != expected {
 		t.Fatalf("renderEmoji(\":go: Tidy\") = %q, want %q", result, expected)
 	}
@@ -76,7 +76,7 @@ func TestRenderEmojiInContext(t *testing.T) {
 
 func TestRenderEmojiMultiple(t *testing.T) {
 	result := renderEmoji(":docker: Build :go:")
-	expected := "\uf21b Build \ue627 "
+	expected := "\uf21b  Build \ue627 "
 	if result != expected {
 		t.Fatalf("renderEmoji(\":docker: Build :go:\") = %q, want %q", result, expected)
 	}

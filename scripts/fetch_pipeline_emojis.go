@@ -22,7 +22,7 @@ func main() {
 		os.Exit(1)
 	}
 	cookie := os.Args[1]
-	dest := filepath.Join("assets", "pipeline-emojis")
+	dest := filepath.Join("internal", "tui", "emoji_assets")
 	os.MkdirAll(dest, 0755)
 
 	// Fetch the emoji JS bundle from the webapp
