@@ -205,28 +205,28 @@ Themes are full Lip Gloss color palettes — borders, titles, selection highligh
 ## Layout
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│ builddeck  my-org / my-pipeline #42  ⟳ loading  14:32:01          │
-├─────────────────┬──────────────────────────┬──────────────────────┤
-│ Organizations   │ Builds                   │ Build Detail         │
-│  ▸ MyOrg        │ [5 │ 1 running │ 3 ...]  │  Number:  #42        │
-│                 │                          │  State:   PASS       │
-│ Pipelines       │ BUILD BRANCH COMMIT ...  │  Branch:  main       │
-│  ▸ my-pipeline  │  ▸ #42 main  abc1234 ..  │  Commit:  abc1234    │
-│    other-pipe   │    #41 main  def5678 ..  │                      │
-│                 │    #40 release 901abcd . │ Jobs                 │
-│                 │                          │   PASS Build [ag-1]  │
-│                 │                          │   RUN  Test  [ag-2]  │
-│                 │                          │                      │
-│                 │                          │  Annotations         │
-│                 │                          │   [ctx] Deploy done  │
-│                 │                          │                      │
+┌─────────────────────────────────────────────────────────────────────┐
+│ builddeck  my-org / my-pipeline #42  ⟳ loading  14:32:01            │
+├─────────────────┬──────────────────────────┬────────────────────────┤
+│ Organizations   │ Builds                   │ Build Detail           │
+│  ▸ MyOrg        │ [5 │ 1 running │ 3 ...]  │  Number:  #42          │
+│                 │                          │  State:   PASS         │
+│ Pipelines       │ BUILD BRANCH COMMIT ...  │  Branch:  main         │
+│  ▸ my-pipeline  │  ▸ #42 main  abc1234 ..  │  Commit:  abc1234      │
+│    other-pipe   │    #41 main  def5678 ..  │                        │
+│                 │    #40 release 901abcd . │ Jobs                   │
+│                 │                          │   PASS Build [ag-1]    │
+│                 │                          │   RUN  Test  [ag-2]    │
+│                 │                          │                        │
+│                 │                          │  Annotations           │
+│                 │                          │   [ctx] Deploy done    │
+│                 │                          │                        │
 │                 │                          │  Artifacts   d:download│
-│                 │                          │   • builddeck  1.2KB │
-│                 │                          │     sha256:abc...321  │
-├─────────────────┴──────────────────────────┴──────────────────────┤
-│ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit R:refresh ...    │
-└───────────────────────────────────────────────────────────────────┘
+│                 │                          │   • builddeck  1.2KB   │
+│                 │                          │     sha256:abc...321   │
+├─────────────────┴──────────────────────────┴────────────────────────┤
+│ Pane: Builds │ Updated: 14:32:01 │ ?:help q:quit R:refresh ...      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Known Limitations
