@@ -40,7 +40,6 @@ type emojiEntry struct {
 	httpClient         = &http.Client{Timeout: 10 * time.Second}
 	assetAliases       = map[string]string{"go": "golang"}
 	supportsInlineImg  bool
-	inlineImagesLoaded bool
 )
 
 // nerdFontIcons maps Buildkite emoji names to Nerd Font codepoints.
@@ -203,8 +202,7 @@ var nerdFontIcons = map[string]string{
 }
 
 func init() {
-	prog := os.Getenv("TERM_PROGRAM")
-	supportsInlineImg = prog == "ghostty" || prog == "iTerm.app" || prog == "WezTerm" || prog == "kitty"
+	supportsInlineImg = inlineImageSupported()
 
 	assets := loadAssetNames()
 	emojiBank = make(map[string]emojiEntry, len(nerdFontIcons)+200)
@@ -216,6 +214,20 @@ func init() {
 	}
 	loadUnicodeEmojiMap()
 	loadAssetEmoji()
+}
+
+func inlineImageSupported() bool {
+	if os.Getenv("GHOSTTY_RESOURCES_DIR") != "" {
+		return true
+	}
+	if os.Getenv("KITTY_WINDOW_ID") != "" {
+		return true
+	}
+	if os.Getenv("WEZTERM_PANE") != "" {
+		return true
+	}
+	prog := os.Getenv("TERM_PROGRAM")
+	return prog == "ghostty" || prog == "iTerm.app" || prog == "WezTerm" || prog == "kitty"
 }
 
 func loadAssetNames() map[string]bool {
@@ -298,7 +310,15 @@ func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 
 func buildInlineImage(data []byte, width int) string {
 	b64 := base64.StdEncoding.EncodeToString(data)
-	return fmt.Sprint("\x1b]1337;File=inline=1;width=", width, ";preserveAspectRatio=1:", b64, "\a")
+	seq := fmt.Sprint("\x1b]1337;File=inline=1;width=", width, ";preserveAspectRatio=1:", b64, "\a")
+	return wrapForTmux(seq)
+}
+
+func wrapForTmux(seq string) string {
+	if os.Getenv("TMUX") == "" {
+		return seq
+	}
+	return "\x1bPtmux;\x1b" + seq + "\x1b\\"
 }
 
 func loadAssetEmoji() {
