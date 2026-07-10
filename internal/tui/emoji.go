@@ -236,12 +236,33 @@ var nerdFontIcons = map[string]string{
 }
 
 func init() {
+	assets := loadAssetNames()
 	emojiBank = make(map[string]emojiEntry, len(nerdFontIcons)+200)
 	for name, glyph := range nerdFontIcons {
+		if assets[name] {
+			continue
+		}
 		emojiBank[":"+name+":"] = emojiEntry{glyph: glyph}
 	}
 	loadUnicodeEmojiMap()
 	loadAssetEmoji()
+}
+
+func loadAssetNames() map[string]bool {
+	entries, err := fs.ReadDir(emojiAssets, emojiAssetsPrefix)
+	if err != nil {
+		return nil
+	}
+	names := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		name := e.Name()
+		if strings.HasSuffix(name, ".png") {
+			names[name[:len(name)-4]] = true
+		} else if strings.HasSuffix(name, ".gif") {
+			names[name[:len(name)-4]] = true
+		}
+	}
+	return names
 }
 
 func loadUnicodeEmojiMap() {
