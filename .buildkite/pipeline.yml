@@ -72,12 +72,24 @@ steps:
       echo "--- Checking all packages compile"
       .buildkite/setup-go.sh go build ./...
       echo "--- Building builddeck binary"
-      VERSION=$(buildkite-agent artifact download version.txt . --step tag && cat version.txt)
+      # Get version: from tag step artifact (main branch) or BUILDKITE_TAG (tag build)
+      if buildkite-agent artifact download version.txt . --step tag 2>/dev/null; then
+        VERSION=$(cat version.txt)
+        echo "Using version from tag step: ${VERSION}"
+      elif [[ -n "${BUILDKITE_TAG}" ]]; then
+        VERSION="${BUILDKITE_TAG}"
+        echo "Using BUILDKITE_TAG: ${VERSION}"
+      else
+        VERSION="dev"
+        echo "No version found, using: ${VERSION}"
+      fi
       echo "Building version: ${VERSION}"
       .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
       ls -lh builddeck
       buildkite-agent artifact upload builddeck
-      .buildkite/release.sh "${VERSION}"
+      if [[ -n "${VERSION}" && "${VERSION}" != "dev" ]]; then
+        .buildkite/release.sh "${VERSION}"
+      fi
 
   - label: ":lock: Checksum"
     key: checksum
