@@ -72,6 +72,8 @@ steps:
         echo "dev" > version.txt
         buildkite-agent artifact upload version.txt
       fi
+    env:
+      GITHUB_TOKEN: GITHUB_TOKEN
 
   - label: ":golang: Build and Release"
     key: build
@@ -98,6 +100,8 @@ steps:
       if [[ -n "${VERSION}" && "${VERSION}" != "dev" ]]; then
         .buildkite/release.sh "${VERSION}"
       fi
+    env:
+      GITHUB_TOKEN: GITHUB_TOKEN
 
   - label: ":lock: Checksum"
     key: checksum
