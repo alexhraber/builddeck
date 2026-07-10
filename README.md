@@ -199,10 +199,42 @@ The `.sha256` file should contain the hash followed by a space and filename (sta
 - **Annotations are HTML-stripped** — rich content is flattened to text
 - **Global search** — searches only currently-loaded data, not all pipelines across orgs
 
+## Architecture (for Contributors)
+
+`builddeck` is a single-binary Go CLI with a Bubble Tea TUI. No server, no database, no background processes.
+
+**Stack:**
+- **Go 1.26+** — standard library only for HTTP, JSON, filesystem
+- **Bubble Tea** — TUI framework (Elm-like Model/View/Update)
+- **Lip Gloss** — style/layout (replaced custom ANSI in v2)
+- **Bubbles** — reusable TUI components (keybindings, viewport)
+
+**Layout:**
+```
+internal/
+  buildkite/   # REST client + types (orgs, pipelines, builds, jobs, artifacts, annotations, agents)
+  config/      # TOML config (~/.config/builddeck/config.toml)
+  tui/         # Bubble Tea model/view/update + emoji rendering
+```
+
+**Key behaviors:**
+- **Adaptive polling**: 2s when any build is running, 10s when all terminal
+- **In-flight guards**: Prevents duplicate concurrent API calls for same scope
+- **Grapheme-cluster emoji**: Nerd Font PUA glyphs + Unicode fallback; ZWJ sequences preserved
+- **Artifact checksums**: Fetches `.sha256` companion artifacts, parses first field of `sha256sum` output
+- **Token handling**: Reads `BUILDKITE_API_TOKEN` from env only; never persisted to disk
+
 ## Planned Next Features
 
 - **GraphQL dashboard snapshots** — efficient nested queries for dashboard views
 - **Incident command mode** — focused view for diagnosing and resolving build failures
+
+## Security
+
+- **Read-only by default** — only `retry`/`rebuild`/`cancel`/`unblock` mutate state, each requires explicit keypress
+- **Token in env only** — `BUILDKITE_API_TOKEN` never written to disk, never logged
+- **HTTPS everywhere** — all API and artifact downloads over TLS
+- **No secrets in binaries** — supply chain scanned via `govulncheck` + `gosec` on every PR
 
 ## Development
 

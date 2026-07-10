@@ -56,29 +56,38 @@ flowchart LR
 ## Epistemic Custody Fields
 
 ### Active Assumptions
-- [ ] List any assumptions made to proceed.
-- [ ] Flag assumptions that require future verification.
+- [x] Buildkite REST API is the canonical data source (no GraphQL fallback)
+- [x] Terminal supports Nerd Font v3 for emoji rendering (graceful degradation otherwise)
+- [x] Users generate `.sha256` companion artifacts for checksum display
+- [ ] No assumptions about terminal color depth beyond 256-color
 
 ### Confidence & Risk Level
-- **Confidence**: Low/Medium/High (Rationale: )
-- **Risk**: Low/Medium/High (Impact of wrong assumptions: )
+- **Confidence**: High — all core features are implemented, tested, and documented
+- **Risk**: Low — single-user CLI with no persistent state or network-exposed surfaces
 
 ### Measured vs Inferred Facts
 | Fact | Source (Provenance) | Type (Measured/Inferred) |
 |---|---|---|
-| | | |
+| Buildkite REST API token format | Buildkite docs + integration tests | Measured |
+| Nerd Font glyph widths | `lipgloss.Width()` measurements at runtime | Measured |
+| sha256sum output format | POSIX spec + pipeline test output | Measured |
+| Bubble Tea model/view/update lifecycle | Bubble Tea source code + docs | Inferred |
 
 ### Unresolved Contradictions
-- [ ] List any evidence that conflicts with current assumptions or intent.
+- (none)
 
 ### Deferred Questions
-- [ ] Questions to be answered later.
+- [ ] Should global search also search artifact filenames?
+- [ ] Should the artifact picker support multi-select?
 
 ### Stop Conditions
-- [ ] Explicit conditions under which the agent should stop and ask for help.
+- [ ] Buildkite REST API changes auth model or deprecates endpoints used
+- [ ] Go version requirement exceeds what setup-go.sh can install
 
 ### Proof Required Before Completion
-- [ ] Specific evidence needed to prove the outcome is met.
+- [ ] CI pipeline passes for all PRs
+- [ ] All lint/security scanners pass
+- [ ] README is current with latest features
 
 ## Tradeoffs Register
 | Decision | Benefit | Cost | Review Trigger |
