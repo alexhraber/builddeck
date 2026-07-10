@@ -71,7 +71,7 @@ If the token is missing, `builddeck` will exit immediately with a clear error me
 - **Saved filter presets** — `S` saves current filter, `P` loads a saved preset
 
 ### TUI
-- **Three-pane layout** — orgs/pipelines | builds | detail+jobs+annotations+artifacts
+- **Three-pane layout** — orgs/pipelines | builds | detail+steps+annotations+artifacts
 - **Header bar** — product name, breadcrumb (org/pipeline/build), refresh status
 - **Build health summary** — count of running/failed/passed/blocked builds with failure rate
 - **State badges** — compact, color-coded state labels (PASS/FAIL/RUN/BLCK/etc.)

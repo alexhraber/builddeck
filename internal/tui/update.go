@@ -199,6 +199,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.buildArtifacts[msg.buildID] = msg.artifacts
 			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
 				m.artifacts = msg.artifacts
+				cmd := m.loadArtifactChecksums()
+				return m, cmd
 			}
 		}
 		return m, nil
@@ -270,6 +272,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.searchMsg = fmt.Sprintf("Downloaded: %s", msg.filename)
+		return m, nil
+
+	case artifactChecksumMsg:
+		if msg.err == nil && msg.checksum != "" {
+			for i := range m.artifacts {
+				if m.artifacts[i].ID == msg.artifactID {
+					m.artifacts[i].Checksum = msg.checksum
+					break
+				}
+			}
+			for _, arts := range m.buildArtifacts {
+				for i := range arts {
+					if arts[i].ID == msg.artifactID {
+						arts[i].Checksum = msg.checksum
+						break
+					}
+				}
+			}
+		}
 		return m, nil
 
 	case tickMsg:
@@ -1356,6 +1377,59 @@ func (m *Model) downloadAllArtifacts() tea.Cmd {
 		cmds = append(cmds, downloadArtifactCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, art.Filename, downloadDir))
 	}
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) loadArtifactChecksums() tea.Cmd {
+	org := m.selectedOrg()
+	pipe := m.selectedPipeline()
+	if org == nil || pipe == nil {
+		return nil
+	}
+
+	var cmds []tea.Cmd
+	for _, art := range m.artifacts {
+		if !strings.HasSuffix(art.Filename, ".sha256") {
+			continue
+		}
+		targetName := strings.TrimSuffix(art.Filename, ".sha256")
+		for i := range m.artifacts {
+			if m.artifacts[i].Filename == targetName {
+				cmds = append(cmds,
+					loadChecksumCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, m.artifacts[i].ID))
+				break
+			}
+		}
+	}
+	return tea.Batch(cmds...)
+}
+
+func loadChecksumCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID, shaArtifactID, targetArtifactID string) tea.Cmd {
+	return func() tea.Msg {
+		url, err := client.DownloadArtifactURL(context.Background(), orgSlug, pipelineSlug, buildNumber, stepID, shaArtifactID)
+		if err != nil {
+			return artifactChecksumMsg{artifactID: targetArtifactID, err: err}
+		}
+		if url == "" {
+			return artifactChecksumMsg{artifactID: targetArtifactID, err: fmt.Errorf("empty download URL")}
+		}
+
+		resp, err := http.Get(url) //#nosec G107
+		if err != nil {
+			return artifactChecksumMsg{artifactID: targetArtifactID, err: err}
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return artifactChecksumMsg{artifactID: targetArtifactID, err: err}
+		}
+
+		parts := strings.Fields(string(body))
+		if len(parts) > 0 {
+			return artifactChecksumMsg{artifactID: targetArtifactID, checksum: parts[0]}
+		}
+		return artifactChecksumMsg{artifactID: targetArtifactID, err: fmt.Errorf("unable to parse checksum")}
+	}
 }
 
 func (m Model) toggleAgentView() (tea.Model, tea.Cmd) {

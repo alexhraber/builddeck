@@ -89,6 +89,7 @@ type Artifact struct {
 	State       string `json:"state"`
 	CreatedAt   string `json:"created_at"`
 	WebURL      string `json:"web_url"`
+	Checksum    string `json:"-"` // populated from companion .sha256 artifact
 }
 
 type ErrorResponse struct {
