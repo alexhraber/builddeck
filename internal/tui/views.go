@@ -161,10 +161,11 @@ func (m Model) leftPaneView(w, h int) string {
 			if i == m.orgIndex {
 				cursor = "▶ "
 			}
-			orgName := renderEmoji(org.Name)
+			orgName := org.Name
 			if len(orgName) > w-10 {
 				orgName = orgName[:w-10]
 			}
+			orgName = renderEmoji(orgName)
 			if w := lipgloss.Width(orgIcon); w < 4 {
 				orgIcon += strings.Repeat(" ", 4-w)
 			}
@@ -207,10 +208,11 @@ func (m Model) leftPaneView(w, h int) string {
 			if i == m.pipeIndex {
 				cursor = "▶ "
 			}
-			pipeName := renderEmoji(pipe.Name)
+			pipeName := pipe.Name
 			if len(pipeName) > w-10 {
 				pipeName = pipeName[:w-10]
 			}
+			pipeName = renderEmoji(pipeName)
 			emojiName := pipe.Emoji
 			if emojiName == "" {
 				emojiName = "buildkite"
@@ -369,10 +371,11 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(field("State", stateBadge(bd.State)))
 		b.WriteString(field("Branch", bd.Branch))
 		b.WriteString(field("Commit", shortSHA(bd.Commit)))
-		msg := formatBuildMessage(bd.Message)
+		msg := bd.Message
 		if len(msg) > w-14 {
 			msg = msg[:w-14]
 		}
+		msg = formatBuildMessage(msg)
 		b.WriteString(field("Message", msg))
 		b.WriteString(field("Creator", renderEmoji(creator)))
 		b.WriteString(field("Created", FormatTime(bd.CreatedAt)))
@@ -412,10 +415,10 @@ func (m Model) rightPaneView(w, h int) string {
 				if label == "" {
 					label = job.Command
 				}
-				label = renderEmoji(label)
-				if len(label) > w-20 {
-					label = label[:w-20]
-				}
+			if len(label) > w-20 {
+				label = label[:w-20]
+			}
+			label = renderEmoji(label)
 				cursor := "  "
 				if m.activePane == rightPane && jobIndex == m.rightScroll {
 					cursor = "▶ "
