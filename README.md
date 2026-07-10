@@ -344,3 +344,4 @@ go vet ./...                  # vet
 MIT
 # trigger
 feat: add tag display in build details
+fix: fix typo in release notes
