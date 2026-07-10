@@ -1,18 +1,14 @@
 package tui
 
 import (
-	"bytes"
 	"embed"
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/png"
 	"io"
 	"io/fs"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -30,16 +26,14 @@ const gridH = 2
 
 type emojiEntry struct {
 	glyph      string // Nerd Font / Unicode for inline use
-	assetGlyph string // 2-cell half-block art from PNG/GIF for fallback
-	imageSeq   string // iTerm2 inline image escape seq (2 cells wide)
+	assetGlyph string // 2-cell half-block art from PNG/GIF
 }
 
 	var (
-	emojiBank          map[string]emojiEntry
-	emojiMu            sync.RWMutex
-	httpClient         = &http.Client{Timeout: 10 * time.Second}
-	assetAliases       = map[string]string{"go": "golang"}
-	supportsInlineImg  bool
+	emojiBank     map[string]emojiEntry
+	emojiMu       sync.RWMutex
+	httpClient    = &http.Client{Timeout: 10 * time.Second}
+	assetAliases  = map[string]string{"go": "golang"}
 )
 
 // nerdFontIcons maps Buildkite emoji names to Nerd Font codepoints.
@@ -202,8 +196,6 @@ var nerdFontIcons = map[string]string{
 }
 
 func init() {
-	supportsInlineImg = inlineImageSupported()
-
 	assets := loadAssetNames()
 	emojiBank = make(map[string]emojiEntry, len(nerdFontIcons)+200)
 	for name, glyph := range nerdFontIcons {
@@ -214,20 +206,6 @@ func init() {
 	}
 	loadUnicodeEmojiMap()
 	loadAssetEmoji()
-}
-
-func inlineImageSupported() bool {
-	if os.Getenv("GHOSTTY_RESOURCES_DIR") != "" {
-		return true
-	}
-	if os.Getenv("KITTY_WINDOW_ID") != "" {
-		return true
-	}
-	if os.Getenv("WEZTERM_PANE") != "" {
-		return true
-	}
-	prog := os.Getenv("TERM_PROGRAM")
-	return prog == "ghostty" || prog == "iTerm.app" || prog == "WezTerm" || prog == "kitty"
 }
 
 func loadAssetNames() map[string]bool {
@@ -308,19 +286,6 @@ func initEmojiMap(apiEmojis []buildkite.EmojiEntry) {
 	wg.Wait()
 }
 
-func buildInlineImage(data []byte, width int) string {
-	b64 := base64.StdEncoding.EncodeToString(data)
-	seq := fmt.Sprint("\x1b]1337;File=inline=1;width=", width, ";preserveAspectRatio=1:", b64, "\a")
-	return wrapForTmux(seq)
-}
-
-func wrapForTmux(seq string) string {
-	if os.Getenv("TMUX") == "" {
-		return seq
-	}
-	return "\x1bPtmux;\x1b" + seq + "\x1b\\"
-}
-
 func loadAssetEmoji() {
 	entries, err := fs.ReadDir(emojiAssets, emojiAssetsPrefix)
 	if err != nil {
@@ -341,30 +306,23 @@ func loadAssetEmoji() {
 			continue
 		}
 
-		raw, err := fs.ReadFile(emojiAssets, emojiAssetsPrefix+"/"+name)
+		f, err := emojiAssets.Open(emojiAssetsPrefix + "/" + name)
 		if err != nil {
 			continue
 		}
-
-		img, _, err := image.Decode(bytes.NewReader(raw))
+		img, _, err := image.Decode(io.LimitReader(f, 512*1024))
+		f.Close()
 		if err != nil {
 			continue
 		}
 
 		glyph := renderEmojiGlyph(img)
 		key := ":" + base + ":"
-		e := emojiEntry{assetGlyph: glyph}
-		if supportsInlineImg {
-			e.imageSeq = buildInlineImage(raw, gridW)
-		}
 		if existing, ok := emojiBank[key]; ok {
-			existing.assetGlyph = e.assetGlyph
-			if e.imageSeq != "" {
-				existing.imageSeq = e.imageSeq
-			}
+			existing.assetGlyph = glyph
 			emojiBank[key] = existing
 		} else {
-			emojiBank[key] = e
+			emojiBank[key] = emojiEntry{assetGlyph: glyph}
 		}
 	}
 	for alias, canonical := range assetAliases {
@@ -372,11 +330,7 @@ func loadAssetEmoji() {
 		canonicalKey := ":" + canonical + ":"
 		if ce, ok := emojiBank[canonicalKey]; ok && ce.assetGlyph != "" {
 			if ae, exists := emojiBank[aliasKey]; !exists || ae.assetGlyph == "" {
-				n := emojiEntry{assetGlyph: ce.assetGlyph}
-				if supportsInlineImg {
-					n.imageSeq = ce.imageSeq
-				}
-				emojiBank[aliasKey] = n
+				emojiBank[aliasKey] = emojiEntry{assetGlyph: ce.assetGlyph}
 			}
 		}
 	}
@@ -391,9 +345,6 @@ func loadPipelineEmoji(name string) string {
 	entry, ok := emojiBank[":"+name+":"]
 	emojiMu.RUnlock()
 
-	if ok && entry.imageSeq != "" {
-		return entry.imageSeq
-	}
 	if ok && entry.assetGlyph != "" {
 		return entry.assetGlyph
 	}
@@ -515,9 +466,7 @@ func renderEmoji(s string) string {
 		}
 		shortcode := s[pos : pos+end+2]
 		entry, ok := emojiBank[shortcode]
-		if ok && entry.imageSeq != "" {
-			buf.WriteString(entry.imageSeq)
-		} else if ok && entry.glyph != "" && !isPUA(entry.glyph) {
+		if ok && entry.glyph != "" && !isPUA(entry.glyph) {
 			buf.WriteString(entry.glyph)
 		} else if ok && entry.assetGlyph != "" {
 			buf.WriteString(entry.assetGlyph)
