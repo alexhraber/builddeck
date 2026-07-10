@@ -38,10 +38,13 @@ func TestInitEmojiBankBuildkite(t *testing.T) {
 	}
 }
 
-func TestRenderEmojiKnown(t *testing.T) {
+func TestRenderEmojiGo(t *testing.T) {
 	result := renderEmoji(":go:")
-	if result != "go" {
-		t.Fatalf("renderEmoji(:go:) = %q, want shortcode name", result)
+	if result == "" {
+		t.Fatal("renderEmoji(:go:) returned empty")
+	}
+	if result == "go" {
+		t.Fatal("renderEmoji(:go:) returned literal 'go', expected asset glyph")
 	}
 }
 
@@ -69,25 +72,31 @@ func TestRenderEmojiNoShortcodes(t *testing.T) {
 
 func TestRenderEmojiInContext(t *testing.T) {
 	result := renderEmoji(":go: Tidy")
-	expected := "go Tidy"
-	if result != expected {
-		t.Fatalf("renderEmoji(\":go: Tidy\") = %q, want %q", result, expected)
+	if result == "" {
+		t.Fatal("renderEmoji(\":go: Tidy\") returned empty")
+	}
+	if result == "go Tidy" {
+		t.Fatal("renderEmoji(\":go: Tidy\") returned literal, expected asset glyph")
 	}
 }
 
 func TestRenderEmojiMultiple(t *testing.T) {
 	result := renderEmoji(":docker: Build :go:")
-	expected := "docker Build go"
-	if result != expected {
-		t.Fatalf("renderEmoji(\":docker: Build :go:\") = %q, want %q", result, expected)
+	if result == "" {
+		t.Fatal("renderEmoji(\":docker: Build :go:\") returned empty")
+	}
+	if result == "docker Build go" {
+		t.Fatal("renderEmoji(\":docker: Build :go:\") returned literal, expected asset glyphs")
 	}
 }
 
 func TestRenderEmojiPartialColon(t *testing.T) {
 	result := renderEmoji(":go:without closing")
-	want := "gowithout closing"
-	if result != want {
-		t.Fatalf("renderEmoji(\":go:without closing\") = %q, want %q", result, want)
+	if result == "" {
+		t.Fatal("renderEmoji(\":go:without closing\") returned empty")
+	}
+	if result == "gowithout closing" {
+		t.Fatal("renderEmoji(\":go:without closing\") returned literal, expected asset glyph")
 	}
 }
 

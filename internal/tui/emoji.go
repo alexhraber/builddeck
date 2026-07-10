@@ -37,29 +37,15 @@ type emojiEntry struct {
 // nerdFontIcons maps Buildkite emoji names to Nerd Font codepoints.
 // Users with Nerd Fonts installed will see crisp icons instead of block art.
 var nerdFontIcons = map[string]string{
-	"docker":          "\uf21b",  //  fa-docker
 	"go":              "\ue627",  //  dev-go
-	"golang":          "\ue627",  //  dev-go
-	"python":          "\ue73c",  //  dev-python
-	"rust":            "\ue7a8",  // 
-	"ruby":            "\ue791",  // 
-	"node":            "\ue718",  //  dev-nodejs_small
-	"npm":             "\ue71e",  //  dev-npm
-	"github":          "\uf09b",  //  fa-github
-	"git":             "\uf1d3",  //  fa-git-alt
-	"aws":             "\uf0c2",  //  fa-cloud
 	"gcp":             "\uf0c2",  //  fa-cloud
-	"azure":           "\uf0c2",  //  fa-cloud
-	"linux":           "\uf17c",  //  fa-linux
 	"apple":           "\uf179",  //  fa-apple
-	"windows":         "\uf17a",  //  fa-windows
 	"test":            "\uf478",  //  oct-check
 	"check":           "\uf00c",  //  fa-check
 	"star":            "\uf005",  //  fa-star
 	"heart":           "\uf004",  //  fa-heart
 	"bug":             "\uf188",  //  fa-bug
 	"rocket":          "\uf135",  //  fa-rocket
-	"shipit":          "\uf135",  //  fa-rocket
 	"warning":         "\uf071",  //  fa-warning
 	"lock":            "\uf023",  //  fa-lock
 	"fire":            "\uf06d",  //  fa-fire
@@ -69,11 +55,8 @@ var nerdFontIcons = map[string]string{
 	"book":            "\uf02d",  //  fa-book
 	"hammer":          "\uf0e7",  //  fa-bolt
 	"fast_forward":    "\u23e9",  // ⏩
-	"buildkite":       "\uf135",  //  fa-rocket (no native buildkite icon in Nerd Fonts)
 	"sparkles":        "\uf00a",  //  md-sparkles
 	"merge":           "\uf157",  //  fa-code-fork
-	"fork":            "\uf126",  //  fa-code-fork alt
-	"terminal":        "\uf120",  //  fa-terminal
 	"zap":             "\uf0e7",  //  fa-bolt
 	"lightning":       "\uf0e7",  //  fa-bolt
 	"gear":            "\uf013",  //  fa-gear
@@ -91,47 +74,22 @@ var nerdFontIcons = map[string]string{
 	"refresh":         "\uf021",  //  fa-sync
 	"search":          "\uf002",  //  fa-search
 	"plus":            "\uf067",  //  fa-plus
-	"pipeline":        "\uf0c5",  //  fa-files-o
 	"tag":             "\uf02b",  //  fa-tag
 	"branch":          "\uf126",  //  fa-code-fork
 	"commit":          "\uf01c",  //  fa-asterisk (or md-source-commit)
 	"pr":              "\uf09b",  //  md-source-pull-request
 	"pull_request":    "\uf09b",  //  md-source-pull-request
 	"docker_compose":  "\uf21b",  //  fa-docker
-	"database":        "\uf1c0",  //  fa-database
-	"redis":           "\ue76d",  //  dev-redis
-	"postgres":        "\ue76e",  //  dev-postgres
 	"postgresql":      "\ue76e",  //  dev-postgres
-	"mysql":           "\ue704",  //  dev-mysql
 	"mongo":           "\ue7a4",  //  dev-mongodb
-	"mongodb":         "\ue7a4",  //  dev-mongodb
-	"nginx":           "\ue776",  //  dev-nginx
 	"nodejs":          "\ue718",  //  dev-nodejs_small
-	"typescript":      "\ue628",  //  dev-typescript
 	"ts":              "\ue628",  //  dev-typescript
-	"javascript":      "\ue781",  //  dev-javascript
 	"js":              "\ue781",  //  dev-javascript
-	"java":            "\ue738",  //  dev-java
-	"kotlin":          "\ue789",  //  dev-kotlin
-	"swift":           "\ue755",  //  dev-swift
-	"elixir":          "\ue62d",  //  dev-elixir
-	"haskell":         "\ue61f",  //  dev-haskell
-	"c":               "\ue61e",  //  dev-c
 	"cplusplus":       "\ue61d",  //  dev-cpp
-	"cpp":             "\ue61d",  //  dev-cpp
-	"csharp":          "\ue648",  //  dev-csharp
-	"dotnet":          "\ue648",  //  dev-csharp
-	"kubernetes":      "\uf10b",  //  md-kubernetes (or \u2388)
 	"k8s":             "\uf10b",  //  md-kubernetes
-	"terraform":       "\ue60b",  //  dev-terraform
 	"tf":              "\ue60b",  //  dev-terraform
-	"ansible":         "\ue769",  //  dev-ansible
-	"circleci":        "\ue78c",  //  dev-circleci
 	"travis":          "\ue77e",  //  dev-travis
-	"gitlab":          "\ue796",  //  dev-gitlab
 	"bitbucket":       "\ue703",  //  dev-bitbucket
-	"slack":           "\ue76a",  //  dev-slack
-	"discord":         "\ue76f",  //  dev-discord
 	"email":           "\uf0e0",  //  fa-envelope
 	"mail":            "\uf0e0",  //  fa-envelope
 	"chat":            "\uf075",  //  fa-comment
@@ -230,7 +188,6 @@ var nerdFontIcons = map[string]string{
 	"sob":                   "\U0001F62D", // 😭
 	"scream":                "\U0001F631", // 😱
 	"buildkite_party":       "\U0001F973", // 🥳 (alias for Buildkite's :buildkite-party:)
-	"buildkite-party":       "\U0001F973", // 🥳
 	"partying_face":         "\U0001F973", // 🥳
 	"partying-face":         "\U0001F973", // 🥳
 	"facepalm":              "\U0001F926", // 🤦
@@ -516,6 +473,8 @@ func renderEmoji(s string) string {
 		entry, ok := emojiBank[shortcode]
 		if ok && entry.glyph != "" && !isPUA(entry.glyph) {
 			buf.WriteString(entry.glyph)
+		} else if ok && entry.assetGlyph != "" {
+			buf.WriteString(entry.assetGlyph)
 		} else if ok {
 			buf.WriteString(shortcode[1 : len(shortcode)-1])
 		} else {
