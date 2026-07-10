@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Creates a release tag based on conventional commits since last tag.
 # Runs only on main branch when not already a tag build.
-# Creates and pushes git tag, uploads version.txt artifact.
+# Uses GITHUB_TOKEN for authenticated git push.
 set -euo pipefail
 
 if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
@@ -48,6 +48,9 @@ esac
 
 VERSION="v${MAJOR}.${MINOR}.${PATCH}"
 echo "Previous: ${LATEST} -> Next: ${VERSION} (${BUMP})"
+
+# Use GITHUB_TOKEN for authenticated push
+git remote set-url origin "https://${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
 
 git tag -a "${VERSION}" -m "Release ${VERSION}"
 git push origin "${VERSION}"
