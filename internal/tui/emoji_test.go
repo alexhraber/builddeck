@@ -12,8 +12,8 @@ func TestInitEmojiBank(t *testing.T) {
 	if !ok {
 		t.Fatal("expected :go: to be in emojiBank after init")
 	}
-	if entry.glyph != "\ue627" {
-		t.Fatalf("expected :go: glyph to be \\ue627, got %q", entry.glyph)
+	if entry.assetGlyph == "" {
+		t.Fatal("expected :go: to have assetGlyph from golang alias")
 	}
 }
 
@@ -189,8 +189,31 @@ func TestLoadPipelineEmojiGo(t *testing.T) {
 	if result == "" {
 		t.Fatal("loadPipelineEmoji(\"go\") returned empty")
 	}
-	// go has no PNG so uses name fallback
 	if strings.HasPrefix(result, ":") {
 		t.Fatalf("loadPipelineEmoji(\"go\") got raw shortcode %q", result)
+	}
+	// go should use golang.png as alias
+	if result == "go" {
+		t.Fatal("loadPipelineEmoji(\"go\") returned literal 'go', expected golang asset glyph")
+	}
+}
+
+func TestLoadPipelineEmojiBuildkiteParty(t *testing.T) {
+	result := loadPipelineEmoji("buildkite-party")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji(\"buildkite-party\") returned empty")
+	}
+	if strings.HasPrefix(result, ":") {
+		t.Fatalf("loadPipelineEmoji(\"buildkite-party\") got raw shortcode %q", result)
+	}
+}
+
+func TestLoadPipelineEmojiGithub(t *testing.T) {
+	result := loadPipelineEmoji("github")
+	if result == "" {
+		t.Fatal("loadPipelineEmoji(\"github\") returned empty")
+	}
+	if strings.HasPrefix(result, ":") {
+		t.Fatalf("loadPipelineEmoji(\"github\") got raw shortcode %q", result)
 	}
 }
