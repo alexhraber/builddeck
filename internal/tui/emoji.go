@@ -21,10 +21,12 @@ import (
 var emojiAssets embed.FS
 
 const emojiAssetsPrefix = "emoji_assets"
+const gridW = 2
+const gridH = 2
 
 type emojiEntry struct {
 	glyph      string // Nerd Font / Unicode for inline use
-	assetGlyph string // half-block art from PNG/GIF for pipeline badges
+	assetGlyph string // 2-cell half-block art from PNG/GIF
 }
 
 	var (
@@ -375,9 +377,6 @@ func renderEmojiGlyph(img image.Image) string {
 	if w == 0 || h == 0 {
 		return ""
 	}
-
-	gridW := 8
-	gridH := 2
 
 	type accum struct {
 		r, g, b, a, n uint32
