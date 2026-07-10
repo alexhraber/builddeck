@@ -91,6 +91,7 @@ type Artifact struct {
 	CreatedAt   string `json:"created_at"`
 	WebURL      string `json:"web_url"`
 	Checksum    string `json:"-"` // populated from companion .sha256 artifact
+	Tag         string `json:"-"` // populated from companion .tag artifact
 }
 
 type ErrorResponse struct {

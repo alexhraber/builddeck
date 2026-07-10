@@ -199,7 +199,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.buildArtifacts[msg.buildID] = msg.artifacts
 			if m.selectedBuild != nil && m.selectedBuild.ID == msg.buildID {
 				m.artifacts = msg.artifacts
-				cmd := m.loadArtifactChecksums()
+				cmd := m.loadArtifactMetadata()
 				return m, cmd
 			}
 		}
@@ -274,20 +274,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchMsg = fmt.Sprintf("Downloaded: %s", msg.filename)
 		return m, nil
 
-	case artifactChecksumMsg:
-		if msg.err == nil && msg.checksum != "" {
+	case artifactTagMsg:
+		m.loadingArtifacts = false
+		if msg.err == nil {
 			for i := range m.artifacts {
 				if m.artifacts[i].ID == msg.artifactID {
-					m.artifacts[i].Checksum = msg.checksum
+					m.artifacts[i].Tag = msg.tag
 					break
-				}
-			}
-			for _, arts := range m.buildArtifacts {
-				for i := range arts {
-					if arts[i].ID == msg.artifactID {
-						arts[i].Checksum = msg.checksum
-						break
-					}
 				}
 			}
 		}
@@ -1379,7 +1372,7 @@ func (m *Model) downloadAllArtifacts() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *Model) loadArtifactChecksums() tea.Cmd {
+func (m *Model) loadArtifactMetadata() tea.Cmd {
 	org := m.selectedOrg()
 	pipe := m.selectedPipeline()
 	if org == nil || pipe == nil {
@@ -1388,19 +1381,61 @@ func (m *Model) loadArtifactChecksums() tea.Cmd {
 
 	var cmds []tea.Cmd
 	for _, art := range m.artifacts {
-		if !strings.HasSuffix(art.Filename, ".sha256") {
-			continue
+		// Handle checksums
+		if strings.HasSuffix(art.Filename, ".sha256") {
+			targetName := strings.TrimSuffix(art.Filename, ".sha256")
+			for i := range m.artifacts {
+				if m.artifacts[i].Filename == targetName {
+					cmds = append(cmds,
+						loadChecksumCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, m.artifacts[i].ID))
+					break
+				}
+			}
 		}
-		targetName := strings.TrimSuffix(art.Filename, ".sha256")
-		for i := range m.artifacts {
-			if m.artifacts[i].Filename == targetName {
-				cmds = append(cmds,
-					loadChecksumCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, m.artifacts[i].ID))
-				break
+		// Handle tags
+		if strings.HasSuffix(art.Filename, ".tag") {
+			targetName := strings.TrimSuffix(art.Filename, ".tag")
+			for i := range m.artifacts {
+				if m.artifacts[i].Filename == targetName {
+					cmds = append(cmds,
+						loadTagCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, art.StepID, art.ID, m.artifacts[i].ID))
+					break
+				}
 			}
 		}
 	}
 	return tea.Batch(cmds...)
+}
+
+func loadTagCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID, tagArtifactID, targetArtifactID string) tea.Cmd {
+	return func() tea.Msg {
+		url, err := client.DownloadArtifactURL(context.Background(), orgSlug, pipelineSlug, buildNumber, stepID, tagArtifactID)
+		if err != nil {
+			return artifactTagMsg{artifactID: targetArtifactID, err: err}
+		}
+		if url == "" {
+			return artifactTagMsg{artifactID: targetArtifactID, err: fmt.Errorf("empty download URL")}
+		}
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return artifactTagMsg{artifactID: targetArtifactID, err: err}
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return artifactTagMsg{artifactID: targetArtifactID, err: err}
+		}
+
+		return artifactTagMsg{artifactID: targetArtifactID, tag: strings.TrimSpace(string(body))}
+	}
+}
+
+type artifactTagMsg struct {
+	artifactID string
+	tag        string
+	err        error
 }
 
 func loadChecksumCmd(client *buildkite.Client, orgSlug, pipelineSlug string, buildNumber int, stepID, shaArtifactID, targetArtifactID string) tea.Cmd {
@@ -1431,7 +1466,6 @@ func loadChecksumCmd(client *buildkite.Client, orgSlug, pipelineSlug string, bui
 		return artifactChecksumMsg{artifactID: targetArtifactID, err: fmt.Errorf("unable to parse checksum")}
 	}
 }
-
 func (m Model) toggleAgentView() (tea.Model, tea.Cmd) {
 	if m.showAgents {
 		m.showAgents = false

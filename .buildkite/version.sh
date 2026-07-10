@@ -26,7 +26,7 @@ else
 fi
 
 # Check if any conventional commits exist
-if ! echo "$COMMITS" | grep -qE '^(feat|fix)(!|\()'; then
+if ! echo "$COMMITS" | grep -qE '^(feat|fix|refactor|perf|docs|style|test|chore)(!|\()'; then
   # No conventional commits since last tag — no release needed
   exit 0
 fi
@@ -34,6 +34,8 @@ fi
 # Determine bump type from conventional commits
 BUMP="patch"
 if echo "$COMMITS" | grep -qE '^feat(!|\()'; then
+  BUMP="minor"
+fi
   BUMP="minor"
 fi
 if echo "$COMMITS" | grep -qE '^feat!:'; then
