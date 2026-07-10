@@ -415,10 +415,10 @@ func (m Model) rightPaneView(w, h int) string {
 				if label == "" {
 					label = job.Command
 				}
-			if len(label) > w-20 {
-				label = label[:w-20]
-			}
-			label = renderEmoji(label)
+				if len(label) > w-20 {
+					label = label[:w-20]
+				}
+				label = renderEmoji(label)
 				cursor := "  "
 				if m.activePane == rightPane && jobIndex == m.rightScroll {
 					cursor = "▶ "
