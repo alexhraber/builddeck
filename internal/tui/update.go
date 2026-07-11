@@ -482,22 +482,29 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.logScroll = maxScroll
 			return m, nil
 		case key.Matches(msg, keys.NextSource):
-			if len(m.logSourceRefs) > 0 && m.logSourceIndex < len(m.logSourceRefs)-1 {
+			if len(m.logSourceRefs) == 0 {
+				m.searchMsg = "No source references in this log"
+				return m, nil
+			}
+			if m.logSourceIndex < len(m.logSourceRefs)-1 {
 				m.logSourceIndex++
 				ref := m.logSourceRefs[m.logSourceIndex]
-				// Scroll to make the ref visible
 				contentHeight := m.height - 2
-				if ref.LineIndex < m.logScroll || ref.LineIndex >= m.logScroll+contentHeight-2 {
+				if contentHeight > 2 && (ref.LineIndex < m.logScroll || ref.LineIndex >= m.logScroll+contentHeight-2) {
 					m.logScroll = ref.LineIndex
 				}
 			}
 			return m, nil
 		case key.Matches(msg, keys.PrevSource):
-			if len(m.logSourceRefs) > 0 && m.logSourceIndex > 0 {
+			if len(m.logSourceRefs) == 0 {
+				m.searchMsg = "No source references in this log"
+				return m, nil
+			}
+			if m.logSourceIndex > 0 {
 				m.logSourceIndex--
 				ref := m.logSourceRefs[m.logSourceIndex]
 				contentHeight := m.height - 2
-				if ref.LineIndex < m.logScroll || ref.LineIndex >= m.logScroll+contentHeight-2 {
+				if contentHeight > 2 && (ref.LineIndex < m.logScroll || ref.LineIndex >= m.logScroll+contentHeight-2) {
 					m.logScroll = ref.LineIndex
 				}
 			}
@@ -1342,13 +1349,14 @@ func (m *Model) openLogSourceInBrowser() {
 		return
 	}
 	ref := m.logSourceRefs[m.logSourceIndex]
+	filePath := strings.TrimLeft(ref.FilePath, "/")
 	commit := ""
 	if bd := m.selectedBuild; bd != nil && bd.Commit != "" {
 		commit = bd.Commit
 	}
-	url := base + "/blob/" + commit + "/" + ref.FilePath + "#L" + fmt.Sprintf("%d", ref.Line)
+	url := fmt.Sprintf("%s/blob/%s/%s#L%d", base, commit, filePath, ref.Line)
 	if commit == "" {
-		url = base + "/blob/main/" + ref.FilePath + "#L" + fmt.Sprintf("%d", ref.Line)
+		url = fmt.Sprintf("%s/blob/main/%s#L%d", base, filePath, ref.Line)
 	}
 	openURL(url)
 	m.searchMsg = "Opened source in browser"
