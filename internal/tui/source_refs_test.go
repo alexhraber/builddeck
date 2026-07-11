@@ -109,6 +109,43 @@ func TestParseSourceRefs(t *testing.T) {
 	}
 }
 
+func TestStripANSI(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"empty", "", ""},
+		{"no ansi", "hello world", "hello world"},
+		{"CSI SGR", "\x1b[31mred\x1b[0m", "red"},
+		{"OSC kitty", "\x1b]bk;t=123\x07path", "path"},
+		{"OSC with ST", "\x1b]bk;t=123\x1b\\path", "path"},
+		{"mixed", "\x1b[1m\x1b[31m  \x1b[0mhello.go:42", "  hello.go:42"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stripANSI(tt.in)
+			if got != tt.want {
+				t.Errorf("stripANSI(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseSourceRefsWithANSI(t *testing.T) {
+	log := "\x1b[1m\x1b[31m  \x1b[0m\x1b]bk;t=123\x07src/main.go:42: error"
+	refs := parseSourceRefs(log)
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1\nrefs: %+v", len(refs), refs)
+	}
+	if refs[0].FilePath != "src/main.go" {
+		t.Errorf("FilePath = %q, want src/main.go", refs[0].FilePath)
+	}
+	if refs[0].Line != 42 {
+		t.Errorf("Line = %d, want 42", refs[0].Line)
+	}
+}
+
 func TestSplitLinesPreserveIndex(t *testing.T) {
 	tests := []struct {
 		name string

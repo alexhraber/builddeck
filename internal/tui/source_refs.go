@@ -8,6 +8,11 @@ import (
 )
 
 var (
+	// ansiPattern matches ANSI/terminal escape sequences:
+	//   CSI: \x1b[31m, \x1b[1m etc.
+	//   OSC: \x1b]bk;t=...\x1b\\ (kitty protocol)
+	ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x1b]*(?:\x1b\\|\x07)|\x1b.`)
+
 	// refPattern matches common compiler/test file:line patterns:
 	//   src/main.go:42
 	//   /home/ci/build/src/main.go:42
@@ -21,11 +26,17 @@ var (
 	altRefPattern = regexp.MustCompile(`(?:File\s+"|at\s+)(\S+?\.\w+)(?:",\s*line\s+|:)(\d+)(?::(\d+))?`)
 )
 
+// stripANSI removes ANSI/terminal escape sequences from s.
+func stripANSI(s string) string {
+	return ansiPattern.ReplaceAllString(s, "")
+}
+
 // parseSourceRefs scans log text and returns all detected file:line references.
 func parseSourceRefs(log string) []LogSourceRef {
 	if log == "" {
 		return nil
 	}
+	log = stripANSI(log)
 	lines := splitLinesPreserveIndex(log)
 	seen := make(map[string]bool)
 	var refs []LogSourceRef
