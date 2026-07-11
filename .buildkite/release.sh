@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Creates a GitHub Release linked to git tag with all artifacts and generated notes.
-# Runs in the release pipeline after tag push.
+# Expects builddeck and builddeck.sha256 in the current directory (same-agent
+# after release_build step or tag-push triggered pipeline).
 # Usage: release.sh <version>
 set -euo pipefail
 
@@ -13,9 +14,6 @@ fi
 echo "+++ Creating GitHub Release ${VERSION}"
 
 cd "$(dirname "$0")/.."
-
-buildkite-agent artifact download "builddeck" . --step build 2>/dev/null || true
-buildkite-agent artifact download "builddeck.sha256" . --step checksum 2>/dev/null || true
 
 echo "=== Files in workspace ==="
 ls -la

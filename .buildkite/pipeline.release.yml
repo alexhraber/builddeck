@@ -4,7 +4,7 @@
 cache: ".buildkite/cache-volume"
 
 steps:
-  - label: ":golang: Build Release Binary"
+  - label: ":golang: Build + Checksum"
     key: build
     command: |
       echo "--- Building release binary for ${BUILDKITE_TAG}"
@@ -12,20 +12,12 @@ steps:
         -ldflags="-s -w -X main.version=${BUILDKITE_TAG}" \
         -o builddeck ./cmd/builddeck
       echo "+++ Binary size: $(ls -lh builddeck | awk '{print $5}')"
-      buildkite-agent artifact upload builddeck
-
-  - label: ":lock: Checksum"
-    key: checksum
-    depends_on: build
-    command: |
-      echo "--- Generating SHA256 checksum"
-      buildkite-agent artifact download builddeck .
       sha256sum builddeck | tee builddeck.sha256
-      buildkite-agent artifact upload builddeck.sha256
+      buildkite-agent artifact upload "builddeck*"
 
   - label: ":rocket: GitHub Release"
     key: release
-    depends_on: checksum
+    depends_on: build
     command: .buildkite/release.sh "${BUILDKITE_TAG}"
     secrets:
       - GITHUB_TOKEN
