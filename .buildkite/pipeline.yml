@@ -104,11 +104,7 @@ steps:
       sha256sum builddeck | tee builddeck.sha256
       buildkite-agent artifact upload "builddeck"
       buildkite-agent artifact upload "builddeck.sha256"
-      # Re-upload builddeck.tag under this step so release can find it
-      # from --step release_build (immediately available, no propagation lag).
-      if [[ -s builddeck.tag ]]; then
-        buildkite-agent artifact upload "builddeck.tag"
-      fi
+
 
   - label: ":rocket: GitHub Release"
     key: release
@@ -117,23 +113,24 @@ steps:
       echo "--- Resolving release version"
       VERSION=""
       # release_build left files locally on single-agent.
-      # Otherwise try download from release_build, then from tag step.
+      # Otherwise try download from the step that has it.
       if [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
-        echo "Found local builddeck.tag"
+        echo "Local builddeck.tag: '${VERSION}'"
       else
         rm -f builddeck.tag
-        if buildkite-agent artifact download builddeck.tag . --step release_build && [[ -s builddeck.tag ]]; then
+        if buildkite-agent artifact download builddeck.tag . && [[ -s builddeck.tag ]]; then
           VERSION=$(cat builddeck.tag)
-          echo "Downloaded builddeck.tag from release_build"
+          echo "Downloaded (any step) builddeck.tag: '${VERSION}'"
         else
           rm -f builddeck.tag
-          if buildkite-agent artifact download builddeck.tag . --step tag && [[ -s builddeck.tag ]]; then
+          if buildkite-agent artifact download builddeck.tag . --step release_build && [[ -s builddeck.tag ]]; then
             VERSION=$(cat builddeck.tag)
-            echo "Downloaded builddeck.tag from tag step"
+            echo "Downloaded (release_build) builddeck.tag: '${VERSION}'"
           fi
         fi
       fi
+      echo "DEBUG: VERSION='${VERSION}'"
       if [[ -n "${VERSION}" ]]; then
         echo "--- Downloading release assets"
         [[ -f builddeck ]] || buildkite-agent artifact download builddeck . --step release_build
