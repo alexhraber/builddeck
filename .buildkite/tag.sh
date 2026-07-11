@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Creates a release tag based on conventional commits.
+# Creates a release tag based on conventional commits since the last tag.
 # Runs only on main branch when not already a tag build.
-# Outputs version to tag.txt artifact for downstream consumption.
-# Exits silently if no conventional commits (feat/fix) since last tag.
+# Computes the next semver via version.sh and pushes the tag.
+# Uploads builddeck.tag artifact for downstream steps.
 set -euo pipefail
 
 if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
@@ -10,14 +10,13 @@ if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
   exit 0
 fi
 
-echo "--- Creating release tag"
+echo "--- Checking conventional commits for release tag"
 
 git config user.email "builddeck@buildkite.com"
 git config user.name "builddeck-bot"
 
-VERSION=$(.buildkite/version.sh)
+VERSION=$(cd "$(dirname "$0")" && ./version.sh)
 
-# No conventional commits since last tag — silently exit (no tag, no release)
 if [[ -z "${VERSION}" ]]; then
   echo "No conventional commits (feat/fix) since last tag — skipping release"
   exit 0
@@ -30,21 +29,24 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
   exit 1
 fi
 
+# Check if tag already exists at origin before trying to create it
+if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
+  echo "Tag ${VERSION} already exists at origin — skipping"
+  exit 0
+fi
+
 git remote set-url origin "https://alexhraber:${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
 
-# Create tag
 git tag -a "${VERSION}" -m "Release ${VERSION}"
 echo "Tag created locally: ${VERSION}"
 
-# Push tag with explicit error handling
 if git push origin "${VERSION}"; then
-  echo "Tagged ${VERSION}"
+  echo "+++ Tagged ${VERSION}"
 else
   echo "ERROR: Failed to push tag ${VERSION}"
   exit 1
 fi
 
-# Output version to artifact for TUI consumption
 echo "${VERSION}" > builddeck.tag
 buildkite-agent artifact upload builddeck.tag
 echo "Uploaded builddeck.tag artifact"

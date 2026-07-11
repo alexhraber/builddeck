@@ -1,3 +1,5 @@
+cache: ".buildkite/cache-volume"
+
 steps:
   - label: ":broom: Tidy"
     key: tidy
@@ -9,6 +11,10 @@ steps:
         exit 1
       fi
       echo "go.mod and go.sum are clean"
+
+  - label: ":memo: Commit Lint"
+    key: commitlint
+    command: .buildkite/commitlint.sh
 
   - label: ":golang: Format"
     key: fmt
@@ -28,12 +34,12 @@ steps:
   - label: ":lock: Sec Scan"
     key: gosec
     depends_on: fmt
-    command: .buildkite/setup-go.sh go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+    command: .buildkite/setup-go.sh go run github.com/securego/gosec/v2/cmd/gosec@latest ./cmd/... ./internal/...
 
   - label: ":mag: Vuln Check"
     key: vulncheck
     depends_on: tidy
-    command: .buildkite/setup-go.sh go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+    command: .buildkite/setup-go.sh go run golang.org/x/vuln/cmd/govulncheck@latest ./cmd/... ./internal/...
 
   - label: ":golang: Test"
     key: test
@@ -53,58 +59,35 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":bookmark: Tag"
-    key: tag
+  - label: ":terminal: Snapshot Build"
+    key: snapshot
     depends_on:
-      - test
       - vet
       - lint
       - gosec
       - vulncheck
-      - tidy
     command: |
-      # Only create tag on main branch, not on tag pushes
-      if [[ -z "${BUILDKITE_TAG}" && "${BUILDKITE_BRANCH}" == "main" ]]; then
-        .buildkite/tag.sh
-      else
-        echo "Skipping tag creation (branch: ${BUILDKITE_BRANCH}, tag: ${BUILDKITE_TAG})"
-      fi
-    secrets:
-      - GITHUB_TOKEN
-
-  - label: ":golang: Build and Release"
-    key: build
-    depends_on: tag
-    command: |
-      echo "--- Checking all packages compile"
-      .buildkite/setup-go.sh go build ./...
-      echo "--- Building builddeck binary"
-      # Get version from builddeck.tag artifact created by tag step (if tag was created)
-      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
-        VERSION=$(cat builddeck.tag)
-        echo "Using version from tag step: ${VERSION}"
-      else
-        VERSION="dev"
-        echo "No tag created, using: ${VERSION}"
-      fi
-      echo "Building version: ${VERSION}"
-      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
-      ls -lh builddeck
+      echo "--- Building snapshot binary"
+      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=snapshot-${BUILDKITE_COMMIT:0:7}" -o builddeck ./cmd/builddeck
+      echo "+++ Snapshot build succeeded: $(ls -lh builddeck | awk '{print $5}')"
       buildkite-agent artifact upload builddeck
-      if [[ -n "${VERSION}" && "${VERSION}" != "dev" ]]; then
-        .buildkite/release.sh "${VERSION}"
-      fi
-      # Ensure the binary is available as a local file for any final steps if needed
-      # (already uploaded as artifact, but release.sh handles the GitHub upload)
-    secrets:
-      - GITHUB_TOKEN
 
   - label: ":lock: Checksum"
     key: checksum
-    depends_on: build
+    depends_on: snapshot
     command: |
-      echo "--- Downloading builddeck binary"
-      buildkite-agent artifact download builddeck /tmp/
-      echo "--- Generating SHA256 checksum"
-      sha256sum /tmp/builddeck | tee builddeck.sha256
+      sha256sum builddeck | tee builddeck.sha256
       buildkite-agent artifact upload builddeck.sha256
+
+  - label: ":bookmark: Tag"
+    key: tag
+    depends_on:
+      - commitlint
+      - test
+      - checksum
+      - codecov
+    branches: main
+    command: |
+      .buildkite/tag.sh
+    secrets:
+      - GITHUB_TOKEN

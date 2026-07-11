@@ -6,11 +6,9 @@
 
 set -euo pipefail
 
-# Get the latest tag (or empty if none)
 LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "")
 
 if [[ -z "$LATEST" ]]; then
-  # No tags exist - start from v0.0.0
   MAJOR=0; MINOR=0; PATCH=0
   COMMITS=$(git log --pretty=format:"%s" 2>/dev/null || echo "")
 else
@@ -21,17 +19,13 @@ else
   else
     MAJOR=0; MINOR=1; PATCH=0
   fi
-  # Get commits since last tag
   COMMITS=$(git log "${LATEST}..HEAD" --pretty=format:"%s" 2>/dev/null || echo "")
 fi
 
-# Check if any conventional commits exist
 if ! echo "$COMMITS" | grep -qE '^(feat|fix|refactor|perf|docs|style|test|chore)'; then
-  # No conventional commits since last tag — no release needed
   exit 0
 fi
 
-# Determine bump type from conventional commits
 BUMP="patch"
 if echo "$COMMITS" | grep -qE '^feat(!|\()'; then
   BUMP="minor"
@@ -46,5 +40,4 @@ case "$BUMP" in
   patch) PATCH=$((PATCH + 1)) ;;
 esac
 
-VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-echo "${VERSION}"
+echo "v${MAJOR}.${MINOR}.${PATCH}"
