@@ -449,6 +449,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.showLogs {
+		m.searchMsg = ""
 		switch {
 		case msg.String() == "esc":
 			m.showLogs = false

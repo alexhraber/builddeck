@@ -1293,6 +1293,11 @@ func (m Model) logsView() string {
 	b.WriteString("\n")
 
 	var statusParts []string
+
+	if m.searchMsg != "" {
+		statusParts = append(statusParts, helpStyle.Render(m.searchMsg))
+	}
+
 	if m.currentLog != "" {
 		lines := strings.Split(m.currentLog, "\n")
 		scrollPercent := 0
@@ -1311,7 +1316,7 @@ func (m Model) logsView() string {
 	case refCount > 0:
 		statusParts = append(statusParts, helpStyle.Render(fmt.Sprintf("source %d/%d", m.logSourceIndex+1, refCount)))
 	case m.currentLog != "" && !m.loadingLog:
-		statusParts = append(statusParts, dimStyle.Render("no source refs — n/N:next/prev  enter:open"))
+		statusParts = append(statusParts, dimStyle.Render("n/N:next/prev  enter:open source"))
 	}
 	statusParts = append(statusParts, helpStyle.Render("L/esc:back  ↑/k:up  ↓/j:down  g:top  G:bottom  q:quit"))
 
