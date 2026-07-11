@@ -2,7 +2,7 @@
 
 [![Build status](https://badge.buildkite.com/286d3362748e755bd5497b6c947bf7fa043491f981dddbdef6.svg)](https://buildkite.com/alexhraber/builddeck)
 [![Go version](https://img.shields.io/badge/Go-1.26-blue?logo=go)](https://go.dev/doc/devel/release#go1.26)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alexhraber/builddeck)](https://goreportcard.com/report/github.com/alexhraber/builddeck)
+[![Codecov](https://codecov.io/gh/alexhraber/builddeck/branch/main/graph/badge.svg)](https://codecov.io/gh/alexhraber/builddeck)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **`htop` for Buildkite. `k9s` for your CI.**
