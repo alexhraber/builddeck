@@ -420,8 +420,8 @@ func (m Model) activeFilterPresets() []config.FilterPreset {
 
 // setLogContent sets the current log text and re-parses source references.
 func (m *Model) setLogContent(log string) {
-	m.currentLog = log
-	m.logSourceRefs = parseSourceRefs(log)
+	m.currentLog = stripANSI(log)
+	m.logSourceRefs = parseSourceRefs(m.currentLog)
 	if len(m.logSourceRefs) > 0 {
 		m.logSourceIndex = 0
 	} else {
