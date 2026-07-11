@@ -94,8 +94,8 @@ steps:
       if [[ -n "${VERSION}" && "${VERSION}" != "dev" ]]; then
         .buildkite/release.sh "${VERSION}"
       fi
-	# Ensure the binary is available as a local file for any final steps if needed
-	# (already uploaded as artifact, but release.sh handles the GitHub upload)
+      # Ensure the binary is available as a local file for any final steps if needed
+      # (already uploaded as artifact, but release.sh handles the GitHub upload)
     secrets:
       - GITHUB_TOKEN
 
