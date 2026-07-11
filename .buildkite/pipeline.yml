@@ -114,17 +114,26 @@ steps:
       TAG=""
       if [[ -n "${BUILDKITE_TAG:-}" ]]; then
         TAG="${BUILDKITE_TAG}"
-        echo "Tag from BUILDKITE_TAG: ${TAG}"
-      else
+        echo "Tag from BUILDKITE_TAG"
+      fi
+      if [[ -z "${TAG}" ]]; then
+        git fetch --tags origin 2>/dev/null || true
         TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
         if [[ -n "${TAG}" ]]; then
-          echo "Tag from local git: ${TAG}"
+          echo "Tag from local git"
+        fi
+      fi
+      if [[ -z "${TAG}" ]]; then
+        TAG=$(git ls-remote --tags origin 'v*' 2>/dev/null | awk '{print $2}' | sed 's|refs/tags/||' | sort -V | tail -1)
+        if [[ -n "${TAG}" ]]; then
+          echo "Tag from remote"
         fi
       fi
       if [[ -z "${TAG}" ]]; then
         echo "No tag found — skipping GitHub release"
         exit 0
       fi
+      echo "Release tag: ${TAG}"
       echo "--- Ensuring release assets"
       [[ -f builddeck ]] || buildkite-agent artifact download builddeck . --step release_build
       [[ -f builddeck.sha256 ]] || buildkite-agent artifact download builddeck.sha256 . --step release_build
