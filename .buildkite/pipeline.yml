@@ -104,18 +104,15 @@ steps:
       sha256sum builddeck | tee builddeck.sha256
       buildkite-agent artifact upload "builddeck"
       buildkite-agent artifact upload "builddeck.sha256"
-      # Upload builddeck.tag so the release step can download it from this step
-      # regardless of which agent it runs on. The tag step also uploads it, but
-      # having it from release_build ensures immediate availability.
-      if [[ -s builddeck.tag ]]; then
-        buildkite-agent artifact upload "builddeck.tag"
-      fi
 
   - label: ":rocket: GitHub Release"
     key: release
     depends_on: release_build
     command: |
-      if buildkite-agent artifact download builddeck.tag . --step release_build 2>/dev/null && [[ -s builddeck.tag ]]; then
+      # Files from release_build persist on single-agent setups. Remove them first
+      # so the downloads below don't fail with "file exists" on rename.
+      rm -f builddeck builddeck.sha256 builddeck.tag
+      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null && [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
         buildkite-agent artifact download builddeck . --step release_build
         buildkite-agent artifact download builddeck.sha256 . --step release_build
