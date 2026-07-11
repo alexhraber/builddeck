@@ -1238,8 +1238,48 @@ func (m Model) logsView() string {
 			end = len(lines)
 		}
 
+		// Build a set of source refs visible in the current window
+		type visibleRef struct {
+			ref LogSourceRef
+			sel bool
+		}
+		var visible []visibleRef
+		for _, ref := range m.logSourceRefs {
+			if ref.LineIndex >= start && ref.LineIndex < end {
+				visible = append(visible, visibleRef{ref: ref, sel: m.logSourceIndex >= 0 && ref.LineIndex == m.logSourceRefs[m.logSourceIndex].LineIndex && ref.StartCol == m.logSourceRefs[m.logSourceIndex].StartCol})
+			}
+		}
+		buildVisibleRef := make(map[int][]visibleRef)
+		for _, vr := range visible {
+			buildVisibleRef[vr.ref.LineIndex] = append(buildVisibleRef[vr.ref.LineIndex], vr)
+		}
+
 		for i := start; i < end; i++ {
-			logBox.WriteString(lines[i])
+			line := lines[i]
+			if refs, ok := buildVisibleRef[i]; ok && len(refs) > 0 {
+				// Render line with highlighted source refs
+				var lineBuf strings.Builder
+				last := 0
+				for _, vr := range refs {
+					r := vr.ref
+					if r.StartCol > last {
+						lineBuf.WriteString(line[last:r.StartCol])
+					}
+					matchText := line[r.StartCol:r.EndCol]
+					if vr.sel {
+						lineBuf.WriteString(sourceRefSelStyle.Render(matchText))
+					} else {
+						lineBuf.WriteString(sourceRefStyle.Render(matchText))
+					}
+					last = r.EndCol
+				}
+				if last < len(line) {
+					lineBuf.WriteString(line[last:])
+				}
+				logBox.WriteString(lineBuf.String())
+			} else {
+				logBox.WriteString(line)
+			}
 			logBox.WriteString("\n")
 		}
 	}
@@ -1266,7 +1306,11 @@ func (m Model) logsView() string {
 		statusParts = append(statusParts, fmt.Sprintf("Line %d/%d (%d%%)", m.logScroll+1, len(lines), scrollPercent))
 	}
 
-	statusParts = append(statusParts, helpStyle.Render("L/esc:back  ↑/k:up  ↓/j:down  g:top  G:bottom  q:quit"))
+	if len(m.logSourceRefs) > 0 {
+		refInfo := fmt.Sprintf("source %d/%d", m.logSourceIndex+1, len(m.logSourceRefs))
+		statusParts = append(statusParts, helpStyle.Render(refInfo))
+	}
+	statusParts = append(statusParts, helpStyle.Render("L/esc:back  ↑/k:up  ↓/j:down  g:top  G:bottom  n/N:src  enter:open  q:quit"))
 
 	b.WriteString(statusStyle.Width(m.width).Render(strings.Join(statusParts, "  │  ")))
 

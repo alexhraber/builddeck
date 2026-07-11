@@ -82,6 +82,10 @@ type Model struct {
 	logStepID                 string
 	pendingLogsForLatestBuild bool
 
+	// Log-to-code source reference navigation
+	logSourceRefs  []LogSourceRef
+	logSourceIndex int
+
 	// Global search state
 	globalSearching    bool
 	globalSearchQuery  string
@@ -111,6 +115,16 @@ type Model struct {
 	buildArtifacts    map[string][]buildkite.Artifact
 	stepLogs          map[string]string
 	buildSelectionSeq int
+}
+
+// LogSourceRef represents a detected file:line reference in log output.
+type LogSourceRef struct {
+	LineIndex int    // line index in the split log
+	FilePath  string // detected file path
+	Line      int    // line number
+	Column    int    // column number (0 if not present)
+	StartCol  int    // column offset in the raw line where the match starts
+	EndCol    int    // column offset where the match ends
 }
 
 // GlobalSearchResult holds one match from global search.
@@ -402,6 +416,17 @@ func (m Model) activeFilterPresets() []config.FilterPreset {
 		return nil
 	}
 	return m.config.FilterPresets
+}
+
+// setLogContent sets the current log text and re-parses source references.
+func (m *Model) setLogContent(log string) {
+	m.currentLog = log
+	m.logSourceRefs = parseSourceRefs(log)
+	if len(m.logSourceRefs) > 0 {
+		m.logSourceIndex = 0
+	} else {
+		m.logSourceIndex = -1
+	}
 }
 
 // paneName returns a display-friendly pane name.

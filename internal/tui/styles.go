@@ -141,6 +141,8 @@ var (
 	helpStyle         lipgloss.Style
 	errorStyle        lipgloss.Style
 	loadingStyle      lipgloss.Style
+	sourceRefStyle    lipgloss.Style
+	sourceRefSelStyle lipgloss.Style
 )
 
 func initStyles(theme Theme) {
@@ -182,6 +184,15 @@ func initStyles(theme Theme) {
 
 	loadingStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(theme.Warning))
+
+	sourceRefStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(theme.Accent)).
+		Underline(true)
+
+	sourceRefSelStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(theme.SelectedFg)).
+		Background(lipgloss.Color(theme.SelectedBg)).
+		Bold(true)
 }
 
 func init() {
