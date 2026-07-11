@@ -91,7 +91,7 @@ steps:
     depends_on: tag
     command: |
       echo "--- Checking for release version from tag step"
-      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
+      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null && [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
         echo "Version from tag step: ${VERSION}"
       else
@@ -102,13 +102,14 @@ steps:
       .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
       echo "+++ Binary size: $(ls -lh builddeck | awk '{print $5}')"
       sha256sum builddeck | tee builddeck.sha256
-      buildkite-agent artifact upload "builddeck*"
+      buildkite-agent artifact upload "builddeck"
+      buildkite-agent artifact upload "builddeck.sha256"
 
   - label: ":rocket: GitHub Release"
     key: release
     depends_on: release_build
     command: |
-      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
+      if [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
         echo "Creating GitHub release for ${VERSION}"
         .buildkite/release.sh "${VERSION}"
