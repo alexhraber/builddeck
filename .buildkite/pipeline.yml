@@ -12,6 +12,10 @@ steps:
       fi
       echo "go.mod and go.sum are clean"
 
+  - label: ":memo: Commit Lint"
+    key: commitlint
+    command: .buildkite/commitlint.sh
+
   - label: ":golang: Format"
     key: fmt
     depends_on: tidy
@@ -68,38 +72,14 @@ steps:
       echo "+++ Snapshot build succeeded: $(ls -lh builddeck | awk '{print $5}')"
       buildkite-agent artifact upload builddeck
 
-  - label: ":package: Create a release?"
-    key: release_unblock
-    depends_on:
-      - test
-      - snapshot
-      - codecov
-    branches: main
-    block: "Select release type to tag a new version"
-    blocked_state: "passed"
-    prompt: "Choose the semver bump for this release. Only patch and minor are available from CI; major must be done manually."
-    fields:
-      - key: release-type
-        select: "Release Type"
-        required: true
-        options:
-          - label: "No release — just validate"
-            value: "skip"
-          - label: "Patch (v0.x.X)"
-            value: "patch"
-          - label: "Minor (v0.X.0)"
-            value: "minor"
-
   - label: ":bookmark: Tag"
     key: tag
-    depends_on: release_unblock
+    depends_on:
+      - commitlint
+      - test
+      - snapshot
     branches: main
     command: |
-      RELEASE_TYPE="$(buildkite-agent meta-data get "release-type")"
-      if [[ "${RELEASE_TYPE}" == "skip" ]]; then
-        echo "Release skipped — no tag created"
-        exit 0
-      fi
-      .buildkite/tag.sh "${RELEASE_TYPE}"
+      .buildkite/tag.sh
     secrets:
       - GITHUB_TOKEN

@@ -1,78 +1,52 @@
 #!/usr/bin/env bash
-# Creates and pushes a release tag based on the release type passed as argument.
-# Reads the latest semver tag from git, bumps accordingly, tags the current commit,
-# and uploads the version to a builddeck.tag artifact.
-# Usage: tag.sh <patch|minor>
-#   patch — increment PATCH (v0.1.0 → v0.1.1)
-#   minor — increment MINOR, reset PATCH (v0.1.0 → v0.2.0)
+# Creates a release tag based on conventional commits since the last tag.
+# Runs only on main branch when not already a tag build.
+# Computes the next semver via version.sh and pushes the tag.
+# Uploads builddeck.tag artifact for downstream steps.
 set -euo pipefail
 
-RELEASE_TYPE="${1:-}"
-if [[ -z "${RELEASE_TYPE}" ]]; then
-  echo "Usage: $0 <patch|minor>"
-  exit 1
+if [[ -n "${BUILDKITE_TAG:-}" || "${BUILDKITE_BRANCH:-}" != "main" ]]; then
+  echo "Skipping tag creation (branch: ${BUILDKITE_BRANCH}, tag: ${BUILDKITE_TAG})"
+  exit 0
 fi
 
-echo "--- Creating release tag"
+echo "--- Checking conventional commits for release tag"
 
 git config user.email "builddeck@buildkite.com"
 git config user.name "builddeck-bot"
 
-# Find the latest semver tag (vMAJOR.MINOR.PATCH)
-LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "")
+VERSION=$(cd "$(dirname "$0")" && ./version.sh)
 
-if [[ -z "$LATEST_TAG" ]]; then
-  MAJOR=0; MINOR=0; PATCH=0
-  echo "No existing tags found — starting from v0.0.0"
-else
-  echo "Latest tag: ${LATEST_TAG}"
-  if [[ "$LATEST_TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-    MAJOR="${BASH_REMATCH[1]}"
-    MINOR="${BASH_REMATCH[2]}"
-    PATCH="${BASH_REMATCH[3]}"
-  else
-    echo "ERROR: Could not parse version from tag: ${LATEST_TAG}"
-    exit 1
-  fi
+if [[ -z "${VERSION}" ]]; then
+  echo "No conventional commits (feat/fix) since last tag — skipping release"
+  exit 0
 fi
 
-case "${RELEASE_TYPE}" in
-  minor)
-    TAG="v${MAJOR}.$((MINOR + 1)).0"
-    ;;
-  patch)
-    TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-    ;;
-  *)
-    echo "ERROR: Unknown release type: ${RELEASE_TYPE}. Use 'patch' or 'minor'."
-    exit 1
-    ;;
-esac
-
-echo "New tag: ${TAG}"
-
-if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-  echo "ERROR: Tag ${TAG} already exists at origin"
-  exit 1
-fi
+echo "Version: ${VERSION}"
 
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
   echo "ERROR: GITHUB_TOKEN not set"
   exit 1
 fi
 
+# Check if tag already exists at origin before trying to create it
+if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
+  echo "Tag ${VERSION} already exists at origin — skipping"
+  exit 0
+fi
+
 git remote set-url origin "https://alexhraber:${GITHUB_TOKEN}@github.com/alexhraber/builddeck.git"
 
-echo "+++ Tagging ${BUILDKITE_COMMIT} with ${TAG}"
-git tag -a "${TAG}" -m "Release ${TAG}"
+git tag -a "${VERSION}" -m "Release ${VERSION}"
+echo "Tag created locally: ${VERSION}"
 
-if git push origin "${TAG}"; then
-  echo "Tagged ${TAG}"
+if git push origin "${VERSION}"; then
+  echo "+++ Tagged ${VERSION}"
 else
-  echo "ERROR: Failed to push tag ${TAG}"
+  echo "ERROR: Failed to push tag ${VERSION}"
   exit 1
 fi
 
-echo "${TAG}" > builddeck.tag
+echo "${VERSION}" > builddeck.tag
 buildkite-agent artifact upload builddeck.tag
 echo "Uploaded builddeck.tag artifact"
