@@ -117,6 +117,8 @@ steps:
     command: |
       if buildkite-agent artifact download builddeck.tag . --step release_build 2>/dev/null && [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
+        buildkite-agent artifact download builddeck . --step release_build
+        buildkite-agent artifact download builddeck.sha256 . --step release_build
         echo "Creating GitHub release for ${VERSION}"
         .buildkite/release.sh "${VERSION}"
       else
