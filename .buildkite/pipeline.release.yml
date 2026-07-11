@@ -19,6 +19,9 @@ steps:
   - label: ":rocket: GitHub Release"
     key: release
     depends_on: build
-    command: .buildkite/release.sh "${BUILDKITE_TAG}"
+    command: |
+      buildkite-agent artifact download builddeck . --step build
+      buildkite-agent artifact download builddeck.sha256 . --step build
+      .buildkite/release.sh "${BUILDKITE_TAG}"
     secrets:
       - GITHUB_TOKEN
