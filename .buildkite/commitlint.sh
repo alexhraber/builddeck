@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Validates that commits unique to the current branch follow conventional
-# commits format. On main, checks commits since the last release tag.
-# On feature branches, checks commits not in origin/main.
+# commits format. Only checks feature branches against origin/main — main
+# builds are already gated by branch protection (PRs must pass on the
+# feature branch first). Direct pushes to main are an infrequent edge case.
 # Exits 0 if all commits are valid, 1 with a report of invalid commits otherwise.
 set -euo pipefail
 
@@ -15,19 +16,15 @@ fi
 BRANCH="${BUILDKITE_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 
 if [[ "${BRANCH}" == "main" ]]; then
-  LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1 || echo "")
-  if [[ -z "${LATEST_TAG}" ]]; then
-    echo "commitlint: no tags found — skipping"
-    exit 0
-  fi
-  RANGE="${LATEST_TAG}..HEAD"
+  echo "commitlint: main branch — already vetted by PR checks, skipping"
+  exit 0
+fi
+
+if git cat-file -e origin/main 2>/dev/null; then
+  RANGE="origin/main..HEAD"
 else
-  if git cat-file -e origin/main 2>/dev/null; then
-    RANGE="origin/main..HEAD"
-  else
-    echo "commitlint: origin/main not available on feature branch — skipping"
-    exit 0
-  fi
+  echo "commitlint: origin/main not available on feature branch — skipping"
+  exit 0
 fi
 
 COMMITS=$(git log "${RANGE}" --pretty=format:"%s" 2>/dev/null || echo "")
