@@ -126,9 +126,11 @@ If your pipeline produces a `.sha256` companion artifact, builddeck downloads it
 
 If your pipeline has a tag step that creates git tags from conventional commits, builddeck queries Buildkite's tags API and displays the tag in the build detail pane.
 
-### 🔍 Log-to-Source Navigation
+### 🔗 Click-to-Source (Superpower)
 
-Logs are parsed for `file:line` and `file:line:col` references. Press `n` / `N` to jump between source references, then `o` to open the file in your browser.
+Logs are parsed for `file:line` and `file:line:col` references. Press `n` / `N` to jump between source references, then `enter` (or `ctrl+s`) to open the file at the exact line in your browser — a full click-to-source pipeline from CI output to production code.
+
+This is the killer feature: your CI failure log shows `src/handler.go:142` → press `enter` → GitHub opens `src/handler.go#L142`. No copy-paste, no searching.
 
 ### 🌐 Emoji Renderer
 
@@ -205,7 +207,7 @@ Press `S` to save the current pane filter as a named preset, `P` to load one. Pe
 |---|---|
 | `↑` / `↓` | Scroll |
 | `n` / `N` | Next / previous source ref |
-| `o` | Open source ref in browser |
+| `enter` / `ctrl+s` | Open source ref in browser |
 | `L` / `esc` | Close log view |
 
 ### Artifact Picker
