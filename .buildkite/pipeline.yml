@@ -109,6 +109,9 @@ steps:
     key: release
     depends_on: release_build
     command: |
+      # Files from release_build persist on single-agent setups. Remove them first
+      # so the downloads below don't fail with "file exists" on rename.
+      rm -f builddeck builddeck.sha256 builddeck.tag
       if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null && [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
         buildkite-agent artifact download builddeck . --step release_build
