@@ -70,8 +70,8 @@ steps:
       echo "--- Building snapshot binary"
       .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=snapshot-${BUILDKITE_COMMIT:0:7}" -o builddeck ./cmd/builddeck
       echo "+++ Snapshot build succeeded: $(ls -lh builddeck | awk '{print $5}')"
-      sha256sum builddeck | tee builddeck.sha256
-      buildkite-agent artifact upload "builddeck*"
+      sha256sum builddeck
+      echo "--- Snapshot done (build verification only — artifacts from release_build)"
 
   - label: ":bookmark: Tag"
     key: tag
