@@ -13,7 +13,8 @@ steps:
         -o builddeck ./cmd/builddeck
       echo "+++ Binary size: $(ls -lh builddeck | awk '{print $5}')"
       sha256sum builddeck | tee builddeck.sha256
-      buildkite-agent artifact upload "builddeck*"
+      buildkite-agent artifact upload "builddeck"
+      buildkite-agent artifact upload "builddeck.sha256"
 
   - label: ":rocket: GitHub Release"
     key: release
