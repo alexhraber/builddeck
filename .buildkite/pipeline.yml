@@ -104,44 +104,31 @@ steps:
       sha256sum builddeck | tee builddeck.sha256
       buildkite-agent artifact upload "builddeck"
       buildkite-agent artifact upload "builddeck.sha256"
-      # Re-upload builddeck.tag under this step so release can find it
-      # from --step release_build (immediately available, no propagation lag).
-      if [[ -s builddeck.tag ]]; then
-        buildkite-agent artifact upload "builddeck.tag"
-      fi
+
 
   - label: ":rocket: GitHub Release"
     key: release
     depends_on: release_build
     command: |
-      echo "--- Resolving release version"
-      VERSION=""
-      # release_build left files locally on single-agent.
-      # Otherwise try download from release_build, then from tag step.
-      if [[ -s builddeck.tag ]]; then
-        VERSION=$(cat builddeck.tag)
-        echo "Found local builddeck.tag"
+      echo "--- Resolving release tag"
+      TAG=""
+      if [[ -n "${BUILDKITE_TAG:-}" ]]; then
+        TAG="${BUILDKITE_TAG}"
+        echo "Tag from BUILDKITE_TAG: ${TAG}"
       else
-        rm -f builddeck.tag
-        if buildkite-agent artifact download builddeck.tag . --step release_build && [[ -s builddeck.tag ]]; then
-          VERSION=$(cat builddeck.tag)
-          echo "Downloaded builddeck.tag from release_build"
-        else
-          rm -f builddeck.tag
-          if buildkite-agent artifact download builddeck.tag . --step tag && [[ -s builddeck.tag ]]; then
-            VERSION=$(cat builddeck.tag)
-            echo "Downloaded builddeck.tag from tag step"
-          fi
+        TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+        if [[ -n "${TAG}" ]]; then
+          echo "Tag from local git: ${TAG}"
         fi
       fi
-      if [[ -n "${VERSION}" ]]; then
-        echo "--- Downloading release assets"
-        [[ -f builddeck ]] || buildkite-agent artifact download builddeck . --step release_build
-        [[ -f builddeck.sha256 ]] || buildkite-agent artifact download builddeck.sha256 . --step release_build
-        echo "Creating GitHub release for ${VERSION}"
-        .buildkite/release.sh "${VERSION}"
-      else
-        echo "No tag was created — skipping GitHub release"
+      if [[ -z "${TAG}" ]]; then
+        echo "No tag found — skipping GitHub release"
+        exit 0
       fi
+      echo "--- Ensuring release assets"
+      [[ -f builddeck ]] || buildkite-agent artifact download builddeck . --step release_build
+      [[ -f builddeck.sha256 ]] || buildkite-agent artifact download builddeck.sha256 . --step release_build
+      echo "Creating GitHub release for ${TAG}"
+      .buildkite/release.sh "${TAG}"
     secrets:
       - GITHUB_TOKEN
