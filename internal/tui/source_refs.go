@@ -1,21 +1,24 @@
 package tui
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 var (
 	// refPattern matches common compiler/test file:line patterns:
-	//   path/to/file.go:42
-	//   path/to/file.ts:10:20  (with column)
+	//   src/main.go:42
+	//   /home/ci/build/src/main.go:42
+	//   src/file.ts:10:20
 	//   ./relative/path.py:42
-	//   /absolute/path.rs:42:5
-	refPattern = regexp.MustCompile(`([^/\s]\S*?\.\w+):(\d+)(?::(\d+))?`)
+	refPattern = regexp.MustCompile(`([^\s]\S*?\.\w+):(\d+)(?::(\d+))?`)
 
-	// goErrorPattern matches Go compiler error continuation lines:
-	//   /path/file.go:42:21: undefined: Foo
-	// (captures the file:line:col part, same as above)
+	// altRefPattern matches quoted filename patterns from test frameworks:
+	//   File "src/main.py", line 42
+	//   at src/app.ts:42:20
+	altRefPattern = regexp.MustCompile(`(?:File\s+"|at\s+)(\S+?\.\w+)(?:",\s*line\s+|:)(\d+)(?::(\d+))?`)
 )
 
 // parseSourceRefs scans log text and returns all detected file:line references.
@@ -24,40 +27,56 @@ func parseSourceRefs(log string) []LogSourceRef {
 		return nil
 	}
 	lines := splitLinesPreserveIndex(log)
+	seen := make(map[string]bool)
 	var refs []LogSourceRef
 	for li, line := range lines {
-		matches := refPattern.FindAllStringSubmatchIndex(line, -1)
-		for _, m := range matches {
-			if len(m) < 6 {
-				continue
+		for _, ref := range extractRefs(line, li, refPattern, 1, 2, 3) {
+			key := fmt.Sprintf("%s:%d:%d", ref.FilePath, ref.Line, ref.Column)
+			if !seen[key] {
+				seen[key] = true
+				refs = append(refs, ref)
 			}
-			fullStart := m[0]
-			// fullEnd := m[1]
-			fileStart := m[2]
-			fileEnd := m[3]
-			lineStart := m[4]
-			lineEnd := m[5]
-
-			filePath := line[fileStart:fileEnd]
-			lineNum, err := strconv.Atoi(line[lineStart:lineEnd])
-			if err != nil {
-				continue
-			}
-
-			colNum := 0
-			if len(m) > 6 && m[6] >= 0 && m[7] > m[6] {
-				colNum, _ = strconv.Atoi(line[m[6]:m[7]])
-			}
-
-			refs = append(refs, LogSourceRef{
-				LineIndex: li,
-				FilePath:  filePath,
-				Line:      lineNum,
-				Column:    colNum,
-				StartCol:  fullStart,
-				EndCol:    m[1],
-			})
 		}
+		for _, ref := range extractRefs(line, li, altRefPattern, 1, 2, 3) {
+			key := fmt.Sprintf("%s:%d:%d", ref.FilePath, ref.Line, ref.Column)
+			if !seen[key] {
+				seen[key] = true
+				refs = append(refs, ref)
+			}
+		}
+	}
+	return refs
+}
+
+func extractRefs(line string, lineIndex int, re *regexp.Regexp, fileGroup, lineGroup, colGroup int) []LogSourceRef {
+	matches := re.FindAllStringSubmatchIndex(line, -1)
+	var refs []LogSourceRef
+	for _, m := range matches {
+		if len(m) < (lineGroup+1)*2 {
+			continue
+		}
+		fileStart, fileEnd := m[fileGroup*2], m[fileGroup*2+1]
+		lineStart, lineEnd := m[lineGroup*2], m[lineGroup*2+1]
+		if fileStart < 0 || fileEnd < 0 || lineStart < 0 || lineEnd < 0 {
+			continue
+		}
+		filePath := strings.TrimLeft(line[fileStart:fileEnd], "/")
+		lineNum, err := strconv.Atoi(line[lineStart:lineEnd])
+		if err != nil {
+			continue
+		}
+		colNum := 0
+		if colGroup >= 0 && len(m) >= (colGroup+1)*2 && m[colGroup*2] >= 0 && m[colGroup*2+1] > m[colGroup*2] {
+			colNum, _ = strconv.Atoi(line[m[colGroup*2]:m[colGroup*2+1]])
+		}
+		refs = append(refs, LogSourceRef{
+			LineIndex: lineIndex,
+			FilePath:  filePath,
+			Line:      lineNum,
+			Column:    colNum,
+			StartCol:  m[0],
+			EndCol:    m[1],
+		})
 	}
 	return refs
 }

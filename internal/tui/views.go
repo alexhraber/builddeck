@@ -1306,11 +1306,14 @@ func (m Model) logsView() string {
 		statusParts = append(statusParts, fmt.Sprintf("Line %d/%d (%d%%)", m.logScroll+1, len(lines), scrollPercent))
 	}
 
-	if len(m.logSourceRefs) > 0 {
-		refInfo := fmt.Sprintf("source %d/%d", m.logSourceIndex+1, len(m.logSourceRefs))
-		statusParts = append(statusParts, helpStyle.Render(refInfo))
+	refCount := len(m.logSourceRefs)
+	switch {
+	case refCount > 0:
+		statusParts = append(statusParts, helpStyle.Render(fmt.Sprintf("source %d/%d", m.logSourceIndex+1, refCount)))
+	case m.currentLog != "" && !m.loadingLog:
+		statusParts = append(statusParts, dimStyle.Render("no source refs — n/N:next/prev  enter:open"))
 	}
-	statusParts = append(statusParts, helpStyle.Render("L/esc:back  ↑/k:up  ↓/j:down  g:top  G:bottom  n/N:src  enter:open  q:quit"))
+	statusParts = append(statusParts, helpStyle.Render("L/esc:back  ↑/k:up  ↓/j:down  g:top  G:bottom  q:quit"))
 
 	b.WriteString(statusStyle.Width(m.width).Render(strings.Join(statusParts, "  │  ")))
 

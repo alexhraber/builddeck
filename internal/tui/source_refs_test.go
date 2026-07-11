@@ -32,7 +32,7 @@ func TestParseSourceRefs(t *testing.T) {
 			name: "with column",
 			log:  "Error in /app/handler.ts:15:20",
 			want: []LogSourceRef{
-				{LineIndex: 0, FilePath: "app/handler.ts", Line: 15, Column: 20, StartCol: 10, EndCol: 30},
+				{LineIndex: 0, FilePath: "app/handler.ts", Line: 15, Column: 20, StartCol: 9, EndCol: 30},
 			},
 		},
 		{
@@ -41,6 +41,40 @@ func TestParseSourceRefs(t *testing.T) {
 			want: []LogSourceRef{
 				{LineIndex: 1, FilePath: "testing.go", Line: 123, Column: 0, StartCol: 4, EndCol: 18},
 				{LineIndex: 2, FilePath: "some_test.go", Line: 45, Column: 0, StartCol: 8, EndCol: 23},
+			},
+		},
+		{
+			name: "absolute path at line start",
+			log:  "/home/ci/build/src/main.go:42: undefined",
+			want: []LogSourceRef{
+				{LineIndex: 0, FilePath: "home/ci/build/src/main.go", Line: 42, Column: 0, StartCol: 0, EndCol: 29},
+			},
+		},
+		{
+			name: "no extension no match",
+			log:  "Makefile:42: error",
+			want: nil,
+		},
+		{
+			name: "Python File pattern",
+			log:  "  File \"src/main.py\", line 42, in foo",
+			want: []LogSourceRef{
+				{LineIndex: 0, FilePath: "src/main.py", Line: 42, Column: 0, StartCol: 2, EndCol: 29},
+			},
+		},
+		{
+			name: "JavaScript at pattern",
+			log:  "at src/app.ts:42:20",
+			want: []LogSourceRef{
+				{LineIndex: 0, FilePath: "src/app.ts", Line: 42, Column: 20, StartCol: 3, EndCol: 19},
+			},
+		},
+		{
+			name: "multiple patterns in one line",
+			log:  "src/a.go:10 and src/b.go:20:30",
+			want: []LogSourceRef{
+				{LineIndex: 0, FilePath: "src/a.go", Line: 10, Column: 0, StartCol: 0, EndCol: 11},
+				{LineIndex: 0, FilePath: "src/b.go", Line: 20, Column: 30, StartCol: 16, EndCol: 30},
 			},
 		},
 	}
