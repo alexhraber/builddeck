@@ -260,6 +260,8 @@ func stateLabel(state string) string {
 		return "FLNG"
 	case "active":
 		return "ACTV"
+	case "accepted":
+		return "ACPT"
 	case "timed_out":
 		return "TMOU"
 	case "broken":
