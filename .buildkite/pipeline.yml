@@ -1,3 +1,5 @@
+cache: ".buildkite/cache-volume"
+
 steps:
   - label: ":broom: Tidy"
     key: tidy
@@ -53,58 +55,51 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":bookmark: Tag"
-    key: tag
+  - label: ":terminal: Snapshot Build"
+    key: snapshot
     depends_on:
-      - test
       - vet
       - lint
       - gosec
       - vulncheck
-      - tidy
     command: |
-      # Only create tag on main branch, not on tag pushes
-      if [[ -z "${BUILDKITE_TAG}" && "${BUILDKITE_BRANCH}" == "main" ]]; then
-        .buildkite/tag.sh
-      else
-        echo "Skipping tag creation (branch: ${BUILDKITE_BRANCH}, tag: ${BUILDKITE_TAG})"
-      fi
-    secrets:
-      - GITHUB_TOKEN
-
-  - label: ":golang: Build and Release"
-    key: build
-    depends_on: tag
-    command: |
-      echo "--- Checking all packages compile"
-      .buildkite/setup-go.sh go build ./...
-      echo "--- Building builddeck binary"
-      # Get version from builddeck.tag artifact created by tag step (if tag was created)
-      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
-        VERSION=$(cat builddeck.tag)
-        echo "Using version from tag step: ${VERSION}"
-      else
-        VERSION="dev"
-        echo "No tag created, using: ${VERSION}"
-      fi
-      echo "Building version: ${VERSION}"
-      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
-      ls -lh builddeck
+      echo "--- Building snapshot binary"
+      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=snapshot-${BUILDKITE_COMMIT:0:7}" -o builddeck ./cmd/builddeck
+      echo "+++ Snapshot build succeeded: $(ls -lh builddeck | awk '{print $5}')"
       buildkite-agent artifact upload builddeck
-      if [[ -n "${VERSION}" && "${VERSION}" != "dev" ]]; then
-        .buildkite/release.sh "${VERSION}"
+
+  - label: ":package: Create a release?"
+    key: release_unblock
+    depends_on:
+      - test
+      - snapshot
+      - codecov
+    branches: main
+    block: "Select release type to tag a new version"
+    blocked_state: "passed"
+    prompt: "Choose the semver bump for this release. Only patch and minor are available from CI; major must be done manually."
+    fields:
+      - key: release-type
+        select: "Release Type"
+        required: true
+        options:
+          - label: "No release — just validate"
+            value: "skip"
+          - label: "Patch (v0.x.X)"
+            value: "patch"
+          - label: "Minor (v0.X.0)"
+            value: "minor"
+
+  - label: ":bookmark: Tag"
+    key: tag
+    depends_on: release_unblock
+    branches: main
+    command: |
+      RELEASE_TYPE="$(buildkite-agent meta-data get "release-type")"
+      if [[ "${RELEASE_TYPE}" == "skip" ]]; then
+        echo "Release skipped — no tag created"
+        exit 0
       fi
-      # Ensure the binary is available as a local file for any final steps if needed
-      # (already uploaded as artifact, but release.sh handles the GitHub upload)
+      .buildkite/tag.sh "${RELEASE_TYPE}"
     secrets:
       - GITHUB_TOKEN
-
-  - label: ":lock: Checksum"
-    key: checksum
-    depends_on: build
-    command: |
-      echo "--- Downloading builddeck binary"
-      buildkite-agent artifact download builddeck /tmp/
-      echo "--- Generating SHA256 checksum"
-      sha256sum /tmp/builddeck | tee builddeck.sha256
-      buildkite-agent artifact upload builddeck.sha256
