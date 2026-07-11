@@ -23,6 +23,9 @@ type keyMap struct {
 	Quit         key.Binding
 	Unblock      key.Binding
 	OpenBrowser  key.Binding
+	OpenSource   key.Binding
+	NextSource   key.Binding
+	PrevSource   key.Binding
 	Download     key.Binding
 	Agents       key.Binding
 	GlobalSearch key.Binding
@@ -114,6 +117,18 @@ var keys = keyMap{
 		key.WithKeys("o"),
 		key.WithHelp("o", "open in browser"),
 	),
+	OpenSource: key.NewBinding(
+		key.WithKeys("enter", "ctrl+s"),
+		key.WithHelp("enter/ctrl+s", "open source"),
+	),
+	NextSource: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "next source ref"),
+	),
+	PrevSource: key.NewBinding(
+		key.WithKeys("N"),
+		key.WithHelp("N", "prev source ref"),
+	),
 	Download: key.NewBinding(
 		key.WithKeys("d"),
 		key.WithHelp("d", "download artifact"),
@@ -153,7 +168,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 		k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab,
 		k.Enter, k.Top, k.Bottom, k.Search, k.Refresh,
 		k.LiveMode, k.Logs, k.AgentStats, k.RetryStep, k.Cancel, k.Unblock,
-		k.OpenBrowser, k.Download, k.Agents, k.GlobalSearch,
+		k.OpenBrowser, k.OpenSource, k.NextSource, k.PrevSource, k.Download, k.Agents, k.GlobalSearch,
 		k.OpenCommit, k.OpenRepo, k.SavePreset, k.LoadPreset, k.Options, k.Help, k.Quit,
 	}
 }
@@ -164,7 +179,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Tab, k.ShiftTab, k.Enter},
 		{k.Top, k.Bottom, k.Search, k.GlobalSearch, k.Refresh, k.LiveMode, k.Logs, k.AgentStats},
 		{k.RetryStep, k.Cancel, k.Unblock},
-		{k.OpenBrowser, k.Download, k.Agents, k.Options, k.OpenRepo, k.OpenCommit},
+		{k.OpenBrowser, k.OpenSource, k.NextSource, k.PrevSource, k.Download, k.Agents, k.Options, k.OpenRepo, k.OpenCommit},
 		{k.SavePreset, k.LoadPreset},
 		{k.Help, k.Quit},
 	}

@@ -120,32 +120,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if targetStep != nil {
 					m.logStepID = targetStep.ID
 					m.ensureCachesInitialized()
-					if cachedLog, has := m.stepLogs[targetStep.ID]; has {
-						m.currentLog = cachedLog
-						m.loadingLog = false
-					} else {
-						m.currentLog = ""
-						m.loadingLog = true
-						org := m.selectedOrg()
-						pipe := m.selectedPipeline()
-						cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID))
-					}
+				if cachedLog, has := m.stepLogs[targetStep.ID]; has {
+					m.setLogContent(cachedLog)
+					m.loadingLog = false
 				} else {
-					m.logStepID = ""
-					m.currentLog = ""
+					m.setLogContent("")
 					m.loadingLog = true
+					org := m.selectedOrg()
+					pipe := m.selectedPipeline()
+					cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID))
 				}
-				return m, tea.Batch(cmds...)
+			} else {
+				m.logStepID = ""
+				m.setLogContent("")
+				m.loadingLog = true
 			}
-
-			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
-		m.pendingLogsForLatestBuild = false
-		m.selectedBuild = nil
-		m.annotations = nil
-		m.artifacts = nil
-		return m, nil
+
+		cmds := m.onBuildIndexChanged()
+		return m, tea.Batch(cmds...)
+	}
+	m.pendingLogsForLatestBuild = false
+	m.selectedBuild = nil
+	m.annotations = nil
+	m.artifacts = nil
+	return m, nil
 
 	case buildDetailMsg:
 		m.loadingDetail = false
@@ -161,17 +161,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.logStepID = targetStep.ID
 						m.logScroll = 0
 						if cachedLog, has := m.stepLogs[targetStep.ID]; has {
-							m.currentLog = cachedLog
+							m.setLogContent(cachedLog)
 							m.loadingLog = false
 						} else {
-							m.currentLog = ""
+							m.setLogContent("")
 							m.loadingLog = true
 							org := m.selectedOrg()
 							pipe := m.selectedPipeline()
 							return m, loadLogCmd(m.client, org.Slug, pipe.Slug, msg.build.Number, targetStep.ID)
 						}
 					} else {
-						m.currentLog = "No steps found for this build"
+						m.setLogContent("No steps found for this build")
 						m.loadingLog = false
 					}
 				}
@@ -233,13 +233,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.errMsg = "failed to load logs"
-			m.currentLog = "Error loading logs: " + msg.err.Error()
+			m.setLogContent("Error loading logs: " + msg.err.Error())
 			return m, nil
 		}
 		m.ensureCachesInitialized()
 		m.stepLogs[msg.stepID] = msg.log
 		if m.showLogs && m.logStepID == msg.stepID {
-			m.currentLog = msg.log
+			m.setLogContent(msg.log)
 		}
 		return m, nil
 
@@ -375,7 +375,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 				if targetStep == nil {
 					m.logStepID = ""
-					m.currentLog = ""
+					m.setLogContent("")
 					m.loadingLog = true
 					cmd := m.loadSelectedBuildDetailsForce()
 					return m, cmd
@@ -384,12 +384,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.logStepID = targetStep.ID
 				m.ensureCachesInitialized()
 				if cachedLog, has := m.stepLogs[targetStep.ID]; has {
-					m.currentLog = cachedLog
+					m.setLogContent(cachedLog)
 					m.loadingLog = false
 					return m, nil
 				}
 
-				m.currentLog = ""
+				m.setLogContent("")
 				m.loadingLog = true
 				return m, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID)
 			}
@@ -422,7 +422,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if targetStep == nil {
 			if m.loadingDetail || len(b.Steps) == 0 {
 				m.logStepID = ""
-				m.currentLog = ""
+				m.setLogContent("")
 				m.loadingLog = true
 				var cmd tea.Cmd
 				if !m.detailInFlight && !m.loadingDetail {
@@ -437,11 +437,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.logStepID = targetStep.ID
 		m.ensureCachesInitialized()
 		if cachedLog, has := m.stepLogs[targetStep.ID]; has {
-			m.currentLog = cachedLog
+			m.setLogContent(cachedLog)
 			m.loadingLog = false
 			return m, nil
 		}
-		m.currentLog = ""
+		m.setLogContent("")
 		m.loadingLog = true
 		org := m.selectedOrg()
 		pipe := m.selectedPipeline()
@@ -480,6 +480,30 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				maxScroll = 0
 			}
 			m.logScroll = maxScroll
+			return m, nil
+		case key.Matches(msg, keys.NextSource):
+			if len(m.logSourceRefs) > 0 && m.logSourceIndex < len(m.logSourceRefs)-1 {
+				m.logSourceIndex++
+				ref := m.logSourceRefs[m.logSourceIndex]
+				// Scroll to make the ref visible
+				contentHeight := m.height - 2
+				if ref.LineIndex < m.logScroll || ref.LineIndex >= m.logScroll+contentHeight-2 {
+					m.logScroll = ref.LineIndex
+				}
+			}
+			return m, nil
+		case key.Matches(msg, keys.PrevSource):
+			if len(m.logSourceRefs) > 0 && m.logSourceIndex > 0 {
+				m.logSourceIndex--
+				ref := m.logSourceRefs[m.logSourceIndex]
+				contentHeight := m.height - 2
+				if ref.LineIndex < m.logScroll || ref.LineIndex >= m.logScroll+contentHeight-2 {
+					m.logScroll = ref.LineIndex
+				}
+			}
+			return m, nil
+		case key.Matches(msg, keys.OpenSource):
+			m.openLogSourceInBrowser()
 			return m, nil
 		}
 		return m, nil
@@ -1300,6 +1324,34 @@ func (m *Model) openRepoInBrowser() {
 	}
 	openURL(url)
 	m.searchMsg = "Opened repo in browser"
+}
+
+func (m *Model) openLogSourceInBrowser() {
+	if len(m.logSourceRefs) == 0 || m.logSourceIndex < 0 || m.logSourceIndex >= len(m.logSourceRefs) {
+		m.searchMsg = "No source reference selected"
+		return
+	}
+	pipe := m.selectedPipeline()
+	if pipe == nil || pipe.Repository == "" {
+		m.searchMsg = "No repo URL available"
+		return
+	}
+	base := gitToHTTPS(pipe.Repository)
+	if base == "" {
+		m.searchMsg = "Could not parse repo URL"
+		return
+	}
+	ref := m.logSourceRefs[m.logSourceIndex]
+	commit := ""
+	if bd := m.selectedBuild; bd != nil && bd.Commit != "" {
+		commit = bd.Commit
+	}
+	url := base + "/blob/" + commit + "/" + ref.FilePath + "#L" + fmt.Sprintf("%d", ref.Line)
+	if commit == "" {
+		url = base + "/blob/main/" + ref.FilePath + "#L" + fmt.Sprintf("%d", ref.Line)
+	}
+	openURL(url)
+	m.searchMsg = "Opened source in browser"
 }
 
 func (m *Model) openCommitInBrowser() {
