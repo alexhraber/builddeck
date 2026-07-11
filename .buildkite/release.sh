@@ -17,9 +17,9 @@ cd "$(dirname "$0")/.."
 
 # Download ALL artifacts from build and checksum steps
 echo "Downloading artifacts..."
-buildkite-agent artifact download "builddeck*" . --step build 2>/dev/null || true
-buildkite-agent artifact download "*.sha256" . --step checksum 2>/dev/null || true
-buildkite-agent artifact download "tag.txt" . --step tag 2>/dev/null || true
+buildkite-agent artifact download "builddeck" . --step build 2>/dev/null || true
+buildkite-agent artifact download "builddeck.sha256" . --step checksum 2>/dev/null || true
+buildkite-agent artifact download "builddeck.tag" . --step tag 2>/dev/null || true
 
 # Debug: list what we have
 echo "=== Files in workspace ==="
