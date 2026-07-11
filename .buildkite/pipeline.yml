@@ -76,7 +76,6 @@ steps:
     key: checksum
     depends_on: snapshot
     command: |
-      buildkite-agent artifact download builddeck .
       sha256sum builddeck | tee builddeck.sha256
       buildkite-agent artifact upload builddeck.sha256
 
