@@ -365,8 +365,8 @@ func (m Model) rightPaneView(w, h int) string {
 		b.WriteString(field("Branch", bd.Branch))
 		b.WriteString(field("Commit", shortSHA(bd.Commit)))
 		msg := bd.Message
-		if len(msg) > w-14 {
-			msg = msg[:w-14]
+		if len(msg) > w-14+20 {
+			msg = msg[:w-14+20] + "..."
 		}
 		msg = formatBuildMessage(msg)
 		b.WriteString(field("Message", msg))
