@@ -109,13 +109,17 @@ steps:
     key: release
     depends_on: release_build
     command: |
-      # Files from release_build persist on single-agent setups. Remove them first
-      # so the downloads below don't fail with "file exists" on rename.
-      rm -f builddeck builddeck.sha256 builddeck.tag
-      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null && [[ -s builddeck.tag ]]; then
+      # On single-agent, release_build left files in the checkout.
+      # Try local first, download only if missing.
+      VERSION=""
+      if [[ -s builddeck.tag ]]; then
         VERSION=$(cat builddeck.tag)
-        buildkite-agent artifact download builddeck . --step release_build
-        buildkite-agent artifact download builddeck.sha256 . --step release_build
+      elif buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null && [[ -s builddeck.tag ]]; then
+        VERSION=$(cat builddeck.tag)
+      fi
+      if [[ -n "${VERSION}" ]]; then
+        [[ -f builddeck ]] || buildkite-agent artifact download builddeck . --step release_build
+        [[ -f builddeck.sha256 ]] || buildkite-agent artifact download builddeck.sha256 . --step release_build
         echo "Creating GitHub release for ${VERSION}"
         .buildkite/release.sh "${VERSION}"
       else
