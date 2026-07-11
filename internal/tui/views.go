@@ -1240,8 +1240,8 @@ func (m Model) logsView() string {
 
 		// Build a set of source refs visible in the current window
 		type visibleRef struct {
-			ref  LogSourceRef
-			sel  bool
+			ref LogSourceRef
+			sel bool
 		}
 		var visible []visibleRef
 		for _, ref := range m.logSourceRefs {

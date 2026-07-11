@@ -120,32 +120,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if targetStep != nil {
 					m.logStepID = targetStep.ID
 					m.ensureCachesInitialized()
-				if cachedLog, has := m.stepLogs[targetStep.ID]; has {
-					m.setLogContent(cachedLog)
-					m.loadingLog = false
+					if cachedLog, has := m.stepLogs[targetStep.ID]; has {
+						m.setLogContent(cachedLog)
+						m.loadingLog = false
+					} else {
+						m.setLogContent("")
+						m.loadingLog = true
+						org := m.selectedOrg()
+						pipe := m.selectedPipeline()
+						cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID))
+					}
 				} else {
+					m.logStepID = ""
 					m.setLogContent("")
 					m.loadingLog = true
-					org := m.selectedOrg()
-					pipe := m.selectedPipeline()
-					cmds = append(cmds, loadLogCmd(m.client, org.Slug, pipe.Slug, m.selectedBuild.Number, targetStep.ID))
 				}
-			} else {
-				m.logStepID = ""
-				m.setLogContent("")
-				m.loadingLog = true
+				return m, tea.Batch(cmds...)
 			}
+
+			cmds := m.onBuildIndexChanged()
 			return m, tea.Batch(cmds...)
 		}
-
-		cmds := m.onBuildIndexChanged()
-		return m, tea.Batch(cmds...)
-	}
-	m.pendingLogsForLatestBuild = false
-	m.selectedBuild = nil
-	m.annotations = nil
-	m.artifacts = nil
-	return m, nil
+		m.pendingLogsForLatestBuild = false
+		m.selectedBuild = nil
+		m.annotations = nil
+		m.artifacts = nil
+		return m, nil
 
 	case buildDetailMsg:
 		m.loadingDetail = false
