@@ -59,7 +59,7 @@ steps:
       chmod +x codecov
       ./codecov -f coverage.out
 
-  - label: ":terminal: Snapshot Build"
+  - label: ":terminal: Snapshot + Checksum"
     key: snapshot
     depends_on:
       - vet
@@ -70,24 +70,50 @@ steps:
       echo "--- Building snapshot binary"
       .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=snapshot-${BUILDKITE_COMMIT:0:7}" -o builddeck ./cmd/builddeck
       echo "+++ Snapshot build succeeded: $(ls -lh builddeck | awk '{print $5}')"
-      buildkite-agent artifact upload builddeck
-
-  - label: ":lock: Checksum"
-    key: checksum
-    depends_on: snapshot
-    command: |
       sha256sum builddeck | tee builddeck.sha256
-      buildkite-agent artifact upload builddeck.sha256
+      buildkite-agent artifact upload "builddeck*"
 
   - label: ":bookmark: Tag"
     key: tag
     depends_on:
       - commitlint
       - test
-      - checksum
+      - snapshot
       - codecov
     branches: main
     command: |
       .buildkite/tag.sh
+    secrets:
+      - GITHUB_TOKEN
+
+  - label: ":golang: Build Release Binary"
+    key: release_build
+    depends_on: tag
+    command: |
+      echo "--- Checking for release version from tag step"
+      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
+        VERSION=$(cat builddeck.tag)
+        echo "Version from tag step: ${VERSION}"
+      else
+        VERSION="dev"
+        echo "No tag created, building with version: ${VERSION}"
+      fi
+      echo "--- Building release binary"
+      .buildkite/setup-go.sh go build -ldflags="-s -w -X main.version=${VERSION}" -o builddeck ./cmd/builddeck
+      echo "+++ Binary size: $(ls -lh builddeck | awk '{print $5}')"
+      sha256sum builddeck | tee builddeck.sha256
+      buildkite-agent artifact upload "builddeck*"
+
+  - label: ":rocket: GitHub Release"
+    key: release
+    depends_on: release_build
+    command: |
+      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
+        VERSION=$(cat builddeck.tag)
+        echo "Creating GitHub release for ${VERSION}"
+        .buildkite/release.sh "${VERSION}"
+      else
+        echo "No tag was created — skipping GitHub release"
+      fi
     secrets:
       - GITHUB_TOKEN
