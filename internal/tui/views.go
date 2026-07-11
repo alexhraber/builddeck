@@ -1325,7 +1325,7 @@ func (m Model) logsView() string {
 	return b.String()
 }
 
-const maxMsgLen = 20
+const maxMsgLen = 40
 
 // formatBuildMessage truncates a build message to maxMsgLen characters and
 // appends a PR reference if one is found in the original message.
