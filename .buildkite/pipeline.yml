@@ -79,9 +79,9 @@ steps:
       echo "--- Checking all packages compile"
       .buildkite/setup-go.sh go build ./...
       echo "--- Building builddeck binary"
-      # Get version from tag.txt artifact created by tag step (if tag was created)
-      if buildkite-agent artifact download tag.txt . --step tag 2>/dev/null; then
-        VERSION=$(cat tag.txt)
+      # Get version from builddeck.tag artifact created by tag step (if tag was created)
+      if buildkite-agent artifact download builddeck.tag . --step tag 2>/dev/null; then
+        VERSION=$(cat builddeck.tag)
         echo "Using version from tag step: ${VERSION}"
       else
         VERSION="dev"
