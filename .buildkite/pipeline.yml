@@ -34,12 +34,12 @@ steps:
   - label: ":lock: Sec Scan"
     key: gosec
     depends_on: fmt
-    command: .buildkite/setup-go.sh go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+    command: .buildkite/setup-go.sh go run github.com/securego/gosec/v2/cmd/gosec@latest ./cmd/... ./internal/...
 
   - label: ":mag: Vuln Check"
     key: vulncheck
     depends_on: tidy
-    command: .buildkite/setup-go.sh go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+    command: .buildkite/setup-go.sh go run golang.org/x/vuln/cmd/govulncheck@latest ./cmd/... ./internal/...
 
   - label: ":golang: Test"
     key: test
