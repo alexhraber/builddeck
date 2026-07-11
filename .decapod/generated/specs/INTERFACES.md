@@ -15,21 +15,30 @@
 ## CLI Surface
 | Flag | Env Var | Description | Required |
 |---|---|---|---|
+| `--version` | — | Print version and exit | No |
 | (none) | `BUILDKITE_API_TOKEN` | Buildkite API token | Yes |
 | (none) | `BUILDKITE_BASE_URL` | API base URL (for testing) | No (defaults to api.buildkite.com) |
+| (none) | `BUILDKITE_DEBUG=1` | Log HTTP requests to stderr | No |
 
 ## Internal Client API (internal/buildkite)
 | Method | HTTP | Path | Returns |
 |---|---|---|---|
-| `GetOrgs()` | GET | `/v2/organizations` | `[]Organization` |
-| `GetPipelines(org)` | GET | `/v2/organizations/{org}/pipelines` | `[]Pipeline` |
-| `GetBuilds(org, pipeline)` | GET | `/v2/organizations/{org}/pipelines/{pipeline}/builds` | `[]Build` |
-| `GetBuild(org, pipeline, number)` | GET | `/v2/organizations/{org}/pipelines/{pipeline}/builds/{number}` | `*Build` |
-| `GetStepLog(org, pipeline, build, job)` | GET | `/v2/organizations/{org}/pipelines/{pipeline}/builds/{number}/jobs/{id}/log?content=true` | `string` |
-| `ListArtifacts(org, pipeline, build)` | GET | `/v2/organizations/{org}/pipelines/{pipeline}/builds/{number}/artifacts` | `[]Artifact` |
-| `DownloadArtifactURL(org, pipeline, build, job, artifact)` | GET | `/v2/organizations/{org}/pipelines/{pipeline}/builds/{number}/jobs/{id}/artifacts/{id}/download` | `string (URL)` |
-| `ListEmoji(org)` | GET | `/v2/organizations/{org}/emoji` | `[]EmojiEntry` |
-| `SearchBuilds(org, query)` | GET | `/v2/organizations/{org}/builds?q={query}` | `[]Build` |
+| `ListOrganizations(ctx)` | GET | `/v2/organizations` | `[]Organization` |
+| `ListPipelines(ctx, orgSlug)` | GET | `/v2/organizations/{org}/pipelines` | `[]Pipeline` (paginated up to 500) |
+| `ListBuilds(ctx, orgSlug, pipeSlug)` | GET | `/v2/organizations/{org}/pipelines/{pipe}/builds` | `[]Build` (25 per page) |
+| `GetBuild(ctx, orgSlug, pipeSlug, buildNum)` | GET | `/.../builds/{number}` | `*Build` |
+| `GetTagArtifact(ctx, orgSlug, pipeSlug, buildNum)` | GET | Downloads `.tag` artifact | `string` (version tag) |
+| `RebuildBuild(ctx, orgSlug, pipeSlug, buildNum)` | PUT | `/.../builds/{number}/rebuild` | `*Build` |
+| `CancelBuild(ctx, orgSlug, pipeSlug, buildNum)` | PUT | `/.../builds/{number}/cancel` | `*Build` |
+| `ListAgents(ctx, orgSlug)` | GET | `/v2/organizations/{org}/agents` | `[]Agent` (paginated up to 500) |
+| `ListAnnotations(ctx, orgSlug, pipeSlug, buildNum)` | GET | `/.../builds/{number}/annotations` | `[]Annotation` |
+| `ListArtifacts(ctx, orgSlug, pipeSlug, buildNum)` | GET | `/.../builds/{number}/artifacts` | `[]Artifact` (paginated) |
+| `GetStepLog(ctx, orgSlug, pipeSlug, buildNum, stepID)` | GET | `/.../jobs/{id}/log?content=true` | `*StepLog` (with raw text fallback) |
+| `RetryStep(ctx, orgSlug, pipeSlug, buildNum, stepID)` | PUT | `/.../jobs/{id}/retry` | error |
+| `UnblockStep(ctx, orgSlug, pipeSlug, buildNum, stepID)` | PUT | `/.../jobs/{id}/unblock` | error |
+| `DownloadArtifactURL(ctx, orgSlug, pipeSlug, buildNum, stepID, artifactID)` | GET | `/.../jobs/{id}/artifacts/{id}/download` | `string` (redirect URL) |
+| `ListEmojis(ctx, orgSlug)` | GET | `/v2/organizations/{org}/emojis` | `[]EmojiEntry` |
+| `GetTagsForCommit(ctx, orgSlug, pipeSlug, commitSHA)` | GET | `/.../builds/{sha}/tags` | `[]Tag` |
 
 ## Key TUI Messages (internal/tui)
 | Msg Type | Trigger | Effect |
@@ -37,11 +46,19 @@
 | `orgsLoadedMsg` | App init or `R` refresh | Populates left pane |
 | `pipelinesLoadedMsg` | Org selected | Populates center pane |
 | `buildsLoadedMsg` | Pipeline selected | Populates right pane header |
-| `buildDetailLoadedMsg` | Build selected | Populates jobs/annotations/artifacts |
+| `buildDetailMsg` | Build selected (250ms debounced) | Populates jobs/annotations/artifacts/tags |
+| `annotationsLoadedMsg` | Build detail loaded | Populates annotations section |
+| `artifactsLoadedMsg` | Build detail loaded | Populates artifacts section |
+| `agentsLoadedMsg` | `a` keypress | Populates agent/queue saturation view |
+| `emojisLoadedMsg` | Org selected | Loads per-org custom emoji |
 | `logLoadedMsg` | `L` key or auto-select | Populates log pane |
-| `errMsg` | Any API failure | Displayed in status bar |
-| `tickMsg` | Timer (2s/10s) | Triggers polling refresh |
+| `buildActionMsg` | Retry/rebuild/cancel/unblock result | Updates build state |
+| `artifactDownloadMsg` | Artifact download completes | Saves file to disk |
 | `artifactChecksumMsg` | `.sha256` artifact download | Updates `Artifact.Checksum` field |
+| `artifactTagMsg` | `.tag` artifact download | Updates build tag display |
+| `buildSelectionDebounceMsg` | 250ms debounce timer | Triggers build detail fetch |
+| `errMsg` | Any API failure | Displayed in status bar |
+| `tickMsg` | Timer (2s/10s/30s/disabled) | Triggers polling refresh |
 
 ## Outbound Dependencies
 | Dependency | Purpose | SLA | Timeout | Circuit-Breaker |
@@ -55,7 +72,7 @@
 
 ## Data Ownership
 - **Source of truth**: Buildkite REST API — all data is ephemeral in-memory cache
-- **Local state**: `~/.config/builddeck/config.toml` (filter presets, preferences)
+- **Local state**: `~/.config/builddeck/config.toml` (filter presets, UI preferences)
 - **No database, no persistent model, no migration**
 
 ## Key Struct Definitions
@@ -66,34 +83,92 @@ type Artifact struct {
     ID          string `json:"id"`
     Filename    string `json:"filename"`
     FileSize    int    `json:"file_size"`
+    Dirname     string `json:"dirname"`
+    ContentType string `json:"mime_type"`
     DownloadURL string `json:"download_url"`
     StepID      string `json:"job_id"`
-    Checksum    string `json:"-"` // populated by loadArtifactChecksums()
+    State       string `json:"state"`
+    WebURL      string `json:"url"`
+    Checksum    string `json:"-"`   // populated by loadArtifactChecksums()
+    Tag         string `json:"-"`   // populated by loadArtifactTags()
+    CreatedAt   time.Time `json:"created_at"`
 }
 ```
 
 ### Build (internal/buildkite/types.go)
 ```go
 type Build struct {
-    Number    int          `json:"number"`
-    State     string       `json:"state"`
-    Branch    string       `json:"branch"`
-    Commit    string       `json:"commit"`
-    Message   string       `json:"message"`
-    Creator   *Creator     `json:"creator"`
-    Steps     []Step       `json:"jobs"`
-    Pipeline  *PipelineRef `json:"pipeline"`
-    StartedAt *time.Time   `json:"started_at"`
-    FinishedAt *time.Time  `json:"finished_at"`
-    Annotations []Annotation `json:"annotations"`
+    ID         string       `json:"id"`
+    Number     int          `json:"number"`
+    State      string       `json:"state"`
+    Branch     string       `json:"branch"`
+    Tag        string       `json:"tag"`
+    Commit     string       `json:"commit"`
+    Message    string       `json:"message"`
+    Creator    *Creator     `json:"creator"`
+    Steps      []Step       `json:"jobs"`
+    Pipeline   *PipelineRef `json:"pipeline"`
+    WebURL     string       `json:"web_url"`
+    StartedAt  *time.Time   `json:"started_at"`
+    FinishedAt *time.Time   `json:"finished_at"`
+    CreatedAt  *time.Time   `json:"created_at"`
+    PipelineID string       `json:"pipeline_id"`
 }
 ```
 
 ### Organization (internal/buildkite/types.go)
 ```go
 type Organization struct {
-    Slug string `json:"slug"`
-    Name string `json:"name"`
+    ID      string `json:"id"`
+    Slug    string `json:"slug"`
+    Name    string `json:"name"`
+    WebURL  string `json:"web_url"`
+}
+```
+
+### Pipeline (internal/buildkite/types.go)
+```go
+type Pipeline struct {
+    ID         string `json:"id"`
+    Slug       string `json:"slug"`
+    Name       string `json:"name"`
+    Repository string `json:"repository"`
+    WebURL     string `json:"web_url"`
+    Emoji      string `json:"emoji"`
+}
+```
+
+### Step (internal/buildkite/types.go)
+```go
+type Step struct {
+    ID              string     `json:"id"`
+    Type            string     `json:"type"`
+    State           string     `json:"state"`
+    Name            string     `json:"name"`
+    Label           string     `json:"label"`
+    Command         string     `json:"command"`
+    AgentQueryRules []string   `json:"agent_query_rules"`
+    ExitStatus      *int       `json:"exit_status"`
+    Agent           string     `json:"agent"`
+    WebURL          string     `json:"url"`
+    UnblockableID   string     `json:"unblockable_id"`
+    StartedAt       *time.Time `json:"started_at"`
+    FinishedAt      *time.Time `json:"finished_at"`
+}
+```
+
+### Agent (internal/buildkite/types.go)
+```go
+type Agent struct {
+    ID             string   `json:"id"`
+    Name           string   `json:"name"`
+    Hostname       string   `json:"hostname"`
+    Version        string   `json:"version"`
+    ConnectedState string   `json:"connection_state"`
+    OS             string   `json:"os"`
+    IPAddress      string   `json:"ip_address"`
+    Metadata       []string `json:"meta_data"`
+    WebURL         string   `json:"url"`
 }
 ```
 
