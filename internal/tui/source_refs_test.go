@@ -120,6 +120,9 @@ func TestStripANSI(t *testing.T) {
 		{"CSI SGR", "\x1b[31mred\x1b[0m", "red"},
 		{"OSC kitty", "\x1b]bk;t=123\x07path", "path"},
 		{"OSC with ST", "\x1b]bk;t=123\x1b\\path", "path"},
+		{"DCS kitty underscore", "\x1b_bk;t=456\x07path", "path"},
+		{"DCS + CSI before path", "\x1b_bk;t=123\x07\x1b[1msrc/main.go:42", "src/main.go:42"},
+		{"orphan BEL", "\x07text", "text"},
 		{"mixed", "\x1b[1m\x1b[31m  \x1b[0mhello.go:42", "  hello.go:42"},
 	}
 	for _, tt := range tests {
@@ -133,16 +136,25 @@ func TestStripANSI(t *testing.T) {
 }
 
 func TestParseSourceRefsWithANSI(t *testing.T) {
-	log := "\x1b[1m\x1b[31m  \x1b[0m\x1b]bk;t=123\x07src/main.go:42: error"
-	refs := parseSourceRefs(log)
-	if len(refs) != 1 {
-		t.Fatalf("got %d refs, want 1\nrefs: %+v", len(refs), refs)
+	tests := []struct {
+		name string
+		log  string
+		want string
+	}{
+		{"OSC kitty", "\x1b[1m\x1b[31m  \x1b[0m\x1b]bk;t=123\x07src/main.go:42", "src/main.go"},
+		{"DCS underscore", "\x1b_bk;t=456\x07internal/tui/views.go:1243", "internal/tui/views.go"},
+		{"CSI before path", "\x1b[1m\x1b[31msrc/main.go:42\x1b[0m", "src/main.go"},
 	}
-	if refs[0].FilePath != "src/main.go" {
-		t.Errorf("FilePath = %q, want src/main.go", refs[0].FilePath)
-	}
-	if refs[0].Line != 42 {
-		t.Errorf("Line = %d, want 42", refs[0].Line)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refs := parseSourceRefs(tt.log)
+			if len(refs) != 1 {
+				t.Fatalf("got %d refs, want 1\nlog=%q\nrefs=%+v", len(refs), tt.log, refs)
+			}
+			if refs[0].FilePath != tt.want {
+				t.Errorf("FilePath = %q, want %q", refs[0].FilePath, tt.want)
+			}
+		})
 	}
 }
 

@@ -9,9 +9,10 @@ import (
 
 var (
 	// ansiPattern matches ANSI/terminal escape sequences:
-	//   CSI: \x1b[31m, \x1b[1m etc.
-	//   OSC: \x1b]bk;t=...\x1b\\ (kitty protocol)
-	ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x1b]*(?:\x1b\\|\x07)|\x1b.`)
+	//   CSI:      \x1b[31m, \x1b[1m
+	//   payload:  \x1b_bk;t=...\x07 (kitty DCS), \x1b]0;title\x07 (OSC), \x1b(B (charset)
+	//   orphan BEL (\x07)
+	ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b[^\[\x1b\x07][^\x1b\x07]*(?:\x1b\\|\x07)?|\x07`)
 
 	// refPattern matches common compiler/test file:line patterns:
 	//   src/main.go:42
