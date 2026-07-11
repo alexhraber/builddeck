@@ -72,12 +72,21 @@ steps:
       echo "+++ Snapshot build succeeded: $(ls -lh builddeck | awk '{print $5}')"
       buildkite-agent artifact upload builddeck
 
+  - label: ":lock: Checksum"
+    key: checksum
+    depends_on: snapshot
+    command: |
+      buildkite-agent artifact download builddeck .
+      sha256sum builddeck | tee builddeck.sha256
+      buildkite-agent artifact upload builddeck.sha256
+
   - label: ":bookmark: Tag"
     key: tag
     depends_on:
       - commitlint
       - test
-      - snapshot
+      - checksum
+      - codecov
     branches: main
     command: |
       .buildkite/tag.sh
