@@ -2,6 +2,7 @@
 
 [![Build status](https://badge.buildkite.com/286d3362748e755bd5497b6c947bf7fa043491f981dddbdef6.svg)](https://buildkite.com/alexhraber/builddeck)
 [![Go version](https://img.shields.io/badge/Go-1.26-blue?logo=go)](https://go.dev/doc/devel/release#go1.26)
+[![Decapod](https://img.shields.io/badge/Decapod-v0.66.3-4A90D9?logo=gear&logoColor=white)](https://github.com/stacklok/decapod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **`htop` for Buildkite. `k9s` for your CI.**
